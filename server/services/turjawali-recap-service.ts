@@ -21,6 +21,7 @@ import {
 } from '../../shared/types.js';
 import { prisma } from '../lib/prisma.js';
 import { isoDay } from '../lib/dates.js';
+import { resolveSandiAssignments } from './personnel-service.js';
 
 const ACTIVE_TYPES: TurjawaliActivityType[] = [
   'PENGATURAN',
@@ -234,21 +235,27 @@ export async function getTurjawaliRecap(options: {
         `${photo.supervisorSandi ?? ''}|${photo.supervisorName ?? photo.senderName}`
     )
   );
+  // Peta sandi terbaru (Settings → Personel) menang atas nama yang tersimpan
+  // saat foto masuk, agar perubahan pemegang sandi langsung terlihat di rekap.
+  const sandiAssignments = await resolveSandiAssignments();
   const supervisionItems: SupervisionSignal[] = supervisionPhotos
     .slice(-20)
     .reverse()
-    .map((photo) => ({
-      photoId: photo.id,
-      name: photo.supervisorName ?? photo.senderName,
-      rank: photo.supervisorRank,
-      sandi: photo.supervisorSandi,
-      senderName: photo.senderName,
-      senderNumber: photo.senderNumber,
-      capturedAt: photo.capturedAt?.toISOString() ?? null,
-      createdAt: photo.createdAt.toISOString(),
-      address: photo.address,
-      turjawaliType: photo.turjawaliType
-    }));
+    .map((photo) => {
+      const current = photo.supervisorSandi ? sandiAssignments[photo.supervisorSandi] : undefined;
+      return {
+        photoId: photo.id,
+        name: current?.name ?? photo.supervisorName ?? photo.senderName,
+        rank: current?.rank ?? photo.supervisorRank,
+        sandi: photo.supervisorSandi,
+        senderName: photo.senderName,
+        senderNumber: photo.senderNumber,
+        capturedAt: photo.capturedAt?.toISOString() ?? null,
+        createdAt: photo.createdAt.toISOString(),
+        address: photo.address,
+        turjawaliType: photo.turjawaliType
+      };
+    });
 
   return {
     period,

@@ -88,6 +88,7 @@ import { api, copyText, downloadFile, errorMessage, exportUrl } from '@/lib/api'
 import { cn } from '@/lib/utils';
 import { formatDateTime } from '@/lib/format';
 import { PersonnelPanel } from './settings-personnel';
+import { RecapPanel } from './settings-recap';
 
 type SimulatorLog = {
   id: string;
@@ -1618,6 +1619,7 @@ export function SettingsPage() {
             <TabsTrigger value="turjawali" className="text-[11px]"><Route className="h-3.5 w-3.5" /> Turjawali</TabsTrigger>
             <TabsTrigger value="personel" className="text-[11px]"><UsersRound className="h-3.5 w-3.5" /> Personel</TabsTrigger>
             <TabsTrigger value="jadwal" className="text-[11px]"><CalendarClock className="h-3.5 w-3.5" /> Jadwal Rekap</TabsTrigger>
+            <TabsTrigger value="rekap" className="text-[11px]"><ClipboardCopy className="h-3.5 w-3.5" /> Rekap Kustom</TabsTrigger>
             <TabsTrigger value="simulator" className="text-[11px]"><Sparkles className="h-3.5 w-3.5" /> Simulator</TabsTrigger>
           </TabsList>
         </div>
@@ -1650,6 +1652,10 @@ export function SettingsPage() {
 
         <TabsContent value="personel" className="mt-5">
           <PersonnelPanel />
+        </TabsContent>
+
+        <TabsContent value="rekap" className="mt-5">
+          <RecapPanel />
         </TabsContent>
 
         <TabsContent value="jadwal" className="mt-5">
