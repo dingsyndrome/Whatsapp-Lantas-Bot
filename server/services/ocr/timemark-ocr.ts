@@ -1,4 +1,4 @@
-﻿import path from 'node:path';
+import path from 'node:path';
 import fs from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import Tesseract from 'tesseract.js';
@@ -8,6 +8,7 @@ import { paths } from '../../config.js';
 import { getBotConfig } from '../settings.js';
 import { logger } from '../../lib/logger.js';
 import { extractTimemarkWithAi } from '../ai/client.js';
+import { isPaddleAvailable, paddleRecognizeWithCrop } from './paddle-ocr.js';
 import {
   mergeTimemarkExtractions,
   parseTimemarkText,
@@ -205,10 +206,26 @@ export async function extractTimemarkFromFile(filePath: string): Promise<Timemar
   let engineConfidence = 0;
   let firstError: unknown = null;
 
+  // Mesin utama: PaddleOCR (PP-OCR via ONNX). Tesseract hanya cadangan.
   try {
-    const first = await recognize(filePath, 'enhanced');
-    ocrText = first.text;
-    engineConfidence = first.confidence;
+    if (await isPaddleAvailable()) {
+      const paddle = await paddleRecognizeWithCrop(filePath);
+      if (paddle.text.trim().length > 0) {
+        ocrText = paddle.text;
+        engineConfidence = paddle.confidence;
+        logger.debug({ confidence: paddle.confidence, lines: paddle.lines.length }, 'PaddleOCR selesai');
+      }
+    }
+  } catch (error) {
+    logger.warn({ err: error }, 'PaddleOCR gagal, memakai Tesseract');
+  }
+
+  try {
+    if (!ocrText) {
+      const first = await recognize(filePath, 'enhanced');
+      ocrText = first.text;
+      engineConfidence = first.confidence;
+    }
   } catch (error) {
     firstError = error;
     logger.warn({ err: error }, 'Primary OCR pass failed');

@@ -312,6 +312,33 @@ Contoh output JSON:
 }
 ```
 
+### 5.2b PaddleOCR (mesin OCR utama)
+
+Mesin OCR utama adalah **PaddleOCR (PP-OCR, model v6) via ONNX runtime**, dijalankan sebagai
+proses Python dari [`scripts/paddle_ocr.py`](scripts/paddle_ocr.py) dan dipanggil oleh
+[`paddle-ocr.ts`](server/services/ocr/paddle-ocr.ts). Tesseract tetap menjadi cadangan bila
+Python/PaddleOCR tidak tersedia; AI Vision dipakai paling akhir.
+
+Pemasangan sekali saja:
+
+```powershell
+python -m venv .venv-ocr
+.venv-ocr\Scripts\python.exe -m pip install --only-binary=:all: numpy==1.26.4 onnxruntime==1.20.1 opencv-python-headless rapidocr
+```
+
+- Interpreter dicari otomatis: `PADDLE_PYTHON` → `.venv-ocr/Scripts/python.exe` → `python`.
+- Model diunduh sekali ke `site-packages/rapidocr/models`.
+- Setiap foto diproses dua kali (seluruh gambar + crop 62% kiri area watermark), lalu digabung.
+- Bila modul tidak tersedia, sistem otomatis memakai Tesseract tanpa error.
+
+Hasil pada foto lapangan (watermark putih di atas foto terang):
+
+| | Tesseract | PaddleOCR |
+|---|---|---|
+| Jam | tidak terbaca | **08:47** |
+| Satuan | `E tlantas Polres® lands` | **Satlantas Polres Tulungagung** |
+| Keyakinan | 34–41 | **83** |
+
 ### 5.3 Pembaca Sprin PDF/DOCX
 
 File: [`sprin-reader.ts`](server/services/documents/sprin-reader.ts) dan [`sprin-parser.ts`](server/services/documents/sprin-parser.ts)
