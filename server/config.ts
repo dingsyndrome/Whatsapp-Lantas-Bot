@@ -24,6 +24,9 @@ export const config = {
   waSessionPath: path.resolve(root, env('WA_SESSION_PATH', 'data/wa-session')),
   puppeteerExecutablePath: env('PUPPETEER_EXECUTABLE_PATH'),
   logLevel: env('LOG_LEVEL', 'info'),
+  /** Basic Auth opsional untuk akses dari luar (kosongkan untuk menonaktifkan). */
+  appUser: env('APP_USER'),
+  appPass: env('APP_PASS'),
   maxUploadMb: Number(env('MAX_UPLOAD_MB', '25')),
   maxUploadBytes: Number(env('MAX_UPLOAD_MB', '25')) * 1024 * 1024
 };
