@@ -29,6 +29,16 @@ whatsappRouter.get('/groups', async (_req, res) => {
   res.json(await whatsappManager.getGroups());
 });
 
+whatsappRouter.post('/resync', async (req, res) => {
+  const body = z
+    .object({
+      hours: z.coerce.number().min(1).max(168).optional(),
+      limitPerChat: z.coerce.number().min(1).max(20).optional()
+    })
+    .parse(req.body ?? {});
+  res.json(await whatsappManager.resyncRecentMessages(body));
+});
+
 whatsappRouter.post('/simulate', async (req, res) => {
   const body = z
     .object({

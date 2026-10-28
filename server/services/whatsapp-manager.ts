@@ -183,14 +183,15 @@ export class WhatsAppManager {
         authStrategy: new LocalAuth({ clientId: 'sigap', dataPath: paths.waSession }),
         // Versi WhatsApp Web yang terlalu baru dapat mematahkan API internal
         // whatsapp-web.js (downloadMedia / getChats melempar error `r`).
-        // Pin versi lewat WA_WEB_VERSION bila itu terjadi.
+        // Pin versi lewat WA_WEB_VERSION; berkas HTML-nya disimpan di
+        // .wwebjs_cache/<versi>.html agar tidak bergantung jaringan saat start.
         ...(config.waWebVersion
           ? {
               webVersion: config.waWebVersion,
               webVersionCache: {
-                type: 'remote' as const,
-                remotePath:
-                  'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/{version}.html'
+                type: 'local' as const,
+                path: path.resolve(config.root, '.wwebjs_cache'),
+                strict: true
               }
             }
           : {}),
@@ -263,7 +264,16 @@ export class WhatsAppManager {
       });
 
       await this.client.initialize();
-      logger.info({ phone: this.phone }, 'WhatsApp client initialized');
+      let webVersion = 'unknown';
+      try {
+        webVersion = await this.client.getWWebVersion();
+      } catch (error) {
+        logger.debug({ err: error }, 'Gagal membaca versi WhatsApp Web');
+      }
+      logger.info(
+        { phone: this.phone, webVersion, pinned: config.waWebVersion || null },
+        'WhatsApp client initialized'
+      );
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Gagal menghubungkan WhatsApp.';
       logger.error({ err: error }, 'WhatsApp connection failed');
@@ -377,7 +387,21 @@ export class WhatsAppManager {
     });
   }
 
-  private async handleIncoming(message: WAWebJS.Message): Promise<void> {
+  private async handleIncoming(
+    message: WAWebJS.Message,
+    options: { silent?: boolean } = {}
+  ): Promise<void> {
+    logger.info(
+      {
+        from: message.from,
+        author: message.author ?? null,
+        fromMe: message.fromMe,
+        type: message.type,
+        hasMedia: message.hasMedia,
+        body: (message.body ?? '').slice(0, 90)
+      },
+      'Pesan WhatsApp diterima'
+    );
     if (message.fromMe) return;
     if (message.from === 'status@broadcast' || message.to === 'status@broadcast') return;
 
@@ -442,7 +466,8 @@ export class WhatsAppManager {
             senderName,
             dto.status === 'failed'
               ? 'Foto diterima, tetapi watermark belum dapat dibaca. Admin akan meninjau.'
-              : `${TURJAWALI_LABELS[dto.turjawaliType]} · ${dto.timeText ?? ''} ${dto.unitName ?? ''} · match ${dto.matchScore}%`.trim()
+              : `${TURJAWALI_LABELS[dto.turjawaliType]} · ${dto.timeText ?? ''} ${dto.unitName ?? ''} · match ${dto.matchScore}%`.trim(),
+            options
           );
         });
         return;
@@ -468,7 +493,8 @@ export class WhatsAppManager {
         await this.autoReply(
           message,
           senderName,
-          `Sprin ${result.sprin.number} diterima · ${result.sprin.personnelCount} personel`
+          `Sprin ${result.sprin.number} diterima · ${result.sprin.personnelCount} personel`,
+          options
         );
       });
       return;
@@ -484,15 +510,84 @@ export class WhatsAppManager {
       });
       if (links.length === 0) return;
       const platforms = [...new Set(links.map((link) => link.platform))].join(', ');
-      await this.autoReply(message, senderName, `${links.length} link terekap (${platforms})`);
+      await this.autoReply(message, senderName, `${links.length} link terekap (${platforms})`, options);
     });
+  }
+
+  /**
+   * Proses ulang pesan terakhir yang belum masuk database. Dipakai saat bot
+   * baru terhubung / sempat offline, atau untuk memulihkan pesan yang gagal
+   * diunduh sebelum perbaikan versi WhatsApp Web.
+   */
+  async resyncRecentMessages(options: { hours?: number; limitPerChat?: number } = {}): Promise<{
+    chats: number;
+    scanned: number;
+    processed: number;
+    skipped: number;
+  }> {
+    if (!this.client || this.statusValue !== 'connected') {
+      throw new Error('WhatsApp belum terhubung.');
+    }
+    const hours = Math.min(168, Math.max(1, options.hours ?? 24));
+    const limitPerChat = Math.min(20, Math.max(1, options.limitPerChat ?? 5));
+    const since = Date.now() - hours * 60 * 60 * 1000;
+
+    const chats = await this.client.getChats();
+    let scanned = 0;
+    let processed = 0;
+    let skipped = 0;
+
+    for (const chat of chats) {
+      let messages: WAWebJS.Message[] = [];
+      try {
+        messages = await chat.fetchMessages({ limit: limitPerChat });
+      } catch (error) {
+        logger.debug({ err: error, chat: chat.id?._serialized }, 'Gagal membaca pesan chat');
+        continue;
+      }
+
+      for (const message of messages) {
+        if (message.fromMe) {
+          skipped += 1;
+          continue;
+        }
+        if ((message.timestamp ?? 0) * 1000 < since) {
+          skipped += 1;
+          continue;
+        }
+        if (!message.hasMedia) {
+          skipped += 1;
+          continue;
+        }
+        const messageId = message.id._serialized;
+        const exists = await prisma.timemarkPhoto
+          .findUnique({ where: { messageId } })
+          .catch(() => null);
+        if (exists) {
+          skipped += 1;
+          continue;
+        }
+        scanned += 1;
+        try {
+          await this.handleIncoming(message, { silent: true });
+          processed += 1;
+        } catch (error) {
+          logger.warn({ err: error, messageId }, 'Gagal memproses ulang pesan');
+        }
+      }
+    }
+
+    logger.info({ chats: chats.length, scanned, processed, skipped }, 'Resync pesan WhatsApp selesai');
+    return { chats: chats.length, scanned, processed, skipped };
   }
 
   private async autoReply(
     message: WAWebJS.Message,
     senderName: string,
-    summary: string
+    summary: string,
+    options: { silent?: boolean } = {}
   ): Promise<void> {
+    if (options.silent) return;
     const bot = await getBotConfig();
     if (!bot.autoReplyEnabled || !bot.autoReplyTemplate) return;
     const template = bot.autoReplyTemplate
