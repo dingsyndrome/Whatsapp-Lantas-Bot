@@ -325,10 +325,45 @@ function DetailDialog({
 }) {
   const [overrideType, setOverrideType] = React.useState<TurjawaliType>('LAINNYA');
   const [savingOverride, setSavingOverride] = React.useState(false);
+  const [editTime, setEditTime] = React.useState('');
+  const [editDate, setEditDate] = React.useState('');
+  const [editUnit, setEditUnit] = React.useState('');
+  const [editAddress, setEditAddress] = React.useState('');
+  const [savingData, setSavingData] = React.useState(false);
 
   React.useEffect(() => {
-    if (photo) setOverrideType(photo.turjawaliType);
+    if (!photo) return;
+    setOverrideType(photo.turjawaliType);
+    setEditTime(photo.timeText ?? '');
+    setEditDate(photo.capturedAt ? photo.capturedAt.slice(0, 10) : '');
+    setEditUnit(photo.unitName ?? '');
+    setEditAddress(photo.address ?? '');
   }, [photo]);
+
+  const saveManualData = async () => {
+    if (!photo) return;
+    if (editTime && !/^([01]\d|2[0-3]):[0-5]\d$/.test(editTime)) {
+      toast.error('Format jam harus HH:MM', { description: 'Contoh: 07:00' });
+      return;
+    }
+    setSavingData(true);
+    try {
+      const updated = await api.patch<TimemarkDTO>(`/timemark/${photo.id}`, {
+        timeText: editTime || null,
+        capturedAt: editDate ? new Date(`${editDate}T12:00:00`).toISOString() : null,
+        unitName: editUnit || null,
+        address: editAddress || null
+      });
+      toast.success('Data Timemark disimpan', {
+        description: `${updated.timeText ?? '-'} · ${updated.dateText ?? '-'} · status ${updated.status}`
+      });
+      onUpdated(updated);
+    } catch (error) {
+      toast.error('Gagal menyimpan koreksi', { description: errorMessage(error) });
+    } finally {
+      setSavingData(false);
+    }
+  };
 
   if (!photo) return null;
   const mapsUrl =
@@ -460,6 +495,74 @@ function DetailDialog({
                   Simpan & rematch
                 </Button>
               </div>
+            </div>
+
+            <div className="mt-4 rounded-xl border border-border/70 bg-muted/15 p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                  Koreksi data OCR (jam, tanggal, satuan, alamat)
+                </Label>
+                <Button size="sm" onClick={() => void saveManualData()} disabled={savingData}>
+                  {savingData ? (
+                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                  )}
+                  Simpan data
+                </Button>
+              </div>
+              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                <div>
+                  <Label htmlFor="edit-time" className="text-[9px] text-muted-foreground">
+                    Jam (HH:MM)
+                  </Label>
+                  <Input
+                    id="edit-time"
+                    value={editTime}
+                    onChange={(event) => setEditTime(event.target.value)}
+                    placeholder="07:00"
+                    className="mt-1 h-8 font-mono text-xs"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-date" className="text-[9px] text-muted-foreground">
+                    Tanggal pelaksanaan
+                  </Label>
+                  <Input
+                    id="edit-date"
+                    type="date"
+                    value={editDate}
+                    onChange={(event) => setEditDate(event.target.value)}
+                    className="mt-1 h-8 text-xs"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-unit" className="text-[9px] text-muted-foreground">
+                    Nama satuan
+                  </Label>
+                  <Input
+                    id="edit-unit"
+                    value={editUnit}
+                    onChange={(event) => setEditUnit(event.target.value)}
+                    className="mt-1 h-8 text-xs"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-address" className="text-[9px] text-muted-foreground">
+                    Alamat
+                  </Label>
+                  <Input
+                    id="edit-address"
+                    value={editAddress}
+                    onChange={(event) => setEditAddress(event.target.value)}
+                    className="mt-1 h-8 text-xs"
+                  />
+                </div>
+              </div>
+              <p className="mt-1.5 text-[9px] text-muted-foreground">
+                Setelah disimpan, foto dihitung ulang ke Sprin dan status berubah dari <b>Perlu review</b>{' '}
+                menjadi <b>terverifikasi</b> bila jam & tanggal terisi.
+              </p>
             </div>
 
             <div className="mt-4 grid gap-3 sm:grid-cols-2">

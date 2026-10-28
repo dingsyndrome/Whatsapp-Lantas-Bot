@@ -9,7 +9,8 @@ import {
   ingestTimemark,
   listTimemarks,
   overrideTimemarkTurjawali,
-  rematchTimemarkQueue
+  rematchTimemarkQueue,
+  updateTimemarkFields
 } from '../services/timemark-service.js';
 import { getTurjawaliRecap } from '../services/turjawali-recap-service.js';
 import {
@@ -83,6 +84,27 @@ timemarkRouter.post('/analyze', upload.single('file'), async (req, res) => {
 timemarkRouter.patch('/:id/turjawali', async (req, res) => {
   const body = z.object({ turjawaliType: z.enum(TURJAWALI_TYPES) }).parse(req.body);
   const item = await overrideTimemarkTurjawali(req.params.id, body.turjawaliType);
+  if (!item) throw new HttpError(404, 'Foto Timemark tidak ditemukan.');
+  res.json(item);
+});
+
+const manualFieldsSchema = z.object({
+  timeText: z
+    .string()
+    .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Format jam harus HH:MM (contoh 07:00).')
+    .nullable()
+    .optional(),
+  capturedAt: z.string().max(40).nullable().optional(),
+  unitName: z.string().max(200).nullable().optional(),
+  address: z.string().max(500).nullable().optional(),
+  coordinateText: z.string().max(80).nullable().optional(),
+  latitude: z.number().min(-90).max(90).nullable().optional(),
+  longitude: z.number().min(-180).max(180).nullable().optional()
+});
+
+timemarkRouter.patch('/:id', async (req, res) => {
+  const body = manualFieldsSchema.parse(req.body ?? {});
+  const item = await updateTimemarkFields(String(req.params.id), body);
   if (!item) throw new HttpError(404, 'Foto Timemark tidak ditemukan.');
   res.json(item);
 });

@@ -2,6 +2,7 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { format } from 'date-fns';
+import { id as localeId } from 'date-fns/locale';
 import sharp from 'sharp';
 import { paths } from '../config.js';
 import { prisma } from '../lib/prisma.js';
@@ -317,6 +318,84 @@ export async function getTimemark(id: string): Promise<TimemarkDTO | null> {
     include: timemarkInclude
   });
   return photo ? serializeTimemark(photo as TimemarkWithSprin) : null;
+}
+
+export interface TimemarkManualFields {
+  timeText?: string | null;
+  capturedAt?: string | null;
+  unitName?: string | null;
+  address?: string | null;
+  coordinateText?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+}
+
+/**
+ * Koreksi manual hasil OCR oleh admin. Jam & tanggal yang dikoreksi dipakai
+ * untuk rekap dan pencocokan Sprin, jadi setelah disimpan foto di-rematch dan
+ * status `review` bisa berubah menjadi `parsed`.
+ */
+export async function updateTimemarkFields(
+  id: string,
+  input: TimemarkManualFields
+): Promise<TimemarkDTO | null> {
+  const existing = await prisma.timemarkPhoto.findUnique({ where: { id } });
+  if (!existing) return null;
+
+  const data: Record<string, unknown> = {};
+
+  if (input.timeText !== undefined) {
+    const time = (input.timeText ?? '').trim();
+    if (time && !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) {
+      throw new Error('Format jam harus HH:MM (contoh 07:00).');
+    }
+    data.timeText = time || null;
+  }
+
+  if (input.capturedAt !== undefined) {
+    if (input.capturedAt) {
+      const parsed = new Date(input.capturedAt);
+      if (Number.isNaN(parsed.getTime())) throw new Error('Tanggal tidak valid.');
+      data.capturedAt = parsed;
+      data.dateText = format(parsed, 'EEEE, dd/MM/yyyy', { locale: localeId });
+    } else {
+      data.capturedAt = null;
+    }
+  }
+
+  for (const key of ['unitName', 'address', 'coordinateText'] as const) {
+    if (input[key] !== undefined) {
+      const value = (input[key] ?? '').trim();
+      data[key] = value || null;
+    }
+  }
+  for (const key of ['latitude', 'longitude'] as const) {
+    if (input[key] !== undefined) data[key] = input[key];
+  }
+
+  const nextTime = (data.timeText as string | null | undefined) ?? existing.timeText;
+  const nextDate =
+    (data.capturedAt as Date | null | undefined) ?? existing.capturedAt;
+  if (nextTime && nextDate) data.status = 'parsed';
+
+  await prisma.timemarkPhoto.update({ where: { id }, data });
+
+  // Jam/tanggal memengaruhi kecocokan Sprin & status review.
+  await rematchTimemark(id).catch((error) =>
+    logger.warn({ err: error }, 'Rematch setelah koreksi manual gagal')
+  );
+
+  await recordActivity({
+    type: 'timemark_corrected',
+    title: 'Data Timemark dikoreksi manual',
+    description: `${existing.senderName} · ${nextTime ?? 'jam kosong'} · ${existing.unitName ?? 'satuan kosong'}`,
+    actor: 'Dashboard',
+    entityType: 'timemark',
+    entityId: id,
+    metadata: { fields: Object.keys(data) }
+  });
+
+  return getTimemark(id);
 }
 
 export async function overrideTimemarkTurjawali(
