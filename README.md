@@ -2,7 +2,7 @@
 
 Sistem full-stack untuk memantau laporan anggota dari WhatsApp: **OCR foto Timemark**, **parser Surat Perintah PDF/DOCX multi-halaman**, **rekap link anggota lintas platform**, **Smart Matching Turjawali (Pengaturan, Penjagaan, Pengawalan, Patroli)**, dan **dashboard React** dengan panel kustomisasi bot.
 
-> **Status validasi (28 Okt 2026):** `pnpm typecheck` bersih, `pnpm test` **27/27 lulus**, smoke test API **49/49 asersi lulus**, dan dashboard telah diuji di Chrome (desktop + mobile, mode gelap/terang) tanpa console error. Proyek dipulihkan dari log sesi DSH dan dijalankan ulang dari nol (`pnpm install` → migrasi Prisma → seed) di `C:\Users\dings\Documents\deepseek-harness\default-workspace\sigap`.
+> **Status validasi (28 Okt 2026):** `pnpm typecheck` bersih, `pnpm test` **35/35 lulus**, smoke test API **49/49 asersi lulus**, dan dashboard telah diuji di Chrome (desktop + mobile, mode gelap/terang) tanpa console error. Proyek dipulihkan dari log sesi DSH dan dijalankan ulang dari nol (`pnpm install` → migrasi Prisma → seed) di `C:\Users\dings\Documents\deepseek-harness\default-workspace\sigap`.
 
 ![Dashboard SIGAP](docs/screenshots/dashboard.png)
 
@@ -129,7 +129,7 @@ Proyek ini sengaja memakai **satu paket full-stack** (bukan monorepo multi-packa
 │   ├── e2e-turjawali.mjs            ← uji UI filter/override/settings
 │   ├── test-wa-connect.mjs          ← uji QR WhatsApp Web
 │   └── docker-entrypoint.sh
-├── tests/                           ← Vitest (27 tes, termasuk 12 tes Turjawali)
+├── tests/                           ← Vitest (35 tes, termasuk 12 tes Turjawali + 8 tes impor personel)
 ├── tessdata/eng.traineddata         ← model OCR lokal (5.2 MB)
 ├── Dockerfile / docker-compose.yml
 ├── .env.example
@@ -353,6 +353,35 @@ Contoh output ringkas:
 }
 ```
 
+### 5.3b Impor personel dari Excel/CSV
+
+Dipakai bila daftar personel hanya tersedia sebagai spreadsheet (tanpa dokumen Sprin PDF/DOCX).
+Alurnya dua langkah, keduanya dari halaman **Data Surat Perintah**:
+
+1. **Buat Sprin** (tombol `Buat Sprin`) — isi nomor, perihal, tanggal, tempat, penandatangan, dan
+   uraian tugas. Kategori Turjawali dideteksi otomatis atau bisa dipilih manual.
+   Endpoint: `POST /api/sprin/manual`.
+2. **Impor Excel/CSV** — buka detail Sprin → tab **Personel** → `Impor Excel/CSV`.
+   Endpoint: `POST /api/sprin/:id/personnel/import` (field `file` + `mode=replace|append`).
+
+Parser sheet: [`personnel-sheet.ts`](server/services/documents/personnel-sheet.ts)
+
+- Menerima `.xlsx`, `.xlsm`, dan `.csv` (pemisah `,` `;` atau tab; kutip ganda & baris multiline didukung).
+- Header kolom dideteksi otomatis: `NO`, `NAMA`, `PANGKAT/NRP` (atau `PANGKAT` + `NRP` terpisah),
+  `JABATAN`, `PENUGASAN`, `KET`. Baris header berulang dan baris kosong dilewati.
+- Bila header tidak dikenali, kolom dibaca berurutan (NO, NAMA, PANGKAT/NRP, JABATAN, PENUGASAN, KET)
+  dan sebuah peringatan dikembalikan.
+- Mode **ganti** menghapus personel lama pada Sprin tersebut; mode **tambah** melewati duplikat
+  (nama + NRP) dan meneruskan nomor urut.
+- Template siap pakai: [`public/template-personel.csv`](public/template-personel.csv)
+  (juga bisa diunduh dari dialog impor).
+
+```bash
+curl -X POST http://localhost:3000/api/sprin/<id>/personnel/import \
+  -F "file=@personel-sprin.xlsx" -F "mode=replace"
+# → { "personnelCount": 24, "imported": 24, "skipped": 0, "warnings": [], "mode": "replace" }
+```
+
 ### 5.4 Rekap Link Anggota
 
 File: [`extractor.ts`](server/services/links/extractor.ts) + [`validator.ts`](server/services/links/validator.ts)
@@ -470,6 +499,8 @@ Contoh bagian Turjawali pada `daily.txt`:
 | DELETE | `/api/timemark/:id` | Hapus foto + file |
 | GET | `/api/sprin` | List/filter Sprin |
 | POST | `/api/sprin/upload` | Upload PDF/DOCX + parse |
+| POST | `/api/sprin/manual` | Buat/perbarui header Sprin tanpa dokumen |
+| POST | `/api/sprin/:id/personnel/import` | Impor personel dari XLSX/CSV (`mode=replace\|append`) |
 | GET | `/api/sprin/:id` | Detail + seluruh personel |
 | PATCH | `/api/sprin/:id/status` | Aktif/selesai/arsip |
 | GET | `/api/links` | List/filter link |
@@ -591,7 +622,7 @@ Kedua skrip menerima `SIGAP_API` sehingga bisa diarahkan ke base URL mana pun (l
 
 ```bash
 pnpm typecheck       # frontend + backend + tests
-pnpm test            # 27 tes Vitest
+pnpm test            # 35 tes Vitest
 pnpm build           # build produksi
 ```
 

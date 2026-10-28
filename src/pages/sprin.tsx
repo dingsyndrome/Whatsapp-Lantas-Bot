@@ -7,9 +7,11 @@ import {
   ExternalLink,
   FileArchive,
   FileSearch,
+  FileSpreadsheet,
   FileText,
   Link2,
   MapPin,
+  Plus,
   RefreshCw,
   Search,
   ShieldCheck,
@@ -42,6 +44,7 @@ import {
   SelectValue
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useApi, useDebouncedValue } from '@/src/hooks/use-api';
@@ -197,6 +200,7 @@ function SprinDetailDialog({
   const detailApi = useApi<SprinDTO>(sprinId ? `/sprin/${sprinId}` : null);
   const [tab, setTab] = React.useState('ringkasan');
   const [updating, setUpdating] = React.useState(false);
+  const [importOpen, setImportOpen] = React.useState(false);
   const sprin = detailApi.data;
 
   React.useEffect(() => {
@@ -330,9 +334,26 @@ function SprinDetailDialog({
                   ) : null}
                 </TabsContent>
                 <TabsContent value="personel" className="mt-4">
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-[10px] text-muted-foreground">
+                      {formatNumber(sprin.personnelCount)} personel terdaftar pada Sprin ini
+                    </p>
+                    <Button size="sm" variant="outline" onClick={() => setImportOpen(true)}>
+                      <FileSpreadsheet className="h-3.5 w-3.5" /> Impor Excel/CSV
+                    </Button>
+                  </div>
                   <PersonnelTable personnel={sprin.personnel ?? []} />
                 </TabsContent>
               </Tabs>
+              <ImportPersonnelDialog
+                sprin={sprin}
+                open={importOpen}
+                onOpenChange={setImportOpen}
+                onImported={() => {
+                  void detailApi.refresh();
+                  onChanged();
+                }}
+              />
             </div>
           </div>
         ) : null}
@@ -476,12 +497,353 @@ function UploadSprinDialog({
   );
 }
 
+function ManualSprinDialog({
+  open,
+  onOpenChange,
+  onSaved
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSaved: (sprin: SprinDTO) => void;
+}) {
+  const empty = {
+    number: '',
+    about: '',
+    activityDate: '',
+    timeText: '',
+    place: '',
+    signatoryRank: '',
+    signatory: '',
+    untuk: '',
+    turjawaliType: 'AUTO'
+  };
+  const [form, setForm] = React.useState(empty);
+  const [saving, setSaving] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!open) {
+      setForm(empty);
+      setSaving(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  const set = (key: keyof typeof empty) => (value: string) =>
+    setForm((previous) => ({ ...previous, [key]: value }));
+
+  const submit = async () => {
+    if (!form.number.trim()) {
+      toast.error('Nomor Surat Perintah wajib diisi.');
+      return;
+    }
+    setSaving(true);
+    try {
+      const response = await api.post<{ sprin: SprinDTO; created: boolean }>('/sprin/manual', {
+        number: form.number.trim(),
+        about: form.about || null,
+        activityDate: form.activityDate || null,
+        timeText: form.timeText || null,
+        place: form.place || null,
+        signatoryRank: form.signatoryRank || null,
+        signatory: form.signatory || null,
+        untuk: form.untuk || null,
+        ...(form.turjawaliType === 'AUTO' ? {} : { turjawaliType: form.turjawaliType })
+      });
+      toast.success(response.created ? 'Surat Perintah dibuat' : 'Header Sprin diperbarui', {
+        description: `${response.sprin.number} · ${TURJAWALI_LABELS[response.sprin.turjawaliType]}`
+      });
+      onSaved(response.sprin);
+      onOpenChange(false);
+    } catch (error) {
+      toast.error('Gagal menyimpan Sprin', { description: errorMessage(error) });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Buat Surat Perintah Manual</DialogTitle>
+          <DialogDescription>
+            Dipakai bila daftar personel hanya tersedia dalam Excel/CSV: buat header Sprin dulu, lalu impor
+            personelnya dari tab Personel.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Nomor Sprin *</Label>
+            <Input
+              value={form.number}
+              onChange={(event) => set('number')(event.target.value)}
+              placeholder="Sprin/1806/X/KEP./2026"
+              className="mt-1 font-mono text-xs"
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Perihal</Label>
+            <Input
+              value={form.about}
+              onChange={(event) => set('about')(event.target.value)}
+              placeholder="Pengaturan lalu lintas pagi di simpang TKK"
+              className="mt-1 text-xs"
+            />
+          </div>
+          <div>
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Tanggal pelaksanaan</Label>
+            <Input
+              type="date"
+              value={form.activityDate}
+              onChange={(event) => set('activityDate')(event.target.value)}
+              className="mt-1 text-xs"
+            />
+          </div>
+          <div>
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Waktu</Label>
+            <Input
+              value={form.timeText}
+              onChange={(event) => set('timeText')(event.target.value)}
+              placeholder="08.00 WITA"
+              className="mt-1 text-xs"
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Tempat</Label>
+            <Input
+              value={form.place}
+              onChange={(event) => set('place')(event.target.value)}
+              placeholder="Jl. Raya Maumere - Ende, Kec. Alok Timur, Kab. Sikka"
+              className="mt-1 text-xs"
+            />
+          </div>
+          <div>
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Pangkat penandatangan</Label>
+            <Input
+              value={form.signatoryRank}
+              onChange={(event) => set('signatoryRank')(event.target.value)}
+              placeholder="AKBP"
+              className="mt-1 text-xs"
+            />
+          </div>
+          <div>
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Nama penandatangan</Label>
+            <Input
+              value={form.signatory}
+              onChange={(event) => set('signatory')(event.target.value)}
+              placeholder="ANDI PRATAMA, S.I.K."
+              className="mt-1 text-xs"
+            />
+          </div>
+          <div>
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Kategori Turjawali</Label>
+            <Select value={form.turjawaliType} onValueChange={set('turjawaliType')}>
+              <SelectTrigger className="mt-1 h-9 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="AUTO">Deteksi otomatis</SelectItem>
+                <SelectItem value="PENGATURAN">Pengaturan (Gatur)</SelectItem>
+                <SelectItem value="PENJAGAAN">Penjagaan</SelectItem>
+                <SelectItem value="PENGAWALAN">Pengawalan</SelectItem>
+                <SelectItem value="PATROLI">Patroli</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="sm:col-span-2">
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              Uraian tugas (“Untuk”)
+            </Label>
+            <Textarea
+              value={form.untuk}
+              onChange={(event) => set('untuk')(event.target.value)}
+              placeholder="Melaksanakan pengaturan lalu lintas dan pengamanan kegiatan…"
+              className="mt-1 min-h-[70px] text-xs"
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Batal
+          </Button>
+          <Button onClick={() => void submit()} disabled={saving}>
+            {saving ? (
+              <>
+                <RefreshCw className="h-4 w-4 animate-spin" /> Menyimpan…
+              </>
+            ) : (
+              <>
+                <Plus className="h-4 w-4" /> Simpan Sprin
+              </>
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+interface PersonnelImportResult {
+  personnelCount: number;
+  imported: number;
+  rows: number;
+  skipped: number;
+  warnings: string[];
+  sheetName: string;
+  mappedColumns: string[];
+  mode: 'replace' | 'append';
+}
+
+function ImportPersonnelDialog({
+  sprin,
+  open,
+  onOpenChange,
+  onImported
+}: {
+  sprin: SprinDTO | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onImported: () => void;
+}) {
+  const [file, setFile] = React.useState<File | null>(null);
+  const [mode, setMode] = React.useState<'replace' | 'append'>('replace');
+  const [busy, setBusy] = React.useState(false);
+  const inputRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    if (!open) {
+      setFile(null);
+      setMode('replace');
+      setBusy(false);
+    }
+  }, [open]);
+
+  const onFile = (next: File | undefined) => {
+    if (!next) return;
+    if (!next.name.toLowerCase().match(/\.(xlsx|xlsm|csv)$/)) {
+      toast.error('Format berkas harus XLSX atau CSV.');
+      return;
+    }
+    if (next.size > 25 * 1024 * 1024) {
+      toast.error('Ukuran berkas melebihi 25 MB.');
+      return;
+    }
+    setFile(next);
+  };
+
+  const submit = async () => {
+    if (!file || !sprin) return;
+    setBusy(true);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      form.append('mode', mode);
+      const response = await api.upload<PersonnelImportResult>(
+        `/sprin/${sprin.id}/personnel/import`,
+        form
+      );
+      toast.success(`${formatNumber(response.imported)} personel diimpor`, {
+        description: `${response.sheetName} · total ${formatNumber(response.personnelCount)} personel di ${sprin.number}`
+      });
+      if (response.warnings.length) {
+        toast.warning('Perlu dicek', { description: response.warnings.join(' ') });
+      }
+      onImported();
+      onOpenChange(false);
+    } catch (error) {
+      toast.error('Gagal mengimpor personel', { description: errorMessage(error) });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-xl">
+        <DialogHeader>
+          <DialogTitle>Impor Personel dari Excel/CSV</DialogTitle>
+          <DialogDescription>
+            {sprin?.number} · baris dibaca dari kolom NO, NAMA, PANGKAT/NRP, JABATAN, PENUGASAN, dan KET.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            onDragOver={(event) => event.preventDefault()}
+            onDrop={(event) => {
+              event.preventDefault();
+              onFile(event.dataTransfer.files[0]);
+            }}
+            className="flex min-h-[150px] w-full flex-col items-center justify-center rounded-xl border border-dashed border-border bg-muted/20 p-6 text-center transition-colors hover:border-primary/40"
+          >
+            <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl border border-border bg-card text-primary shadow-soft">
+              {file ? <FileSpreadsheet className="h-5 w-5" /> : <UploadCloud className="h-5 w-5" />}
+            </div>
+            <p className="text-sm font-semibold">
+              {file ? file.name : 'Tarik berkas XLSX/CSV ke sini atau klik'}
+            </p>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              {file ? `${(file.size / 1024).toFixed(0)} KB · klik untuk mengganti` : 'Header kolom dideteksi otomatis'}
+            </p>
+          </button>
+          <input
+            ref={inputRef}
+            type="file"
+            accept=".xlsx,.xlsm,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            className="hidden"
+            onChange={(event) => onFile(event.target.files?.[0])}
+          />
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="w-full sm:w-[240px]">
+              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Mode impor</Label>
+              <Select value={mode} onValueChange={(value) => setMode(value as 'replace' | 'append')}>
+                <SelectTrigger className="mt-1 h-9 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="replace">Ganti seluruh personel</SelectItem>
+                  <SelectItem value="append">Tambah ke daftar yang ada</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <p className="text-[10px] leading-relaxed text-muted-foreground sm:max-w-[260px]">
+              Mode <span className="font-semibold text-foreground">ganti</span> menghapus personel lama pada Sprin
+              ini. Mode <span className="font-semibold text-foreground">tambah</span> melewati nama yang sudah ada.{' '}
+              <a href="/template-personel.csv" download className="text-primary underline-offset-2 hover:underline">
+                Unduh template CSV
+              </a>
+            </p>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Batal
+          </Button>
+          <Button onClick={() => void submit()} disabled={!file || busy}>
+            {busy ? (
+              <>
+                <RefreshCw className="h-4 w-4 animate-spin" /> Mengimpor…
+              </>
+            ) : (
+              <>
+                <FileSpreadsheet className="h-4 w-4" /> Impor personel
+              </>
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function SprinPage() {
   const [page, setPage] = React.useState(1);
   const [search, setSearch] = React.useState('');
   const [status, setStatus] = React.useState('all');
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const [uploadOpen, setUploadOpen] = React.useState(false);
+  const [manualOpen, setManualOpen] = React.useState(false);
   const debounced = useDebouncedValue(search);
   const version = useRealtimeVersion();
 
@@ -521,6 +883,9 @@ export function SprinPage() {
           <>
             <Button variant="outline" size="sm" onClick={() => downloadFile(exportUrl('sprin.csv'))}>
               <Download className="h-4 w-4" /> CSV Personel
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setManualOpen(true)}>
+              <FileSpreadsheet className="h-4 w-4" /> Buat Sprin
             </Button>
             <Button size="sm" onClick={() => setUploadOpen(true)}>
               <UploadCloud className="h-4 w-4" /> Unggah Sprin
@@ -586,11 +951,16 @@ export function SprinPage() {
         <EmptyState
           icon={FileText}
           title="Belum ada Surat Perintah"
-          description="Unggah PDF/DOCX atau kirim dokumen ke grup WhatsApp yang dipantau."
+          description="Unggah PDF/DOCX, buat header manual lalu impor personel dari Excel/CSV, atau kirim dokumen ke grup WhatsApp yang dipantau."
           action={
-            <Button onClick={() => setUploadOpen(true)}>
-              <UploadCloud className="h-4 w-4" /> Unggah Sprin
-            </Button>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <Button onClick={() => setUploadOpen(true)}>
+                <UploadCloud className="h-4 w-4" /> Unggah Sprin
+              </Button>
+              <Button variant="outline" onClick={() => setManualOpen(true)}>
+                <FileSpreadsheet className="h-4 w-4" /> Buat Sprin manual
+              </Button>
+            </div>
           }
         />
       ) : (
@@ -698,6 +1068,16 @@ export function SprinPage() {
           void listApi.refresh();
           void activeApi.refresh();
           void statsApi.refresh();
+        }}
+      />
+      <ManualSprinDialog
+        open={manualOpen}
+        onOpenChange={setManualOpen}
+        onSaved={(sprin) => {
+          void listApi.refresh();
+          void activeApi.refresh();
+          void statsApi.refresh();
+          setSelectedId(sprin.id);
         }}
       />
     </div>

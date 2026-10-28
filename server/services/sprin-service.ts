@@ -12,10 +12,11 @@ import {
   type SprinWithPersonnel
 } from '../lib/serializers.js';
 import { parseSprinDocument } from './documents/sprin-reader.js';
-import type { ParsedSprinDocument } from './documents/types.js';
+import { isPersonnelSheet, parsePersonnelSheet } from './documents/personnel-sheet.js';
+import type { ParsedPersonnel, ParsedSprinDocument } from './documents/types.js';
 import { getBotConfig, getTurjawaliRules } from './settings.js';
 import { classifySprinTurjawali } from './ocr/turjawali-matcher.js';
-import type { SprinDTO } from '../../shared/types.js';
+import type { SprinDTO, TurjawaliType } from '../../shared/types.js';
 
 export class SprinValidationError extends Error {
   constructor(message: string) {
@@ -253,6 +254,203 @@ export async function getSprin(id: string): Promise<SprinDTO | null> {
     }
   });
   return row ? serializeSprin(row as SprinWithPersonnel) : null;
+}
+
+export interface ManualSprinInput {
+  number: string;
+  about?: string | null;
+  dasar?: string | null;
+  untuk?: string | null;
+  activityDate?: string | Date | null;
+  timeText?: string | null;
+  place?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  signatory?: string | null;
+  signatoryRank?: string | null;
+  turjawaliType?: TurjawaliType | null;
+  status?: string;
+}
+
+/**
+ * Membuat/menyegarkan header Sprin tanpa dokumen. Berguna saat daftar personel
+ * hanya tersedia dalam bentuk Excel/CSV, sehingga Sprin dibuat manual lalu
+ * personelnya diimpor.
+ */
+export async function createManualSprin(input: ManualSprinInput): Promise<{
+  sprin: SprinDTO;
+  created: boolean;
+}> {
+  const number = input.number?.trim();
+  if (!number) {
+    throw new SprinValidationError('Nomor Surat Perintah wajib diisi.');
+  }
+  if (!/^[A-Za-z0-9./\-\s]{3,120}$/.test(number)) {
+    throw new SprinValidationError('Nomor Surat Perintah mengandung karakter yang tidak diperbolehkan.');
+  }
+
+  const bot = await getBotConfig();
+  const turjawaliType =
+    input.turjawaliType && input.turjawaliType !== 'LAINNYA'
+      ? input.turjawaliType
+      : classifySprinTurjawali(
+          { about: input.about ?? null, untuk: input.untuk ?? null, dasar: input.dasar ?? null },
+          getTurjawaliRules(bot)
+        ).type;
+
+  const activityDate =
+    input.activityDate instanceof Date
+      ? input.activityDate
+      : input.activityDate
+        ? new Date(input.activityDate)
+        : null;
+  if (activityDate && Number.isNaN(activityDate.getTime())) {
+    throw new SprinValidationError('Tanggal pelaksanaan tidak valid.');
+  }
+
+  const data = {
+    number,
+    about: input.about?.trim() || null,
+    dasar: input.dasar?.trim() || null,
+    untuk: input.untuk?.trim() || null,
+    activityDate,
+    timeText: input.timeText?.trim() || null,
+    place: input.place?.trim() || null,
+    latitude: typeof input.latitude === 'number' ? input.latitude : null,
+    longitude: typeof input.longitude === 'number' ? input.longitude : null,
+    signatory: input.signatory?.trim() || null,
+    signatoryRank: input.signatoryRank?.trim() || null,
+    turjawaliType,
+    source: 'manual',
+    status: input.status && ['active', 'completed', 'archived'].includes(input.status) ? input.status : 'active'
+  };
+
+  const existing = await prisma.sprin.findUnique({ where: { number } });
+
+  const saved = existing
+    ? await prisma.sprin.update({
+        where: { id: existing.id },
+        data,
+        include: {
+          ...includeCounts,
+          personnel: { orderBy: [{ page: 'asc' }, { no: 'asc' }] }
+        }
+      })
+    : await prisma.sprin.create({
+        data,
+        include: {
+          ...includeCounts,
+          personnel: { orderBy: [{ page: 'asc' }, { no: 'asc' }] }
+        }
+      });
+
+  await recordActivity({
+    type: existing ? 'sprin_updated' : 'sprin_created',
+    title: existing ? 'Header Sprin diperbarui manual' : 'Sprin dibuat manual',
+    description: `${number} · ${data.about ?? 'tanpa perihal'} · ${turjawaliType}`,
+    actor: 'Dashboard',
+    entityType: 'sprin',
+    entityId: saved.id
+  });
+
+  return { sprin: serializeSprin(saved as SprinWithPersonnel), created: !existing };
+}
+
+export interface PersonnelImportInput {
+  buffer: Buffer;
+  filename: string;
+  mimeType?: string;
+  mode?: 'replace' | 'append';
+}
+
+export async function importSprinPersonnel(
+  sprinId: string,
+  input: PersonnelImportInput
+): Promise<{
+  personnelCount: number;
+  imported: number;
+  rows: number;
+  skipped: number;
+  warnings: string[];
+  sheetName: string;
+  mappedColumns: string[];
+  mode: 'replace' | 'append';
+} | null> {
+  const sprin = await prisma.sprin.findUnique({ where: { id: sprinId } });
+  if (!sprin) return null;
+  if (!isPersonnelSheet(input.filename, input.mimeType)) {
+    throw new SprinValidationError('Format berkas personel harus XLSX atau CSV.');
+  }
+
+  const mode: 'replace' | 'append' = input.mode === 'append' ? 'append' : 'replace';
+  const sheet = await parsePersonnelSheet(input.buffer, input.filename, input.mimeType);
+
+  const toCreate = (people: ParsedPersonnel[]) =>
+    people.map((person) => ({
+      no: person.no,
+      name: person.name,
+      rankNrp: person.rankNrp,
+      rank: person.rank,
+      nrp: person.nrp,
+      jabatan: person.jabatan,
+      penugasan: person.penugasan,
+      ket: person.ket,
+      page: person.page,
+      rawText: person.rawText
+    }));
+
+  let imported: number;
+
+  if (mode === 'replace') {
+    imported = sheet.personnel.length;
+    await prisma.$transaction(async (tx) => {
+      await tx.sprinPersonnel.deleteMany({ where: { sprinId } });
+      await tx.sprinPersonnel.createMany({
+        data: toCreate(sheet.personnel).map((row) => ({ ...row, sprinId }))
+      });
+    });
+  } else {
+    const existing = await prisma.sprinPersonnel.findMany({ where: { sprinId } });
+    const seen = new Set(
+      existing.map((row) => `${row.name.toUpperCase()}::${row.nrp ?? row.rankNrp ?? ''}`)
+    );
+    const nextNo = existing.reduce((max, row) => Math.max(max, row.no), 0);
+    const fresh = sheet.personnel.filter((person) => {
+      const key = `${person.name.toUpperCase()}::${person.nrp ?? person.rankNrp ?? ''}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    imported = fresh.length;
+    if (fresh.length > 0) {
+      await prisma.sprinPersonnel.createMany({
+        data: toCreate(fresh).map((row, index) => ({ ...row, no: nextNo + index + 1, sprinId }))
+      });
+    }
+  }
+
+  const personnelCount = await prisma.sprinPersonnel.count({ where: { sprinId } });
+
+  await recordActivity({
+    type: 'sprin_personnel_import',
+    title: 'Personel Sprin diimpor',
+    description: `${sprin.number} · ${imported} baris (${mode === 'replace' ? 'ganti' : 'tambah'}) dari ${sheet.sheetName}`,
+    actor: 'Dashboard',
+    entityType: 'sprin',
+    entityId: sprinId,
+    metadata: { imported, skipped: sheet.skipped, mode }
+  });
+
+  return {
+    personnelCount,
+    imported,
+    rows: sheet.rows,
+    skipped: sheet.skipped,
+    warnings: sheet.warnings,
+    sheetName: sheet.sheetName,
+    mappedColumns: sheet.mappedColumns,
+    mode
+  };
 }
 
 export async function updateSprinStatus(id: string, status: string): Promise<SprinDTO | null> {
