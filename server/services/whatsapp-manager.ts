@@ -109,13 +109,25 @@ export class WhatsAppManager {
   async reflectConfig(): Promise<WhatsAppStatusDTO> {
     const bot = await getBotConfig();
     if (bot.waDriver === 'baileys') {
+      // Cabut otoritas WhatsApp Web sebelum pindah ke Baileys: logout perangkat
+      // lalu hapus sesi webjs agar tidak ada dua perangkat tertaut yang berebut.
+      if (this.client) {
+        await this.disconnect(true).catch(() => undefined);
+      }
       await this.stopClient();
+      const fsp = await import('node:fs/promises');
+      await fsp
+        .rm(path.join(paths.waSession, 'session-sigap'), { recursive: true, force: true })
+        .catch(() => undefined);
       this.activeDriver = 'baileys';
       await baileysManager.connect();
       realtime.publish('wa-status', this.getStatus());
       return this.getStatus();
     }
     if (bot.waDriver === 'mock') {
+      if (this.client) {
+        await this.disconnect(true).catch(() => undefined);
+      }
       await this.stopClient();
       this.statusValue = 'mock';
       this.qrDataUrl = null;

@@ -298,7 +298,7 @@ function ConnectionPanel({
                 <WifiOff className="h-4 w-4" /> Putuskan
               </Button>
             ) : null}
-            {form.waDriver === 'webjs' ? (
+            {form.waDriver !== 'mock' ? (
               <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={onLogout}>
                 <LogOut className="h-4 w-4" /> Logout sesi
               </Button>
