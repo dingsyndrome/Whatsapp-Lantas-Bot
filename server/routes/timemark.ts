@@ -1,0 +1,95 @@
+import { Router } from 'express';
+import multer from 'multer';
+import { z } from 'zod';
+import { config } from '../config.js';
+import { HttpError } from '../lib/http-error.js';
+import {
+  deleteTimemark,
+  getTimemark,
+  ingestTimemark,
+  listTimemarks,
+  overrideTimemarkTurjawali,
+  rematchTimemarkQueue
+} from '../services/timemark-service.js';
+import { getTurjawaliRecap } from '../services/turjawali-recap-service.js';
+import {
+  TURJAWALI_MATCH_STATUSES,
+  TURJAWALI_TYPES
+} from '../../shared/types.js';
+
+export const timemarkRouter = Router();
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: config.maxUploadBytes }
+});
+
+const querySchema = z.object({
+  page: z.coerce.number().int().positive().optional(),
+  pageSize: z.coerce.number().int().positive().max(100).optional(),
+  search: z.string().max(200).optional(),
+  status: z.enum(['all', 'parsed', 'review', 'failed']).optional(),
+  turjawaliType: z.enum(['all', ...TURJAWALI_TYPES]).optional(),
+  matchStatus: z.enum(['all', ...TURJAWALI_MATCH_STATUSES]).optional(),
+  from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional()
+});
+
+const recapQuerySchema = z.object({
+  period: z.enum(['daily', 'weekly']).optional(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional()
+});
+
+timemarkRouter.get('/turjawali-recap', async (req, res) => {
+  const query = recapQuerySchema.parse(req.query);
+  res.json(await getTurjawaliRecap(query));
+});
+
+timemarkRouter.get('/', async (req, res) => {
+  const query = querySchema.parse(req.query);
+  res.json(await listTimemarks(query));
+});
+
+timemarkRouter.post('/rematch', async (req, res) => {
+  const body = z
+    .object({ scope: z.enum(['unmatched', 'partial', 'both']).optional() })
+    .parse(req.body ?? {});
+  res.json(await rematchTimemarkQueue(body.scope));
+});
+
+timemarkRouter.get('/:id', async (req, res) => {
+  const item = await getTimemark(req.params.id);
+  if (!item) throw new HttpError(404, 'Foto Timemark tidak ditemukan.');
+  res.json(item);
+});
+
+timemarkRouter.post('/analyze', upload.single('file'), async (req, res) => {
+  if (!req.file) throw new HttpError(400, 'File gambar wajib diunggah pada field "file".');
+  if (!req.file.mimetype.startsWith('image/')) {
+    throw new HttpError(415, 'File harus berupa gambar (JPG, PNG, WEBP).');
+  }
+  const dto = await ingestTimemark({
+    buffer: req.file.buffer,
+    filename: req.file.originalname,
+    mimeType: req.file.mimetype,
+    senderName: String(req.body.senderName ?? 'Dashboard'),
+    senderNumber: String(req.body.senderNumber ?? 'dashboard'),
+    groupName: req.body.groupName ? String(req.body.groupName) : 'Upload Dashboard',
+    caption: req.body.caption ? String(req.body.caption) : null,
+    source: 'dashboard'
+  });
+  res.status(201).json({ item: dto, warnings: dto.status === 'review' ? ['Perlu verifikasi manual.'] : [] });
+});
+
+timemarkRouter.patch('/:id/turjawali', async (req, res) => {
+  const body = z.object({ turjawaliType: z.enum(TURJAWALI_TYPES) }).parse(req.body);
+  const item = await overrideTimemarkTurjawali(req.params.id, body.turjawaliType);
+  if (!item) throw new HttpError(404, 'Foto Timemark tidak ditemukan.');
+  res.json(item);
+});
+
+timemarkRouter.delete('/:id', async (req, res) => {
+  const existing = await getTimemark(req.params.id);
+  if (!existing) throw new HttpError(404, 'Foto Timemark tidak ditemukan.');
+  await deleteTimemark(req.params.id);
+  res.status(204).end();
+});

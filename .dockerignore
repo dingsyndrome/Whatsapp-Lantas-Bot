@@ -1,0 +1,15 @@
+node_modules
+dist
+.pnpm-store
+.git
+.gitignore
+.env
+.env.local
+data
+storage
+test-output
+coverage
+*.log
+docs/screenshots
+scripts/screenshot.mjs
+scripts/screenshot-interactions.mjs

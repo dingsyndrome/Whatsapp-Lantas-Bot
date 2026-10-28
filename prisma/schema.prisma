@@ -1,0 +1,199 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model BotConfig {
+  id                 String   @id @default("singleton")
+  botName            String   @default("SIGAP Command Center")
+  waDriver           String   @default("mock")
+  autoReplyEnabled   Boolean  @default(true)
+  autoReplyTemplate  String   @default("Terima kasih {name} 🙏\nLaporan Anda sudah diterima SIGAP dan sedang diverifikasi otomatis.\n\n{summary}")
+  timemarkPrompt     String   @default("")
+  documentPrompt     String   @default("")
+  aiEnabled          Boolean  @default(false)
+  aiBaseUrl          String   @default("https://api.openai.com/v1")
+  aiApiKey           String   @default("")
+  aiModel            String   @default("gpt-4o-mini")
+  scheduleEnabled    Boolean  @default(false)
+  scheduleTime       String   @default("17:00")
+  scheduleTimezone   String   @default("Asia/Jakarta")
+  scheduleGroupJid   String   @default("")
+  scheduleGroupName  String   @default("")
+  minOcrConfidence   Int      @default(50)
+  turjawaliMatchingEnabled Boolean @default(true)
+  turjawaliKeywords   String   @default("")
+  gaturMorningStart   String   @default("06:00")
+  gaturMorningEnd     String   @default("08:00")
+  gaturEveningStart   String   @default("16:00")
+  gaturEveningEnd     String   @default("17:30")
+  patrolNightStart    String   @default("21:00")
+  patrolNightEnd      String   @default("04:00")
+  matchTimeToleranceMinutes Int @default(60)
+  matchLocationRadiusMeters Int  @default(500)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model MonitoredGroup {
+  id        String   @id @default(cuid())
+  jid       String   @unique
+  name      String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model WhatsAppSession {
+  id              String    @id @default("runtime")
+  status          String    @default("disconnected")
+  driver          String    @default("mock")
+  phone           String?
+  pushName        String?
+  lastConnectedAt DateTime?
+  lastError       String?
+  qrGeneratedAt   DateTime?
+  updatedAt       DateTime  @updatedAt
+}
+
+model TimemarkPhoto {
+  id            String    @id @default(cuid())
+  source        String    @default("whatsapp")
+  messageId     String?   @unique
+  senderName    String
+  senderNumber  String
+  groupName     String?
+  imagePath     String
+  thumbnailPath String?
+  mimeType      String    @default("image/jpeg")
+  caption       String?
+  capturedAt    DateTime?
+  timeText      String?
+  dateText      String?
+  address       String?
+  village       String?
+  district      String?
+  regency       String?
+  province      String?
+  unitName      String?
+  latitude      Float?
+  longitude     Float?
+  coordinateText String?
+  rawText       String    @default("")
+  confidence    Float     @default(0)
+  aiUsed        Boolean   @default(false)
+  status        String    @default("parsed")
+  turjawaliType String    @default("LAINNYA")
+  matchStatus   String    @default("UNMATCHED")
+  matchScore    Int       @default(0)
+  matchedPersonnelId String?
+  matchedPersonnel   SprinPersonnel? @relation("TurjawaliMatchedPersonnel", fields: [matchedPersonnelId], references: [id], onDelete: SetNull)
+  matchNotes    String    @default("")
+  senderCaption String?
+  sprinId       String?
+  sprin         Sprin?    @relation(fields: [sprinId], references: [id], onDelete: SetNull)
+  createdAt     DateTime  @default(now())
+
+  @@index([createdAt])
+  @@index([capturedAt])
+  @@index([senderNumber])
+  @@index([sprinId])
+  @@index([turjawaliType])
+  @@index([matchStatus])
+}
+
+model Sprin {
+  id             String            @id @default(cuid())
+  number         String            @unique
+  about          String?
+  dasar          String?
+  untuk          String?
+  activityDate   DateTime?
+  timeText       String?
+  place          String?
+  latitude       Float?
+  longitude      Float?
+  signatory      String?
+  signatoryRank  String?
+  filePath       String?
+  fileName       String?
+  mimeType       String?
+  source         String            @default("whatsapp")
+  rawText        String            @default("")
+  status         String            @default("active")
+  turjawaliType  String            @default("LAINNYA")
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  personnel      SprinPersonnel[]
+  links          LinkSubmission[]
+  timemarks      TimemarkPhoto[]
+
+  @@index([activityDate])
+  @@index([status])
+  @@index([turjawaliType])
+}
+
+model SprinPersonnel {
+  id        String   @id @default(cuid())
+  sprinId   String
+  sprin     Sprin    @relation(fields: [sprinId], references: [id], onDelete: Cascade)
+  no        Int
+  name      String
+  rankNrp   String?
+  rank      String?
+  nrp       String?
+  jabatan   String?
+  penugasan String?
+  ket       String?
+  page      Int      @default(1)
+  rawText   String   @default("")
+  createdAt DateTime @default(now())
+  matchedTimemarks TimemarkPhoto[] @relation("TurjawaliMatchedPersonnel")
+
+  @@index([sprinId, no])
+  @@index([penugasan])
+}
+
+model LinkSubmission {
+  id            String    @id @default(cuid())
+  messageId     String?
+  senderName    String
+  senderNumber  String
+  groupName     String?
+  url           String
+  normalizedUrl String
+  platform      String
+  category      String    @default("Lainnya")
+  title         String?
+  receivedAt    DateTime
+  status        String    @default("unchecked")
+  httpStatus    Int?
+  verifiedAt    DateTime?
+  sprinId       String?
+  sprin         Sprin?    @relation(fields: [sprinId], references: [id], onDelete: SetNull)
+  createdAt     DateTime  @default(now())
+
+  @@index([receivedAt])
+  @@index([platform])
+  @@index([senderNumber])
+  @@index([sprinId])
+}
+
+model Activity {
+  id          String   @id @default(cuid())
+  type        String
+  title       String
+  description String?
+  actor       String?
+  entityType  String?
+  entityId    String?
+  metadata    String   @default("{}")
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([type])
+}
