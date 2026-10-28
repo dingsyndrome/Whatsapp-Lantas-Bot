@@ -5,6 +5,7 @@ import { config } from '../config.js';
 import { HttpError } from '../lib/http-error.js';
 import {
   createManualSprin,
+  deleteSprin,
   getSprin,
   importSprinPersonnel,
   ingestSprin,
@@ -98,4 +99,10 @@ sprinRouter.post('/:id/personnel/import', upload.single('file'), async (req, res
   });
   if (!result) throw new HttpError(404, 'Surat Perintah tidak ditemukan.');
   res.status(201).json(result);
+});
+
+sprinRouter.delete('/:id', async (req, res) => {
+  const deleted = await deleteSprin(String(req.params.id));
+  if (!deleted) throw new HttpError(404, 'Surat Perintah tidak ditemukan.');
+  res.status(204).end();
 });

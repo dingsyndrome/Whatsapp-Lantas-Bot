@@ -11,6 +11,7 @@ import {
   parsePersonnelCells,
   parsePersonnelLine,
   parseSprinText,
+  personnelFromLampiranPages,
   personnelFromTextPages
 } from './sprin-parser.js';
 import { PAGE_BREAK, type ParsedPersonnel, type ParsedSprinDocument } from './types.js';
@@ -268,7 +269,11 @@ export async function parseSprinDocument(
   if (isPdf) {
     const { rawText, pages, tablePersonnel } = await extractPdf(buffer);
     const textPersonnel = personnelFromTextPages(pages);
-    const personnel = chooseBestPersonnel([...tablePersonnel, ...textPersonnel]);
+    let personnel = chooseBestPersonnel([...tablePersonnel, ...textPersonnel]);
+    if (personnel.length === 0) {
+      // Lampiran Polri sering tanpa garis tabel & tanpa kolom NRP.
+      personnel = personnelFromLampiranPages(pages);
+    }
     parsed = parseSprinText(rawText, pages, personnel, pages.length);
   } else if (isDocx) {
     const { rawText, html } = await extractDocx(buffer);

@@ -19,6 +19,8 @@ export const config = {
   storageDir: path.resolve(root, env('STORAGE_DIR', 'storage')),
   databaseUrl: env('DATABASE_URL', 'file:../data/app.db'),
   waDriver: env('WA_DRIVER', 'mock'),
+  /** Pin versi WhatsApp Web (mis. `2.3000.1047399436-alpha`); kosong = otomatis. */
+  waWebVersion: env('WA_WEB_VERSION'),
   waSessionPath: path.resolve(root, env('WA_SESSION_PATH', 'data/wa-session')),
   puppeteerExecutablePath: env('PUPPETEER_EXECUTABLE_PATH'),
   logLevel: env('LOG_LEVEL', 'info'),

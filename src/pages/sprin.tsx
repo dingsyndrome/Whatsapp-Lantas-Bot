@@ -15,6 +15,7 @@ import {
   RefreshCw,
   Search,
   ShieldCheck,
+  Trash2,
   UploadCloud,
   UsersRound
 } from 'lucide-react';
@@ -201,7 +202,25 @@ function SprinDetailDialog({
   const [tab, setTab] = React.useState('ringkasan');
   const [updating, setUpdating] = React.useState(false);
   const [importOpen, setImportOpen] = React.useState(false);
+  const [deleteOpen, setDeleteOpen] = React.useState(false);
+  const [deleting, setDeleting] = React.useState(false);
   const sprin = detailApi.data;
+
+  const removeSprin = async () => {
+    if (!sprin) return;
+    setDeleting(true);
+    try {
+      await api.delete(`/sprin/${sprin.id}`);
+      toast.success('Surat Perintah dihapus', { description: sprin.number });
+      setDeleteOpen(false);
+      onChanged();
+      onClose();
+    } catch (error) {
+      toast.error('Gagal menghapus Sprin', { description: errorMessage(error) });
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   React.useEffect(() => {
     if (!sprinId) return;
@@ -291,6 +310,9 @@ function SprinDetailDialog({
                     <RefreshCw className="h-3.5 w-3.5" /> Aktifkan kembali
                   </Button>
                 )}
+                <Button size="sm" variant="destructive" onClick={() => setDeleteOpen(true)}>
+                  <Trash2 className="h-3.5 w-3.5" /> Hapus Sprin
+                </Button>
               </div>
             </div>
 
@@ -354,6 +376,27 @@ function SprinDetailDialog({
                   onChanged();
                 }}
               />
+              <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Hapus Surat Perintah?</DialogTitle>
+                    <DialogDescription>
+                      <span className="font-mono">{sprin.number}</span> beserta seluruh personel dan dokumen
+                      tersimpannya akan dihapus permanen. Foto Timemark dan link yang pernah tertaut tidak
+                      dihapus, hanya kehilangan kaitan Sprin.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setDeleteOpen(false)}>
+                      Batal
+                    </Button>
+                    <Button variant="destructive" onClick={() => void removeSprin()} disabled={deleting}>
+                      {deleting ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                      Hapus permanen
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
         ) : null}

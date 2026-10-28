@@ -203,6 +203,7 @@ Sesi WhatsApp disimpan di `data/wa-session/` (lokal) atau `/data/wa-session` (Do
 | `STORAGE_DIR` | `./storage` | Gambar, thumbnail, PDF/DOCX |
 | `WA_DRIVER` | `mock` | Nilai awal driver; dapat diubah dari dashboard |
 | `WA_SESSION_PATH` | `./data/wa-session` | Sesi LocalAuth WhatsApp |
+| `WA_WEB_VERSION` | kosong | Pin versi WhatsApp Web (mis. `2.3000.1047399436-alpha`) bila `downloadMedia`/`getChats` gagal setelah WA Web terbaru |
 | `PUPPETEER_EXECUTABLE_PATH` | kosong | Path Chrome/Chromium; Docker `/usr/bin/chromium` |
 | `TZ` | `Asia/Jakarta` | Zona waktu server, laporan, dan cron |
 | `CORS_ORIGIN` | `http://localhost:5173` | Origin frontend yang diizinkan |
@@ -548,6 +549,7 @@ Contoh bagian Turjawali pada `daily.txt`:
 | POST | `/api/sprin/:id/personnel/import` | Impor personel dari XLSX/CSV (`mode=replace\|append`) |
 | GET | `/api/sprin/:id` | Detail + seluruh personel |
 | PATCH | `/api/sprin/:id/status` | Aktif/selesai/arsip |
+| DELETE | `/api/sprin/:id` | Hapus Sprin + personel + dokumen tersimpan |
 | GET | `/api/links` | List/filter link |
 | GET | `/api/links/summary` | Agregat status/platform |
 | POST | `/api/links/:id/validate` | Validasi ulang |
@@ -737,6 +739,8 @@ Build       Vite build success
 | OCR confidence rendah | Foto miring/blur; aktifkan AI fallback atau edit prompt; cek `minOcrConfidence` |
 | Nomor Sprin tidak terdeteksi | Pastikan PDF/DOCX memuat baris `Nomor: Sprin/...`; cek teks mentah di database/log |
 | PDF terbaca 0 personel | Tabel tanpa grid garis; parser fallback membutuhkan baris bernomor + kolom teks. Kirim sample untuk tuning |
+| `Failed to download WhatsApp media` / daftar grup kosong / bot tidak membalas | WhatsApp Web terlalu baru untuk whatsapp-web.js. Pin versi lewat `WA_WEB_VERSION` (mis. `2.3000.1047399436-alpha`), lalu restart |
+| Pesan dari nomor bot sendiri tidak diproses | Normal: `fromMe` diabaikan agar bot tidak membalas dirinya. Uji dari nomor lain yang ada di grup |
 | `spawn EPERM` saat install | Jalankan terminal biasa (bukan sandbox ketat), lalu `pnpm approve-builds --all` |
 | `EPERM rename query_engine...` saat setup | Hentikan API/dev server dulu (DLL Prisma sedang dipakai), lalu jalankan `pnpm setup` |
 | SQLite terkunci | Hanya satu proses API; jangan jalankan `pnpm dev:api` dan `pnpm start` bersamaan |

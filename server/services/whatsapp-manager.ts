@@ -181,6 +181,19 @@ export class WhatsAppManager {
       }
       this.client = new Client({
         authStrategy: new LocalAuth({ clientId: 'sigap', dataPath: paths.waSession }),
+        // Versi WhatsApp Web yang terlalu baru dapat mematahkan API internal
+        // whatsapp-web.js (downloadMedia / getChats melempar error `r`).
+        // Pin versi lewat WA_WEB_VERSION bila itu terjadi.
+        ...(config.waWebVersion
+          ? {
+              webVersion: config.waWebVersion,
+              webVersionCache: {
+                type: 'remote' as const,
+                remotePath:
+                  'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/{version}.html'
+              }
+            }
+          : {}),
         puppeteer: {
           headless: true,
           executablePath,

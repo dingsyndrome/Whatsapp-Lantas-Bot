@@ -453,6 +453,26 @@ export async function importSprinPersonnel(
   };
 }
 
+export async function deleteSprin(id: string): Promise<boolean> {
+  const sprin = await prisma.sprin.findUnique({ where: { id } });
+  if (!sprin) return false;
+
+  // Personel ikut terhapus (cascade); link & foto Timemark menjadi tanpa Sprin.
+  await prisma.sprin.delete({ where: { id } });
+  if (sprin.filePath) {
+    await fs.unlink(path.join(paths.storage, sprin.filePath)).catch(() => undefined);
+  }
+  await recordActivity({
+    type: 'sprin_deleted',
+    title: 'Surat Perintah dihapus',
+    description: sprin.number,
+    actor: 'Dashboard',
+    entityType: 'sprin',
+    entityId: id
+  });
+  return true;
+}
+
 export async function updateSprinStatus(id: string, status: string): Promise<SprinDTO | null> {
   if (!['active', 'completed', 'archived'].includes(status)) {
     throw new SprinValidationError('Status Sprin tidak valid.');

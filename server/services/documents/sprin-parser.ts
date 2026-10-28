@@ -27,6 +27,8 @@ const RANKS = [
   'IPTU',
   'AIPTU',
   'AIPDA',
+  'BRIPTU',
+  'BRPTU',
   'BRIPKA',
   'BRIGPOL',
   'BRIPDA',
@@ -197,6 +199,36 @@ function extractSignatory(text: string): { name: string | null; rank: string | n
     const rank = rankMatch?.[1] ?? null;
     const name = cleanField(rankLine.replace(rankPattern, ''));
     if (name) return { name, rank };
+  }
+
+  // Gaya Polri: "IVAN DANARA OKTAVIAN, S.Tr.K." diikuti
+  // "AJUN KOMISARIS POLISI NRP 94101244".
+  const nrpIndex = bodyLines.findIndex((line) => /\bNRP\s*[:.]?\s*\d{4,}/i.test(line));
+  if (nrpIndex > 0) {
+    const nrpLine = bodyLines[nrpIndex];
+    const longRank = nrpLine.match(
+      /^(AJUN\s+KOMISARIS\s+BESAR\s+POLISI|AJUN\s+KOMISARIS\s+POLISI|KOMISARIS\s+BESAR\s+POLISI|KOMISARIS\s+POLISI|BRIGADIR\s+JENDERAL(?:\s+POLISI)?|INSPEKTUR\s+JENDERAL(?:\s+POLISI)?|INSPEKTUR\s+POLISI)/i
+    );
+    const rankMap: Record<string, string> = {
+      'AJUN KOMISARIS BESAR POLISI': 'AKBP',
+      'AJUN KOMISARIS POLISI': 'AKP',
+      'KOMISARIS BESAR POLISI': 'KOMBES',
+      'KOMISARIS POLISI': 'KOMPOL',
+      'BRIGADIR JENDERAL': 'BRIGJEN',
+      'INSPEKTUR JENDERAL': 'IRJEN',
+      'INSPEKTUR POLISI': 'IP'
+    };
+    const candidate = bodyLines[nrpIndex - 1]?.trim() ?? '';
+    const looksLikeName =
+      /^[A-Z][A-Za-z.,'\- ]{4,}$/.test(candidate) &&
+      !/^(KASAT|KANIT|KAUR|KEPALA|KAPOLRES|WAKA|KABAG|KASI)\b/i.test(candidate);
+    if (looksLikeName) {
+      const key = longRank?.[1]?.toUpperCase().replace(/\s+/g, ' ') ?? '';
+      return {
+        name: cleanField(candidate),
+        rank: longRank ? (rankMap[key] ?? key) : null
+      };
+    }
   }
 
   const leader = [...tail].reverse().find((line) => /^(?:KEPALA\s+KEPOLISIAN|KAPOLRES|KEPALA\s+SAT)/i.test(line));
@@ -404,6 +436,93 @@ export function dedupePersonnel(personnel: ParsedPersonnel[]): ParsedPersonnel[]
     seen.add(key);
     return true;
   });
+}
+
+/** Urutkan pangkat terpanjang dulu agar "PENATA MUDA TK I" tidak terbaca "PENATA". */
+const LAMPIRAN_RANK_RE = new RegExp(
+  `\\b(${[...RANKS]
+    .sort((a, b) => b.length - a.length)
+    .map((rank) => rank.replace(/ /g, '\\s+'))
+    .join('|')})\\b`,
+  'i'
+);
+
+/**
+ * Baris lampiran gaya "26. ANDI SISCA AIPDA BA SATLANTAS SIMP 3 GOLDEN":
+ * nomor, nama, pangkat (tanpa NRP), lalu jabatan/penugasan/ket.
+ */
+export function parseLampiranRow(line: string, page: number): ParsedPersonnel | null {
+  const match = /^\s*(\d{1,3})\s*[.)]\s+(.+)$/.exec(line);
+  if (!match) return null;
+  const no = Number(match[1]);
+  if (!Number.isFinite(no) || no < 1 || no > 2000) return null;
+
+  const body = match[2].replace(/\s+/g, ' ').trim();
+  const rankMatch = LAMPIRAN_RANK_RE.exec(body);
+  if (!rankMatch) return null;
+
+  const name = body.slice(0, rankMatch.index).trim().replace(/[,\s]+$/, '');
+  if (name.length < 3) return null;
+
+  const rank = rankMatch[1].toUpperCase().replace(/\s+/g, ' ');
+  const rest = body.slice(rankMatch.index + rankMatch[0].length).trim();
+  const penMatch = rest.match(PENUGASAN_RE);
+  const ketMatch = rest.match(KET_RE);
+
+  const jabatan = cleanField(
+    rest.replace(PENUGASAN_RE, ' ').replace(KET_RE, ' ').replace(/\s+/g, ' ')
+  );
+
+  return {
+    no,
+    name: name.toUpperCase(),
+    rankNrp: null,
+    rank,
+    nrp: null,
+    jabatan: jabatan ? jabatan.toUpperCase() : null,
+    penugasan: penMatch ? penMatch[1].toUpperCase() : null,
+    ket: ketMatch ? ketMatch[0].toUpperCase() : null,
+    page,
+    rawText: body
+  };
+}
+
+/**
+ * Ekstraksi cadangan untuk lampiran tanpa garis tabel (umum pada PDF Polri):
+ * baris bernomor + pangkat, tanpa kolom NRP. Hanya dipakai bila parser utama
+ * tidak menemukan personel sama sekali.
+ */
+export function personnelFromLampiranPages(pages: string[]): ParsedPersonnel[] {
+  const rows: Array<{ text: string; page: number }> = [];
+
+  pages.forEach((pageText, pageIndex) => {
+    if (!/LAMPIRAN|DAFTAR PERSONEL|NO\.?\s*NAMA/i.test(pageText)) return;
+    const lines = pageText.split('\n').map((line) => line.trim()).filter(Boolean);
+
+    for (const line of lines) {
+      if (/^(NO|NAMA|PANGKAT|JABATAN|PENUGASAN|KET|LAMPIRAN|TANGGAL|NOMOR|HALAMAN)\b/i.test(line)) {
+        continue;
+      }
+      if (/^\d[\d\s.]*$/.test(line)) continue; // nomor halaman / indeks kolom
+      if (/^\s*\d{1,3}\s*[.)]\s+/.test(line)) {
+        rows.push({ text: line, page: pageIndex + 1 });
+        continue;
+      }
+      // Teks hasil wrap milik baris sebelumnya.
+      if (rows.length > 0 && line.length < 160) {
+        rows[rows.length - 1].text = `${rows[rows.length - 1].text} ${line}`;
+      }
+    }
+  });
+
+  const personnel: ParsedPersonnel[] = [];
+  for (const row of rows) {
+    const parsed = parseLampiranRow(row.text, row.page);
+    if (parsed) personnel.push(parsed);
+  }
+  return dedupePersonnel(personnel).sort((a, b) =>
+    a.page === b.page ? a.no - b.no : a.page - b.page
+  );
 }
 
 export function parseSprinText(
