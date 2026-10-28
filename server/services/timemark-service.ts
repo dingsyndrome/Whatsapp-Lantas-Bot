@@ -326,6 +326,9 @@ export async function overrideTimemarkTurjawali(
   const existing = await prisma.timemarkPhoto.findUnique({ where: { id } });
   if (!existing) return null;
   await rematchTimemark(id, turjawaliType);
+  // Pilihan operator selalu menang (termasuk 'LAINNYA'), agar dropdown tidak terasa
+  // 'tidak merespons' saat mesin cocok mengembalikan kategori lain.
+  await prisma.timemarkPhoto.update({ where: { id }, data: { turjawaliType } });
   await recordActivity({
     type: 'timemark_override',
     title: `Kategori Turjawali dikoreksi: ${TURJAWALI_LABELS[turjawaliType]}`,

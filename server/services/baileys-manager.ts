@@ -39,6 +39,8 @@ class BaileysManager {
   private lastError: string | null = null;
   private starting = false;
   private groupNames = new Map<string, string>();
+  private pairingCode: string | null = null;
+  private pendingPairingPhone: string | null = null;
 
   private sessionDir(): string {
     return path.join(paths.waSession, 'baileys');
@@ -54,6 +56,7 @@ class BaileysManager {
       lastError: this.lastError,
       qrDataUrl: this.qrDataUrl,
       qrGeneratedAt: this.qrGeneratedAt?.toISOString() ?? null,
+      pairingCode: this.pairingCode,
       isMock: false
     } as WhatsAppStatusDTO;
   }
@@ -68,13 +71,14 @@ class BaileysManager {
       .catch((error) => logger.warn({ err: error }, 'Gagal menyimpan status WhatsApp'));
   }
 
-  async connect(): Promise<WhatsAppStatusDTO> {
+  async connect(pairingPhone?: string): Promise<WhatsAppStatusDTO> {
     if (this.starting) return this.getStatus();
     if (this.socket) return this.getStatus();
     this.starting = true;
     this.statusValue = 'connecting';
     this.lastError = null;
     this.qrDataUrl = null;
+    this.pairingCode = null;
     await this.persist('connecting');
 
     try {
@@ -91,6 +95,12 @@ class BaileysManager {
         generateHighQualityLinkPreview: false
       });
       this.socket = socket;
+
+      // Login tanpa QR: kode pairing diminta saat event `qr` pertama tiba,
+      // karena socket belum siap menerima perintah sebelum itu.
+      if (pairingPhone) {
+        this.pendingPairingPhone = pairingPhone.replace(/\D/g, '');
+      }
 
       socket.ev.on('creds.update', saveCreds);
 
@@ -136,11 +146,26 @@ class BaileysManager {
       await this.persist('qr');
       realtime.publish('wa-status', this.getStatus());
       logger.info('QR WhatsApp (Baileys) dibuat — pindai dari Settings → Koneksi');
+
+      // Nomor sudah diminta lewat /wa/pairing → minta kode pairing sekarang,
+      // saat socket benar-benar siap (kalau dipanggil lebih awal: "Connection Closed").
+      if (this.pendingPairingPhone && !this.pairingCode) {
+        const phone = this.pendingPairingPhone;
+        this.pendingPairingPhone = null;
+        try {
+          this.pairingCode = await this.socket?.requestPairingCode(phone) ?? null;
+          logger.info({ code: this.pairingCode, phone }, 'Kode pairing WhatsApp dibuat');
+          realtime.publish('wa-status', this.getStatus());
+        } catch (error) {
+          logger.warn({ err: error }, 'Gagal meminta kode pairing WhatsApp');
+        }
+      }
     }
 
     if (update.connection === 'open') {
       this.statusValue = 'connected';
       this.qrDataUrl = null;
+      this.pairingCode = null;
       const id = this.socket?.user?.id ?? '';
       this.phone = normalizePhone(id.split(':')[0] ?? '') ?? null;
       this.pushName = this.socket?.user?.name ?? null;
@@ -197,6 +222,29 @@ class BaileysManager {
   async restart(): Promise<WhatsAppStatusDTO> {
     await this.disconnect(false);
     return this.connect();
+  }
+
+  /**
+   * Minta kode pairing pada socket yang sedang aktif (status `qr`).
+   * Dipakai tombol "Login via nomor HP" tanpa memulai ulang koneksi.
+   */
+  async pairWithPhone(phone: string): Promise<WhatsAppStatusDTO> {
+    const digits = phone.replace(/\D/g, '');
+    if (!this.socket || this.statusValue !== 'qr') {
+      this.pendingPairingPhone = digits;
+      if (!this.socket) await this.connect(digits);
+      return this.getStatus();
+    }
+    try {
+      this.pairingCode = await this.socket.requestPairingCode(digits);
+      this.pendingPairingPhone = null;
+      logger.info({ code: this.pairingCode, phone: digits }, 'Kode pairing WhatsApp dibuat');
+      realtime.publish('wa-status', this.getStatus());
+    } catch (error) {
+      logger.warn({ err: error }, 'Gagal meminta kode pairing WhatsApp');
+      this.lastError = error instanceof Error ? error.message : 'Gagal meminta kode pairing.';
+    }
+    return this.getStatus();
   }
 
   async getGroups(): Promise<AvailableGroup[]> {

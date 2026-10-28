@@ -39,6 +39,18 @@ whatsappRouter.post('/resync', async (req, res) => {
   res.json(await whatsappManager.resyncRecentMessages(body));
 });
 
+whatsappRouter.post('/pairing', async (req, res) => {
+  const body = z.object({ phone: z.string().min(9).max(20) }).parse(req.body ?? {});
+  res.json(await whatsappManager.requestPairing(body.phone));
+});
+
+whatsappRouter.post('/reset-session', async (req, res) => {
+  const body = z
+    .object({ target: z.enum(['webjs', 'baileys', 'all']).optional() })
+    .parse(req.body ?? {});
+  res.json(await whatsappManager.resetSessions(body.target ?? 'all'));
+});
+
 whatsappRouter.post('/simulate', async (req, res) => {
   const body = z
     .object({

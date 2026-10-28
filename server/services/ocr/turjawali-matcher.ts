@@ -167,6 +167,7 @@ function emptyScores(): Record<TurjawaliType, number> {
     PENJAGAAN: 0,
     PENGAWALAN: 0,
     PATROLI: 0,
+    PENEGAKKAN: 0,
     LAINNYA: 0
   };
 }

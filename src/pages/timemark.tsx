@@ -13,6 +13,7 @@ import {
   LayoutGrid,
   List,
   MapPin,
+  Gavel,
   Radar,
   RefreshCw,
   Route,
@@ -81,21 +82,22 @@ const ACTIVE_TURJAWALI: Exclude<TurjawaliType, 'LAINNYA'>[] = [
   'PATROLI'
 ];
 
-const TURJAWALI_TAB_LABELS: Record<Exclude<TurjawaliType, 'LAINNYA'>, string> = {
+const TURJAWALI_TAB_LABELS: Record<TurjawaliType, string> = {
   PENGATURAN: 'Pengaturan',
   PENJAGAAN: 'Penjagaan',
   PENGAWALAN: 'Pengawalan',
-  PATROLI: 'Patroli'
+  PATROLI: 'Patroli',
+  PENEGAKKAN: 'Gakkum',
+  LAINNYA: 'Lainnya'
 };
 
-const TURJAWALI_ICONS: Record<
-  Exclude<TurjawaliType, 'LAINNYA'>,
-  React.ElementType
-> = {
+const TURJAWALI_ICONS: Record<TurjawaliType, React.ElementType> = {
   PENGATURAN: TrafficCone,
   PENJAGAAN: Shield,
   PENGAWALAN: Car,
-  PATROLI: Radar
+  PATROLI: Radar,
+  PENEGAKKAN: Gavel,
+  LAINNYA: Crosshair
 };
 
 const TURJAWALI_STYLES: Record<TurjawaliType, { badge: string; icon: string }> = {
@@ -110,6 +112,10 @@ const TURJAWALI_STYLES: Record<TurjawaliType, { badge: string; icon: string }> =
   PENGAWALAN: {
     badge: 'border-violet-500/25 bg-violet-500/10 text-violet-400',
     icon: 'bg-violet-500/10 text-violet-400 border-violet-500/20'
+  },
+  PENEGAKKAN: {
+    badge: 'border-warning/25 bg-warning/10 text-warning',
+    icon: 'bg-warning/10 text-warning border-warning/20'
   },
   PATROLI: {
     badge: 'border-success/25 bg-success/10 text-success',

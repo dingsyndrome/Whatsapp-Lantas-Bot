@@ -19,6 +19,7 @@ import {
   Radio,
   Radar,
   RefreshCw,
+  Gavel,
   ScanLine,
   Search,
   Send,
@@ -201,6 +202,12 @@ const TURJAWALI_META: Record<
     className: 'border-violet-500/25 bg-violet-500/10 text-violet-400',
     bar: 'bg-violet-400',
     soft: 'from-violet-500/[0.08]'
+  },
+  PENEGAKKAN: {
+    icon: Gavel,
+    className: 'border-warning/25 bg-warning/10 text-warning',
+    bar: 'bg-warning',
+    soft: 'from-warning/[0.08]'
   },
   PATROLI: {
     icon: Radar,

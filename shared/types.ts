@@ -46,6 +46,7 @@ export const TURJAWALI_TYPES = [
   'PENJAGAAN',
   'PENGAWALAN',
   'PATROLI',
+  'PENEGAKKAN',
   'LAINNYA'
 ] as const;
 
@@ -64,6 +65,7 @@ export const TURJAWALI_LABELS: Record<TurjawaliType, string> = {
   PENJAGAAN: 'Penjagaan',
   PENGAWALAN: 'Pengawalan (Wal)',
   PATROLI: 'Patroli',
+  PENEGAKKAN: 'Penegakan Hukum (Gakkum)',
   LAINNYA: 'Lainnya'
 };
 
@@ -72,6 +74,7 @@ export const TURJAWALI_SHORT_LABELS: Record<TurjawaliType, string> = {
   PENJAGAAN: 'Jaga',
   PENGAWALAN: 'Wal',
   PATROLI: 'Patroli',
+  PENEGAKKAN: 'Gakkum',
   LAINNYA: 'Lainnya'
 };
 
@@ -150,6 +153,19 @@ export const DEFAULT_TURJAWALI_KEYWORDS: TurjawaliKeywordMap = {
     'balap liar',
     'patroli malam',
     'patroli pagi'
+  ],
+  PENEGAKKAN: [
+    'penegakan hukum',
+    'gakkum',
+    'tilang',
+    'penilangan',
+    'razia',
+    'operasi',
+    'penindakan',
+    'sidak',
+    'etle',
+    'penyidikan',
+    'laka lantas'
   ]
 };
 
@@ -436,6 +452,8 @@ export interface WhatsAppStatusDTO {
   lastError: string | null;
   qrDataUrl: string | null;
   qrGeneratedAt: string | null;
+  /** Kode pairing (login lewat nomor HP, tanpa QR) bila diminta. */
+  pairingCode?: string | null;
   isMock: boolean;
 }
 

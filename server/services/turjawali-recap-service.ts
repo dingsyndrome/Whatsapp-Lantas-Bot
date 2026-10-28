@@ -26,7 +26,8 @@ const ACTIVE_TYPES: TurjawaliActivityType[] = [
   'PENGATURAN',
   'PENJAGAAN',
   'PENGAWALAN',
-  'PATROLI'
+  'PATROLI',
+  'PENEGAKKAN'
 ];
 
 function parseDate(value?: string | null): Date {

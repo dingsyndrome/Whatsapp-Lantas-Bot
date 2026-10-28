@@ -126,6 +126,34 @@ function ConnectionPanel({
   const currentStatus = status?.status ?? 'disconnected';
   const qr = status?.qrDataUrl?.startsWith('data:image') ? status.qrDataUrl : null;
   const isMock = form.waDriver === 'mock' && currentStatus === 'mock';
+  const [pairPhone, setPairPhone] = React.useState('');
+  const [pairCode, setPairCode] = React.useState<string | null>(null);
+  const [pairPending, setPairPending] = React.useState(false);
+
+  const requestPairing = async () => {
+    if (pairPhone.replace(/\D/g, '').length < 10) {
+      toast.error('Masukkan nomor bot, contoh 08563639888.');
+      return;
+    }
+    setPairPending(true);
+    try {
+      const result = await api.post<WhatsAppStatusDTO>('/wa/pairing', { phone: pairPhone });
+      if (result.pairingCode) {
+        setPairCode(result.pairingCode);
+        toast.success('Kode pairing dibuat', {
+          description: 'Masukkan di WhatsApp → Perangkat tertaut → Tautkan dengan nomor telepon.'
+        });
+      } else {
+        toast.warning('Kode belum tersedia', {
+          description: result.lastError ?? 'Tunggu QR muncul, lalu klik lagi.'
+        });
+      }
+    } catch (error) {
+      toast.error('Gagal meminta kode pairing', { description: errorMessage(error) });
+    } finally {
+      setPairPending(false);
+    }
+  };
   return (
     <div className="grid gap-4 lg:grid-cols-[1.3fr_1fr]">
       <Card className="relative overflow-hidden">
@@ -258,6 +286,45 @@ function ConnectionPanel({
               </Button>
             ) : null}
           </div>
+
+          {form.waDriver !== 'mock' ? (
+            <div className="rounded-lg border border-border/60 bg-muted/20 p-3">
+              <p className="text-[9px] uppercase tracking-wider text-muted-foreground">
+                Login tanpa QR — via nomor HP
+              </p>
+              <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                <Input
+                  value={pairPhone}
+                  onChange={(event) => setPairPhone(event.target.value)}
+                  placeholder="08563639888"
+                  className="h-8 flex-1 text-xs"
+                />
+                <Button size="sm" variant="outline" onClick={() => void requestPairing()} disabled={pairPending}>
+                  {pairPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Smartphone className="h-3.5 w-3.5" />}
+                  Minta kode
+                </Button>
+              </div>
+              {pairCode ?? status?.pairingCode ? (
+                <div className="mt-2 flex items-center gap-3">
+                  <p className="font-mono text-xl font-bold tracking-[0.2em] text-primary">
+                    {pairCode ?? status?.pairingCode}
+                  </p>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => void copyText(pairCode ?? status?.pairingCode ?? '')}
+                  >
+                    Salin
+                  </Button>
+                </div>
+              ) : null}
+              <p className="mt-1.5 text-[9px] leading-relaxed text-muted-foreground">
+                WhatsApp di HP bot → <span className="font-semibold text-foreground">Perangkat tertaut</span> →{' '}
+                <span className="font-semibold text-foreground">Tautkan dengan nomor telepon</span>, lalu masukkan
+                kode di atas. Kode berlaku ±1 menit.
+              </p>
+            </div>
+          ) : null}
         </CardContent>
       </Card>
 
@@ -777,7 +844,8 @@ function TurjawaliSettingsPanel({
               PENGATURAN: [...DEFAULT_TURJAWALI_KEYWORDS.PENGATURAN],
               PENJAGAAN: [...DEFAULT_TURJAWALI_KEYWORDS.PENJAGAAN],
               PENGAWALAN: [...DEFAULT_TURJAWALI_KEYWORDS.PENGAWALAN],
-              PATROLI: [...DEFAULT_TURJAWALI_KEYWORDS.PATROLI]
+              PATROLI: [...DEFAULT_TURJAWALI_KEYWORDS.PATROLI],
+              PENEGAKKAN: [...DEFAULT_TURJAWALI_KEYWORDS.PENEGAKKAN]
             },
             gaturMorningStart: DEFAULT_TURJAWALI_RULES.gaturMorningStart,
             gaturMorningEnd: DEFAULT_TURJAWALI_RULES.gaturMorningEnd,

@@ -634,6 +634,46 @@ export class WhatsAppManager {
       logger.warn({ err: error }, 'Auto-reply failed');
     }
   }
+
+  /** Login tanpa QR: minta kode pairing untuk nomor bot (driver Baileys). */
+  async requestPairing(phone: string): Promise<WhatsAppStatusDTO> {
+    const digits = phone.replace(/\D/g, '');
+    if (digits.length < 10) throw new Error('Nomor HP tidak valid (contoh: 08563639888).');
+    this.activeDriver = 'baileys';
+    return baileysManager.pairWithPhone(digits);
+  }
+
+  /**
+   * Bersihkan sesi tersimpan yang menggantung (mis. sisa whatsapp-web.js)
+   * agar perangkat tertaut lama tidak menghalangi login baru.
+   */
+  async resetSessions(target: 'webjs' | 'baileys' | 'all' = 'all'): Promise<{ removed: string[] }> {
+    const removed: string[] = [];
+    const roots: Array<{ label: 'webjs' | 'baileys'; dir: string }> = [
+      { label: 'webjs', dir: path.join(paths.waSession, 'session-sigap') },
+      { label: 'baileys', dir: path.join(paths.waSession, 'baileys') }
+    ];
+
+    if (target === 'all' || target === 'webjs') {
+      await this.disconnect(false).catch(() => undefined);
+    }
+    if (target === 'all' || target === 'baileys') {
+      await baileysManager.disconnect(true).catch(() => undefined);
+    }
+
+    const fsp = await import('node:fs/promises');
+    for (const root of roots) {
+      if (target !== 'all' && target !== root.label) continue;
+      try {
+        await fsp.rm(root.dir, { recursive: true, force: true });
+        removed.push(root.label);
+      } catch (error) {
+        logger.warn({ err: error, dir: root.dir }, 'Gagal menghapus sesi WhatsApp');
+      }
+    }
+    logger.info({ removed }, 'Sesi WhatsApp dibersihkan');
+    return { removed };
+  }
 }
 
 export const whatsappManager = new WhatsAppManager();
