@@ -635,6 +635,65 @@ function TurjawaliOverview({ data }: { data: DashboardStats }) {
   );
 }
 
+function SupervisionCard({ data }: { data: DashboardStats }) {
+  const supervision = data.turjawali.supervisions;
+  return (
+    <Card className="overflow-hidden">
+      <CardHeader className="flex-row items-center justify-between space-y-0 pb-2">
+        <div>
+          <h3 className="flex items-center gap-2 text-sm font-semibold">
+            Supervisi Perwira
+            <Badge variant="violet" className="text-[8px]">12.1 – 12.6 · AGUNG 1 – 16</Badge>
+          </h3>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Caption perwira yang melakukan supervisi/pengecekan pada kegiatan hari ini
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="text-right">
+            <p className="font-mono text-lg font-semibold leading-none">{supervision.total}</p>
+            <p className="text-[9px] text-muted-foreground">laporan supervisi</p>
+          </div>
+          <div className="text-right">
+            <p className="font-mono text-lg font-semibold leading-none">{supervision.uniqueOfficers}</p>
+            <p className="text-[9px] text-muted-foreground">perwira</p>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="pt-1">
+        {supervision.items.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-border/70 bg-muted/10 px-3 py-4 text-center text-[10px] text-muted-foreground">
+            Belum ada supervisi terdeteksi. Bot mengenali sandi (mis. “12.1” / “Agung 6”), pangkat perwira
+            (IPDA–AKBP), atau pengirim yang terdaftar sebagai perwira.
+          </div>
+        ) : (
+          <div className="divide-y divide-border/40">
+            {supervision.items.slice(0, 6).map((item) => (
+              <div key={item.photoId} className="flex flex-wrap items-center gap-2 py-2">
+                <Badge variant="violet" className="font-mono text-[8px]">
+                  {item.sandi ?? 'SANDI -'}
+                </Badge>
+                <span className="text-[11px] font-semibold">
+                  {[item.rank, item.name].filter(Boolean).join(' ') || item.senderName}
+                </span>
+                <span className="text-[9px] text-muted-foreground">
+                  {TURJAWALI_LABELS[item.turjawaliType as TurjawaliType]}
+                </span>
+                <span className="max-w-[280px] truncate text-[9px] text-muted-foreground">
+                  {item.address ?? 'lokasi tidak tercatat'}
+                </span>
+                <span className="ml-auto font-mono text-[9px] text-muted-foreground">
+                  {item.createdAt ? timeAgo(item.createdAt) : ''}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 function PlatformCard({ data }: { data: DashboardStats }) {
   const total = data.linksByPlatform.reduce((sum, row) => sum + row.count, 0);
   return (
@@ -1020,6 +1079,8 @@ export function DashboardPage() {
       </div>
 
       <TurjawaliOverview data={data} />
+
+      <SupervisionCard data={data} />
 
       <div className="grid gap-4 lg:grid-cols-3">
         <ChartCard data={data} />

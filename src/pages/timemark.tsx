@@ -19,6 +19,7 @@ import {
   ScanText,
   Search,
   Shield,
+  ShieldCheck,
   SlidersHorizontal,
   TrafficCone,
   UploadCloud,
@@ -153,6 +154,18 @@ function MatchBadge({ status, score }: { status: TurjawaliMatchStatus; score: nu
   );
 }
 
+function SupervisionBadge({ photo }: { photo: TimemarkDTO }) {
+  if (!photo.isSupervision) return null;
+  const who = [photo.supervisorRank, photo.supervisorName].filter(Boolean).join(' ');
+  return (
+    <Badge variant="violet" className="gap-1 text-[9px]" title={who || undefined}>
+      <ShieldCheck className="h-2.5 w-2.5" />
+      Supervisi
+      {photo.supervisorSandi ? <span className="font-mono">{photo.supervisorSandi}</span> : null}
+    </Badge>
+  );
+}
+
 function TimemarkSummary({
   data,
   reviewCount,
@@ -262,6 +275,7 @@ function PhotoCard({ photo, onClick }: { photo: TimemarkDTO; onClick: () => void
         <div className="flex flex-wrap items-center gap-1.5">
           <TurjawaliBadge type={photo.turjawaliType} />
           <MatchBadge status={photo.matchStatus} score={photo.matchScore} />
+          <SupervisionBadge photo={photo} />
           {photo.matchedPersonnelName ? (
             <span className="truncate text-[8px] text-muted-foreground">
               {photo.matchedPersonnelName}
@@ -365,6 +379,7 @@ function DetailDialog({
               <Badge className="border-0 bg-black/60 text-white backdrop-blur-sm">Timemark</Badge>
               <TurjawaliBadge type={photo.turjawaliType} />
               <MatchBadge status={photo.matchStatus} score={photo.matchScore} />
+              <SupervisionBadge photo={photo} />
               <StatusBadge status={photo.status} className="border-0 bg-black/60 backdrop-blur-sm" />
             </div>
             {mapsUrl ? (
@@ -911,7 +926,10 @@ export function TimemarkPage() {
                     <p className="truncate text-xs font-medium">{photo.unitName ?? '-'}</p>
                   </TableCell>
                   <TableCell className="hidden md:table-cell">
-                    <TurjawaliBadge type={photo.turjawaliType} />
+                    <div className="flex flex-wrap items-center gap-1">
+                      <TurjawaliBadge type={photo.turjawaliType} />
+                      <SupervisionBadge photo={photo} />
+                    </div>
                   </TableCell>
                   <TableCell>
                     <MatchBadge status={photo.matchStatus} score={photo.matchScore} />

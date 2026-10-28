@@ -77,6 +77,10 @@ export function serializeTimemark(photo: TimemarkWithSprin): TimemarkDTO {
     matchNotes: photo.matchNotes,
     sprinId: photo.sprinId,
     sprinNumber: photo.sprin?.number ?? null,
+    isSupervision: photo.isSupervision,
+    supervisorSandi: photo.supervisorSandi,
+    supervisorName: photo.supervisorName,
+    supervisorRank: photo.supervisorRank,
     createdAt: photo.createdAt.toISOString()
   };
 }
@@ -91,6 +95,7 @@ export function serializePersonnel(person: {
   jabatan: string | null;
   penugasan: string | null;
   ket: string | null;
+  phone?: string | null;
   page: number;
 }): PersonnelDTO {
   return {
@@ -103,6 +108,7 @@ export function serializePersonnel(person: {
     jabatan: person.jabatan,
     penugasan: person.penugasan,
     ket: person.ket,
+    phone: person.phone ?? null,
     page: person.page
   };
 }

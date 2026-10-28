@@ -213,6 +213,11 @@ export interface TurjawaliRecap {
     pending: number;
     details: TurjawaliPersonnelStatus[];
   };
+  supervisions: {
+    total: number;
+    uniqueOfficers: number;
+    items: SupervisionSignal[];
+  };
 }
 
 export interface TimemarkDTO {
@@ -251,6 +256,10 @@ export interface TimemarkDTO {
   matchNotes: string;
   sprinId: string | null;
   sprinNumber: string | null;
+  isSupervision: boolean;
+  supervisorSandi: string | null;
+  supervisorName: string | null;
+  supervisorRank: string | null;
   createdAt: string;
 }
 
@@ -264,6 +273,7 @@ export interface PersonnelDTO {
   jabatan: string | null;
   penugasan: string | null;
   ket: string | null;
+  phone: string | null;
   page: number;
 }
 
@@ -471,3 +481,57 @@ export interface ApiError {
   error: string;
   details?: unknown;
 }
+
+export type PersonnelCategory = 'PERWIRA' | 'PJU' | 'ANGGOTA';
+
+export interface PersonnelRosterDTO {
+  id: string;
+  no: number;
+  name: string;
+  rank: string | null;
+  nrp: string | null;
+  jabatan: string | null;
+  phone: string | null;
+  unit: string;
+  category: PersonnelCategory;
+  sandi: string | null;
+  active: boolean;
+}
+
+export interface PersonnelRosterPage extends Paginated<PersonnelRosterDTO> {
+  stats: {
+    total: number;
+    perwira: number;
+    anggota: number;
+    withPhone: number;
+    withoutPhone: number;
+  };
+}
+
+export interface SandiSlot {
+  code: string;
+  label: string;
+  personnelId: string | null;
+  personnelName: string | null;
+  source: 'manual' | 'default' | 'kosong';
+}
+
+export interface SandiMapDTO {
+  slots: SandiSlot[];
+  perwira: Array<{ id: string; name: string; rank: string | null; jabatan: string | null }>;
+  updatedAt: string | null;
+}
+
+export interface SupervisionSignal {
+  photoId: string;
+  name: string | null;
+  rank: string | null;
+  sandi: string | null;
+  senderName: string;
+  senderNumber: string;
+  capturedAt: string | null;
+  createdAt: string;
+  address: string | null;
+  turjawaliType: string;
+}
+

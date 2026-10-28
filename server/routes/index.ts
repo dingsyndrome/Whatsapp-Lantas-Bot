@@ -8,6 +8,7 @@ import { whatsappRouter } from './whatsapp.js';
 import { exportsRouter } from './exports.js';
 import { reportsRouter } from './reports.js';
 import { eventsRouter } from './events.js';
+import { personnelRouter } from './personnel.js';
 
 export const apiRouter = Router();
 
@@ -17,6 +18,7 @@ apiRouter.use('/timemark', timemarkRouter);
 apiRouter.use('/sprin', sprinRouter);
 apiRouter.use('/links', linksRouter);
 apiRouter.use('/settings', settingsRouter);
+apiRouter.use('/personnel', personnelRouter);
 apiRouter.use('/wa', whatsappRouter);
 apiRouter.use('/exports', exportsRouter);
 apiRouter.use('/reports', reportsRouter);

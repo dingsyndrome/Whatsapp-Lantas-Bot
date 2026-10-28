@@ -25,6 +25,7 @@ model BotConfig {
   scheduleGroupJid   String   @default("")
   scheduleGroupName  String   @default("")
   minOcrConfidence   Int      @default(50)
+  officerSandiMap    String   @default("{}")
   turjawaliMatchingEnabled Boolean @default(true)
   turjawaliKeywords   String   @default("")
   gaturMorningStart   String   @default("06:00")
@@ -94,6 +95,11 @@ model TimemarkPhoto {
   matchedPersonnel   SprinPersonnel? @relation("TurjawaliMatchedPersonnel", fields: [matchedPersonnelId], references: [id], onDelete: SetNull)
   matchNotes    String    @default("")
   senderCaption String?
+  isSupervision Boolean   @default(false)
+  supervisorSandi String?
+  supervisorName String?
+  supervisorRank String?
+  supervisorPersonnelId String?
   sprinId       String?
   sprin         Sprin?    @relation(fields: [sprinId], references: [id], onDelete: SetNull)
   createdAt     DateTime  @default(now())
@@ -137,6 +143,29 @@ model Sprin {
   @@index([turjawaliType])
 }
 
+model Personnel {
+  id        String   @id @default(cuid())
+  no        Int      @default(0)
+  name      String
+  rank      String?
+  nrp       String?
+  jabatan   String?
+  phone     String?
+  unit      String   @default("SATLANTAS")
+  category  String   @default("ANGGOTA")
+  sandi     String?
+  active    Boolean  @default(true)
+  source    String   @default("import")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([name])
+  @@index([nrp])
+  @@index([phone])
+  @@index([category])
+  @@index([active])
+}
+
 model SprinPersonnel {
   id        String   @id @default(cuid())
   sprinId   String
@@ -149,6 +178,7 @@ model SprinPersonnel {
   jabatan   String?
   penugasan String?
   ket       String?
+  phone     String?
   page      Int      @default(1)
   rawText   String   @default("")
   createdAt DateTime @default(now())
@@ -156,6 +186,7 @@ model SprinPersonnel {
 
   @@index([sprinId, no])
   @@index([penugasan])
+  @@index([phone])
 }
 
 model LinkSubmission {

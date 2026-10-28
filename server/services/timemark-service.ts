@@ -10,6 +10,7 @@ import { recordActivity } from '../lib/activity.js';
 import { serializeTimemark, type TimemarkWithSprin } from '../lib/serializers.js';
 import { getBotConfig } from './settings.js';
 import { extractTimemarkFromFile } from './ocr/timemark-ocr.js';
+import { detectSupervision } from './ocr/supervision-detector.js';
 import {
   matchTurjawali,
   rematchPendingTimemarks,
@@ -116,6 +117,12 @@ export async function ingestTimemark(input: TimemarkIngestInput): Promise<Timema
       caption: senderCaption,
       receivedAt
     });
+    const supervision = await detectSupervision({
+      caption: senderCaption,
+      ocrText: result.ocrText,
+      senderName: input.senderName,
+      senderNumber: input.senderNumber
+    }).catch(() => null);
 
     const created = await prisma.timemarkPhoto.create({
       data: {
@@ -151,6 +158,11 @@ export async function ingestTimemark(input: TimemarkIngestInput): Promise<Timema
         matchedPersonnelId: match.matchedPersonnelId,
         matchNotes: match.matchNotes,
         sprinId: match.sprinId,
+        isSupervision: supervision?.isSupervision ?? false,
+        supervisorSandi: supervision?.sandi ?? null,
+        supervisorName: supervision?.name ?? null,
+        supervisorRank: supervision?.rank ?? null,
+        supervisorPersonnelId: supervision?.personnelId ?? null,
         createdAt: receivedAt
       }
     });
@@ -193,6 +205,12 @@ export async function ingestTimemark(input: TimemarkIngestInput): Promise<Timema
     } catch (matchError) {
       logger.debug({ err: matchError }, 'Fallback Turjawali classification failed');
     }
+    const supervision = await detectSupervision({
+      caption: senderCaption,
+      ocrText: '',
+      senderName: input.senderName,
+      senderNumber: input.senderNumber
+    }).catch(() => null);
     const created = await prisma.timemarkPhoto.create({
       data: {
         source: input.source ?? 'whatsapp',
@@ -213,7 +231,12 @@ export async function ingestTimemark(input: TimemarkIngestInput): Promise<Timema
         matchStatus: fallbackMatch?.matchStatus ?? 'UNMATCHED',
         matchScore: fallbackMatch?.matchScore ?? 0,
         matchedPersonnelId: fallbackMatch?.matchedPersonnelId ?? null,
-        matchNotes: fallbackMatch?.matchNotes ?? 'OCR gagal; matching tidak dapat dijalankan.'
+        matchNotes: fallbackMatch?.matchNotes ?? 'OCR gagal; matching tidak dapat dijalankan.',
+        isSupervision: supervision?.isSupervision ?? false,
+        supervisorSandi: supervision?.sandi ?? null,
+        supervisorName: supervision?.name ?? null,
+        supervisorRank: supervision?.rank ?? null,
+        supervisorPersonnelId: supervision?.personnelId ?? null
       }
     });
     dtoId = created.id;

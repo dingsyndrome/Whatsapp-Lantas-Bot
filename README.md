@@ -2,7 +2,7 @@
 
 Sistem full-stack untuk memantau laporan anggota dari WhatsApp: **OCR foto Timemark**, **parser Surat Perintah PDF/DOCX multi-halaman**, **rekap link anggota lintas platform**, **Smart Matching Turjawali (Pengaturan, Penjagaan, Pengawalan, Patroli)**, dan **dashboard React** dengan panel kustomisasi bot.
 
-> **Status validasi (28 Okt 2026):** `pnpm typecheck` bersih, `pnpm test` **35/35 lulus**, smoke test API **49/49 asersi lulus**, dan dashboard telah diuji di Chrome (desktop + mobile, mode gelap/terang) tanpa console error. Proyek dipulihkan dari log sesi DSH dan dijalankan ulang dari nol (`pnpm install` → migrasi Prisma → seed) di `C:\Users\dings\Documents\deepseek-harness\default-workspace\sigap`.
+> **Status validasi (28 Okt 2026):** `pnpm typecheck` bersih, `pnpm test` **47/47 lulus**, smoke test API **49/49 asersi lulus**, dan dashboard telah diuji di Chrome (desktop + mobile, mode gelap/terang) tanpa console error. Basis data personel Satlantas (96 orang, 7 perwira) sudah diimpor dan terverifikasi, termasuk deteksi supervisi perwira dari caption. Proyek dipulihkan dari log sesi DSH dan dijalankan ulang dari nol (`pnpm install` → migrasi Prisma → seed) di `C:\Users\dings\Documents\deepseek-harness\default-workspace\sigap`.
 
 ![Dashboard SIGAP](docs/screenshots/dashboard.png)
 
@@ -129,7 +129,7 @@ Proyek ini sengaja memakai **satu paket full-stack** (bukan monorepo multi-packa
 │   ├── e2e-turjawali.mjs            ← uji UI filter/override/settings
 │   ├── test-wa-connect.mjs          ← uji QR WhatsApp Web
 │   └── docker-entrypoint.sh
-├── tests/                           ← Vitest (35 tes, termasuk 12 tes Turjawali + 8 tes impor personel)
+├── tests/                           ← Vitest (47 tes: Turjawali, impor Sprin, roster personel, supervisi)
 ├── tessdata/eng.traineddata         ← model OCR lokal (5.2 MB)
 ├── Dockerfile / docker-compose.yml
 ├── .env.example
@@ -382,6 +382,46 @@ curl -X POST http://localhost:3000/api/sprin/<id>/personnel/import \
 # → { "personnelCount": 24, "imported": 24, "skipped": 0, "warnings": [], "mode": "replace" }
 ```
 
+### 5.3c Basis data personel & deteksi supervisi perwira
+
+Selain personel per-Sprin, ada **basis data personel** (roster) yang berdiri sendiri — berisi seluruh
+anggota satuan beserta nomor HP — dan dipakai untuk mengenali pengirim WhatsApp serta mendeteksi
+perwira yang menyupervisi kegiatan.
+
+**Unggah/ganti dari Settings → tab Personel**
+
+- Berkas `XLSX`/`XLSM`/`CSV` dengan kolom `NO`, `NAMA`, `PANGKAT`, `NRP`, `JABATAN`, `NO HP`
+  (kolom `SANDI` dan `SATUAN` opsional, kolom penyangga kosong diabaikan).
+- Nomor HP dinormalkan ke format `62xxxxxxxxxx`, sehingga `0812…`, `+62 812…`, dan `62812…` dianggap sama.
+- Mode **ganti seluruh data** dipakai saat ada mutasi personel (upload ulang file terbaru);
+  mode **tambah/perbarui** mencocokkan baris berdasarkan NRP lalu nama.
+- Ringkasan: jumlah personel, perwira, dan yang belum punya nomor HP.
+- Endpoint: `GET /api/personnel`, `POST /api/personnel/import`, `GET|PUT /api/personnel/sandi`.
+
+**Peta sandi (call sign)**
+
+| Sandi | Pemegang (default dari jabatan) |
+|---|---|
+| `12.1` – `12.6` | Kasat Lantas, KBO, Kaur Mintu, Kanit Regident, Kanit Turjagwali, Kanit Gakkum |
+| `AGUNG 1` – `AGUNG 16` | Jajaran Pejabat Utama Polres (Kapolres, Waka, Kabag, Kasat, Kasi) |
+
+Pemetaan otomatis dari jabatan, bisa ditimpa manual di Settings. Peta disimpan pada
+`BotConfig.officerSandiMap`.
+
+**Deteksi supervisi** ([`supervision-detector.ts`](server/services/ocr/supervision-detector.ts))
+dijalankan setiap foto Timemark masuk, memakai caption WhatsApp + teks OCR:
+
+1. **Sandi** — `12.1`…`12.6` (juga `12,1`) dan `Agung 1`…`Agung 16` (juga `AGUNG-6`).
+2. **Pengirim perwira** — nomor HP pengirim dicocokkan ke roster, lalu pangkat dicek
+   (`IPDA`, `IPTU`, `AKP`, `KOMPOL`, `AKBP`).
+3. **Pangkat + kata kunci** — mis. “supervisi oleh AKP …”, “pengecekan lokasi”, “sidak”.
+4. Nama perwira disebut di caption (minimal dua kata sama) → dihubungkan ke roster.
+
+Hasilnya disimpan di `TimemarkPhoto` (`isSupervision`, `supervisorSandi`, `supervisorName`,
+`supervisorRank`, `supervisorPersonnelId`), tampil sebagai badge **Supervisi** di daftar foto,
+kartu **Supervisi Perwira** di dashboard, bagian `SUPERVISI PERWIRA` pada teks rekap WhatsApp,
+serta sheet **Supervisi Perwira** dan kolom `Supervisi`/`Sandi` pada ekspor XLSX.
+
 ### 5.4 Rekap Link Anggota
 
 File: [`extractor.ts`](server/services/links/extractor.ts) + [`validator.ts`](server/services/links/validator.ts)
@@ -507,6 +547,9 @@ Contoh bagian Turjawali pada `daily.txt`:
 | GET | `/api/links/summary` | Agregat status/platform |
 | POST | `/api/links/:id/validate` | Validasi ulang |
 | GET/PUT | `/api/settings` | Baca/simpan konfigurasi bot |
+| GET | `/api/personnel` | Roster personel + statistik (cari/filter) |
+| POST | `/api/personnel/import` | Unggah/ganti basis data personel (XLSX/CSV) |
+| GET/PUT | `/api/personnel/sandi` | Baca/simpan peta sandi 12.x dan Agung 1–16 |
 | POST/PATCH/DELETE | `/api/settings/groups...` | CRUD whitelist |
 | GET | `/api/wa/status` | Status WhatsApp |
 | POST | `/api/wa/connect` | Mulai/QR |
@@ -622,7 +665,7 @@ Kedua skrip menerima `SIGAP_API` sehingga bisa diarahkan ke base URL mana pun (l
 
 ```bash
 pnpm typecheck       # frontend + backend + tests
-pnpm test            # 35 tes Vitest
+pnpm test            # 47 tes Vitest
 pnpm build           # build produksi
 ```
 

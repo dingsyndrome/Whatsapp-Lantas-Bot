@@ -154,6 +154,26 @@ export function buildWaText(bundle: DailyBundle): string {
   lines.push('');
 
   lines.push('┌──────────────────────');
+  lines.push('│ *SUPERVISI PERWIRA*');
+  lines.push('└──────────────────────');
+  if (bundle.turjawali.supervisions.total === 0) {
+    lines.push('_Belum ada supervisi/pengecekan perwira terdeteksi._');
+  } else {
+    lines.push(
+      `👁️ ${bundle.turjawali.supervisions.total} laporan supervisi dari ${bundle.turjawali.supervisions.uniqueOfficers} perwira`
+    );
+    bundle.turjawali.supervisions.items.slice(0, 10).forEach((item, index) => {
+      const who = [item.rank, item.name].filter(Boolean).join(' ') || item.senderName;
+      lines.push(
+        `${index + 1}. ${item.sandi ? `[${item.sandi}] ` : ''}*${who}* · ${TURJAWALI_LABELS[item.turjawaliType as keyof typeof TURJAWALI_LABELS] ?? item.turjawaliType}`
+      );
+      if (item.address) lines.push(`   📍 ${item.address}`);
+    });
+  }
+  lines.push('──────────────────────');
+  lines.push('');
+
+  lines.push('┌──────────────────────');
   lines.push('│ *FOTO TIMEMARK*');
   lines.push('└──────────────────────');
   if (bundle.timemarks.length === 0) {
@@ -461,6 +481,24 @@ export async function buildDailyXlsx(bundle: DailyBundle): Promise<Buffer> {
 
   addSheet(
     workbook,
+    'Supervisi Perwira',
+    ['No', 'Sandi', 'Pangkat', 'Nama Perwira', 'Kategori', 'Alamat', 'Waktu Foto', 'Pengirim', 'No WA'],
+    bundle.turjawali.supervisions.items.map((item, index) => [
+      index + 1,
+      item.sandi,
+      item.rank,
+      item.name,
+      TURJAWALI_LABELS[item.turjawaliType as keyof typeof TURJAWALI_LABELS] ?? item.turjawaliType,
+      item.address,
+      item.capturedAt ? format(new Date(item.capturedAt), 'dd/MM/yyyy HH:mm') : null,
+      item.senderName,
+      item.senderNumber
+    ]),
+    [6, 12, 10, 32, 18, 50, 18, 24, 16]
+  );
+
+  addSheet(
+    workbook,
     'Foto Timemark',
     [
       'No',
@@ -478,6 +516,8 @@ export async function buildDailyXlsx(bundle: DailyBundle): Promise<Buffer> {
       'Pengirim',
       'WA',
       'Caption',
+      'Supervisi',
+      'Sandi',
       'Confidence',
       'Status'
     ],
@@ -497,10 +537,12 @@ export async function buildDailyXlsx(bundle: DailyBundle): Promise<Buffer> {
       item.senderName,
       item.senderNumber,
       item.senderCaption,
+      item.isSupervision ? 'Ya' : 'Tidak',
+      item.supervisorSandi,
       item.confidence,
       item.status
     ]),
-    [5, 16, 8, 16, 24, 11, 7, 26, 30, 48, 26, 22, 22, 16, 44, 11, 11]
+    [5, 16, 8, 16, 24, 11, 7, 26, 30, 48, 26, 22, 22, 16, 44, 10, 10, 11, 11]
   );
 
   addSheet(

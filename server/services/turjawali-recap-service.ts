@@ -7,6 +7,7 @@ import {
 } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import type {
+  SupervisionSignal,
   TurjawaliActivityType,
   TurjawaliMatchStatus,
   TurjawaliPersonnelStatus,
@@ -224,6 +225,30 @@ export async function getTurjawaliRecap(options: {
     return a.name.localeCompare(b.name);
   });
 
+  const supervisionPhotos = photos.filter((photo) => photo.isSupervision);
+  const officerKeys = new Set(
+    supervisionPhotos.map(
+      (photo) =>
+        photo.supervisorPersonnelId ??
+        `${photo.supervisorSandi ?? ''}|${photo.supervisorName ?? photo.senderName}`
+    )
+  );
+  const supervisionItems: SupervisionSignal[] = supervisionPhotos
+    .slice(-20)
+    .reverse()
+    .map((photo) => ({
+      photoId: photo.id,
+      name: photo.supervisorName ?? photo.senderName,
+      rank: photo.supervisorRank,
+      sandi: photo.supervisorSandi,
+      senderName: photo.senderName,
+      senderNumber: photo.senderNumber,
+      capturedAt: photo.capturedAt?.toISOString() ?? null,
+      createdAt: photo.createdAt.toISOString(),
+      address: photo.address,
+      turjawaliType: photo.turjawaliType
+    }));
+
   return {
     period,
     date: isoDay(start),
@@ -241,6 +266,11 @@ export async function getTurjawaliRecap(options: {
       reported: reportedPersonnel.size,
       pending: Math.max(0, activePersonnel.size - reportedPersonnel.size),
       details
+    },
+    supervisions: {
+      total: supervisionPhotos.length,
+      uniqueOfficers: officerKeys.size,
+      items: supervisionItems
     }
   };
 }

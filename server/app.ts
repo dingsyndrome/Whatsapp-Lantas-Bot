@@ -13,6 +13,7 @@ import { HttpError } from './lib/http-error.js';
 import { prisma } from './lib/prisma.js';
 import { apiRouter } from './routes/index.js';
 import { SprinValidationError } from './services/sprin-service.js';
+import { PersonnelValidationError } from './services/personnel-service.js';
 
 export function createApp(): express.Express {
   const app = express();
@@ -109,6 +110,10 @@ export function createApp(): express.Express {
       return;
     }
     if (error instanceof SprinValidationError) {
+      res.status(422).json({ error: error.message });
+      return;
+    }
+    if (error instanceof PersonnelValidationError) {
       res.status(422).json({ error: error.message });
       return;
     }

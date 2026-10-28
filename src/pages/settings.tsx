@@ -86,6 +86,7 @@ import { useRealtime } from '@/src/lib/realtime';
 import { api, copyText, downloadFile, errorMessage, exportUrl } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { formatDateTime } from '@/lib/format';
+import { PersonnelPanel } from './settings-personnel';
 
 type SimulatorLog = {
   id: string;
@@ -1509,6 +1510,7 @@ export function SettingsPage() {
             <TabsTrigger value="grup" className="text-[11px]"><UsersRound className="h-3.5 w-3.5" /> Grup & Auto-reply</TabsTrigger>
             <TabsTrigger value="ai" className="text-[11px]"><Cpu className="h-3.5 w-3.5" /> AI & Prompt</TabsTrigger>
             <TabsTrigger value="turjawali" className="text-[11px]"><Route className="h-3.5 w-3.5" /> Turjawali</TabsTrigger>
+            <TabsTrigger value="personel" className="text-[11px]"><UsersRound className="h-3.5 w-3.5" /> Personel</TabsTrigger>
             <TabsTrigger value="jadwal" className="text-[11px]"><CalendarClock className="h-3.5 w-3.5" /> Jadwal Rekap</TabsTrigger>
             <TabsTrigger value="simulator" className="text-[11px]"><Sparkles className="h-3.5 w-3.5" /> Simulator</TabsTrigger>
           </TabsList>
@@ -1538,6 +1540,10 @@ export function SettingsPage() {
 
         <TabsContent value="turjawali" className="mt-5">
           <TurjawaliSettingsPanel form={form} setForm={setForm} />
+        </TabsContent>
+
+        <TabsContent value="personel" className="mt-5">
+          <PersonnelPanel />
         </TabsContent>
 
         <TabsContent value="jadwal" className="mt-5">
