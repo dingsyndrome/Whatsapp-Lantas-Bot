@@ -1,10 +1,8 @@
 node_modules/
 .pnpm-store/
 dist/
-data/*.db
-data/*.db-journal
-data/wa-session/
-data/tesseract/
+# Runtime: database SQLite, sesi WhatsApp/Chromium, cache OCR, marker seed
+data/
 storage/
 .env
 .env.local
