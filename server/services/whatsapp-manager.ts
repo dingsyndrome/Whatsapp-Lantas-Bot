@@ -125,6 +125,7 @@ export class WhatsAppManager {
       return this.getStatus();
     }
     if (bot.waDriver === 'mock') {
+      this.activeDriver = 'mock';
       if (this.client) {
         await this.disconnect(true).catch(() => undefined);
       }

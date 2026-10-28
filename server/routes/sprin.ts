@@ -12,6 +12,7 @@ import {
   listSprins,
   updateSprinStatus
 } from '../services/sprin-service.js';
+import { autoNotifySprin, notifySprinPersonnel } from '../services/sprin-notify-service.js';
 
 export const sprinRouter = Router();
 const upload = multer({
@@ -55,6 +56,7 @@ sprinRouter.post('/upload', upload.single('file'), async (req, res) => {
     senderNumber: String(req.body.senderNumber ?? 'dashboard')
   });
   res.status(201).json(result);
+  void autoNotifySprin(result.sprin.id);
 });
 
 sprinRouter.patch('/:id/status', async (req, res) => {
@@ -99,6 +101,20 @@ sprinRouter.post('/:id/personnel/import', upload.single('file'), async (req, res
   });
   if (!result) throw new HttpError(404, 'Surat Perintah tidak ditemukan.');
   res.status(201).json(result);
+  void autoNotifySprin(sprinId);
+});
+
+sprinRouter.post('/:id/notify', async (req, res) => {
+  const body = z
+    .object({ force: z.boolean().optional(), dryRun: z.boolean().optional(), limit: z.number().int().min(1).max(200).optional() })
+    .parse(req.body ?? {});
+  const result = await notifySprinPersonnel(String(req.params.id), {
+    force: body.force,
+    dryRun: body.dryRun,
+    limit: body.limit
+  });
+  if (!result) throw new HttpError(404, 'Surat Perintah tidak ditemukan.');
+  res.json(result);
 });
 
 sprinRouter.delete('/:id', async (req, res) => {

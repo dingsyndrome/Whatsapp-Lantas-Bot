@@ -25,6 +25,7 @@ model BotConfig {
   scheduleGroupJid   String   @default("")
   scheduleGroupName  String   @default("")
   minOcrConfidence   Int      @default(50)
+  notifyOnSprinUpload Boolean @default(true)
   officerSandiMap    String   @default("{}")
   turjawaliMatchingEnabled Boolean @default(true)
   turjawaliKeywords   String   @default("")
@@ -179,6 +180,7 @@ model SprinPersonnel {
   penugasan String?
   ket       String?
   phone     String?
+  notifiedAt DateTime?
   page      Int      @default(1)
   rawText   String   @default("")
   createdAt DateTime @default(now())

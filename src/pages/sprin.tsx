@@ -14,6 +14,7 @@ import {
   Plus,
   RefreshCw,
   Search,
+  Send,
   ShieldCheck,
   Trash2,
   UploadCloud,
@@ -204,8 +205,28 @@ function SprinDetailDialog({
   const [importOpen, setImportOpen] = React.useState(false);
   const [deleteOpen, setDeleteOpen] = React.useState(false);
   const [deleting, setDeleting] = React.useState(false);
+  const [notifying, setNotifying] = React.useState(false);
   const sprin = detailApi.data;
 
+  const notifyPersonnel = async () => {
+    if (!sprin) return;
+    setNotifying(true);
+    try {
+      const result = await api.post<{
+        sent: number;
+        failed: number;
+        skipped: number;
+        matchedRoster: number;
+      }>(`/sprin/${sprin.id}/notify`, { force: true });
+      toast.success('Notifikasi diproses', {
+        description: `Terkirim ${result.sent} · gagal ${result.failed} · dilewati ${result.skipped} · cocok roster ${result.matchedRoster}`
+      });
+    } catch (error) {
+      toast.error('Gagal mengirim notifikasi', { description: errorMessage(error) });
+    } finally {
+      setNotifying(false);
+    }
+  };
   const removeSprin = async () => {
     if (!sprin) return;
     setDeleting(true);
@@ -310,6 +331,10 @@ function SprinDetailDialog({
                     <RefreshCw className="h-3.5 w-3.5" /> Aktifkan kembali
                   </Button>
                 )}
+                <Button size="sm" variant="secondary" disabled={notifying} onClick={() => void notifyPersonnel()}>
+                  {notifying ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                  Kirim notifikasi personel
+                </Button>
                 <Button size="sm" variant="destructive" onClick={() => setDeleteOpen(true)}>
                   <Trash2 className="h-3.5 w-3.5" /> Hapus Sprin
                 </Button>
