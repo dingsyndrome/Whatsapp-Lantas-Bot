@@ -1,4 +1,4 @@
-const base = 'http://127.0.0.1:3000/api';
+const base = process.env.SIGAP_API ?? 'http://127.0.0.1:3000/api';
 
 async function json(path, options) {
   const response = await fetch(`${base}${path}`, options);

@@ -4,6 +4,12 @@ import path from 'node:path';
 
 export default defineConfig({
   plugins: [react()],
+  // Vite tidak perlu membaca `.env` milik server. Berkas itu memuat
+  // NODE_ENV=development, dan Vite memakainya untuk memilih *export condition*
+  // `development` pada dependency: React dev build + JSX dev transform masuk ke
+  // bundle (≈40% lebih besar, berbeda dari hasil build Docker yang tidak membawa
+  // `.env`). Frontend tidak memakai variabel VITE_*, jadi cukup dimatikan.
+  envDir: false,
   resolve: {
     alias: {
       '@': path.resolve(__dirname, '.')

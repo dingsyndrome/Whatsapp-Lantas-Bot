@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import assert from 'node:assert/strict';
 
-const base = 'http://127.0.0.1:3000/api';
+const base = process.env.SIGAP_API ?? 'http://127.0.0.1:3000/api';
 let passed = 0;
 const cleanupTasks = [];
 

@@ -568,11 +568,24 @@ Buka **http://localhost:3000**.
 Catatan Docker:
 
 - Chromium + seluruh dependency headless sudah terpasang.
-- Model OCR sudah dibundel di `tessdata/`.
+- Model OCR `eng.traineddata` ikut ter-copy bila ada di `tessdata/`. Jika tidak ada, Tesseract mengunduhnya sekali saat OCR pertama (butuh internet) lalu menyimpannya di `tessdata/` — mount folder itu agar persist.
 - Data persisten: `./data` (SQLite + sesi WA) dan `./storage` (media).
 - Seed demo hanya berjalan sekali (marker `/data/.seeded`). Set `SEED_DEMO=false` untuk database kosong.
 - `shm_size: 1gb` diperlukan Chromium.
 - Jika ganti driver ke WhatsApp Web, QR tampil di **Settings → Koneksi**. Sesi tersimpan di volume.
+
+**Status verifikasi image (28 Okt 2026):** `docker build` sukses (image ~3,1 GB), container berstatus `healthy`,
+entrypoint menjalankan migrasi + seed pada volume kosong, dan seluruh alur berikut lolos di dalam container:
+
+```bash
+# smoke test penuh (49 asersi) terhadap aplikasi yang berjalan di Docker
+SIGAP_API=http://127.0.0.1:3005/api pnpm smoke      # PowerShell: $env:SIGAP_API='http://127.0.0.1:3005/api'
+
+# uji QR WhatsApp Web memakai /usr/bin/chromium di dalam image
+SIGAP_API=http://127.0.0.1:3005/api node scripts/test-wa-connect.mjs
+```
+
+Kedua skrip menerima `SIGAP_API` sehingga bisa diarahkan ke base URL mana pun (lokal, container, atau server lain).
 
 ### 7.4 Pengujian otomatis
 
@@ -651,6 +664,8 @@ Build       Vite build success
 | Dev server mati dengan `EBUSY: resource busy or locked, watch '...\data\wa-session\...Cookies'` | Watcher Vite menyentuh profil Chromium/LocalAuth. Sudah ditangani lewat `server.watch.ignored` di `vite.config.ts`; jika muncul lagi, pastikan daftar ignore memuat `**/data/**`, `**/server/**`, `**/*.tmpdir/**` |
 | API lambat siap saat driver `webjs` | Koneksi WhatsApp kini dijalankan di latar belakang setelah `server.listen`, jadi `/api/health` tetap langsung merespons |
 | Chat tidak diproses | Cek whitelist grup, bot harus anggota grup, dan pesan bukan dari bot sendiri |
+| Bundle `dist` ~1,4 MB & React DevTools aktif di produksi | `NODE_ENV=development` di `.env` membuat Vite memilih *export condition* dev. `vite.config.ts` kini memakai `envDir: false` sehingga build selalu memakai React produksi (~1,03 MB, identik dengan hasil Docker) |
+| `[vite:esbuild-transpile] remove ... Access is denied` saat build di Windows | Antivirus memegang berkas sementara esbuild. Arahkan `TEMP`/`TMP` ke folder lokal (`$env:TEMP='.tmp-build'`) lalu ulangi build |
 
 ### 7.7 Checklist produksi
 
