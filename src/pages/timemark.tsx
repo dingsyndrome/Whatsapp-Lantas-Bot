@@ -79,7 +79,8 @@ const ACTIVE_TURJAWALI: Exclude<TurjawaliType, 'LAINNYA'>[] = [
   'PENGATURAN',
   'PENJAGAAN',
   'PENGAWALAN',
-  'PATROLI'
+  'PATROLI',
+  'PENEGAKKAN'
 ];
 
 const TURJAWALI_TAB_LABELS: Record<TurjawaliType, string> = {

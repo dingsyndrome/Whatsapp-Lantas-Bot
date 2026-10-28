@@ -1072,7 +1072,7 @@ function TurjawaliSettingsPanel({
             }}
           >
             <TabsList className="h-9 w-full justify-start overflow-x-auto">
-              {(['PENGATURAN', 'PENJAGAAN', 'PENGAWALAN', 'PATROLI'] as TurjawaliActivityType[]).map(
+              {(['PENGATURAN', 'PENJAGAAN', 'PENGAWALAN', 'PATROLI', 'PENEGAKKAN'] as TurjawaliActivityType[]).map(
                 (type) => (
                   <TabsTrigger key={type} value={type} className="text-[10px]">
                     {TURJAWALI_LABELS[type]}

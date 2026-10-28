@@ -62,6 +62,18 @@ function normalizeName(value: string): string {
     .trim();
 }
 
+
+/** Ringkas alamat menjadi kecamatan saja, sesuai kebutuhan laporan. */
+function shortLocation(address: string | null, district: string | null): string {
+  if (district && district.trim()) return `Kec. ${district.trim()}`;
+  if (!address) return 'lokasi tidak tercatat';
+  const match = address.match(/Kec(?:amatan)?\.?\s*([A-Za-z][A-Za-z\s.'-]{1,30}?)(?:,|\s*Kab|\s*Kota|$)/i);
+  if (match) return `Kec. ${match[1].trim()}`;
+  const kab = address.match(/Kab(?:upaten)?\.?\s*([A-Za-z][A-Za-z\s.'-]{1,30}?)(?:,|$)/i);
+  if (kab) return `Kab. ${kab[1].trim()}`;
+  return address.split(',')[0].trim().slice(0, 40);
+}
+
 function hourOf(date: Date): number {
   return date.getHours();
 }
@@ -115,7 +127,7 @@ export async function buildCustomRecap(params: CustomRecapParams): Promise<Custo
       at: (photo.capturedAt ?? photo.createdAt).toISOString(),
       timeText: photo.timeText,
       category: photo.turjawaliType as TurjawaliType,
-      address: photo.address,
+      address: shortLocation(photo.address, photo.district),
       senderName: photo.senderName,
       unitName: photo.unitName,
       matchStatus: photo.matchStatus,
@@ -156,6 +168,7 @@ export async function buildCustomRecap(params: CustomRecapParams): Promise<Custo
   };
 
   const rosterView = rosterOnly ? roster : roster;
+  const isPerwira = (row: { category: string }) => row.category === 'PERWIRA';
   for (const photo of filteredPhotos) {
     const person = matchRoster(photo.senderName, photo.senderNumber);
     if (!person) continue;
@@ -176,6 +189,7 @@ export async function buildCustomRecap(params: CustomRecapParams): Promise<Custo
     .map((person) => ({
       name: person.name,
       rankNrp: [person.rank, person.nrp].filter(Boolean).join('/') || null,
+      category: person.category,
       photos: submittedMap.get(person.id)?.photos ?? 0,
       links: submittedMap.get(person.id)?.links ?? 0
     }));
@@ -184,8 +198,14 @@ export async function buildCustomRecap(params: CustomRecapParams): Promise<Custo
     .map((person) => ({
       name: person.name,
       rankNrp: [person.rank, person.nrp].filter(Boolean).join('/') || null,
+      category: person.category,
       phone: person.phone
     }));
+
+  // Perwira tidak dibebani kewajiban pelaporan — dinilai pada pengawasan saja.
+  const anggotaSubmitted = submitted.filter((person) => person.category !== 'PERWIRA');
+  const anggotaNotSubmitted = notSubmitted.filter((person) => person.category !== 'PERWIRA');
+  const anggotaTotal = rosterView.filter((person) => person.category !== 'PERWIRA').length;
 
   const label = category === 'ALL' ? 'Semua kegiatan' : category === 'POS_PAGI' ? `Pos pagi (${morningStart}–${morningEnd})` : TURJAWALI_LABELS[category];
   const supervisors = [...supervisorMap.values()].sort((a, b) => b.count - a.count);
@@ -195,8 +215,8 @@ export async function buildCustomRecap(params: CustomRecapParams): Promise<Custo
     `${format(from, 'dd MMMM yyyy', { locale: localeId })}${params.to !== params.from ? ` – ${format(to, 'dd MMMM yyyy', { locale: localeId })}` : ''}${hourFrom !== null || hourTo !== null ? ` · ${String(hourFrom ?? 0).padStart(2, '0')}:00–${String(hourTo ?? 23).padStart(2, '0')}:59` : ''}`,
     '',
     `📸 Foto Timemark: ${filteredPhotos.length}`,
-    `🔗 Link anggota: ${filteredLinks.length}`,
-    `👮 Personel roster: ${submitted.length}/${rosterView.length} sudah melapor`,
+    `🔗 Link anggota: ${filteredLinks.length} (dari ${anggotaSubmitted.filter((p) => p.links > 0).length} anggota)`,
+    `👮 Anggota sudah melapor: ${anggotaSubmitted.length}/${anggotaTotal}`,
     ''
   ];
 
@@ -204,9 +224,8 @@ export async function buildCustomRecap(params: CustomRecapParams): Promise<Custo
     lines.push('*KEGIATAN*');
     activities.slice(0, 20).forEach((activity, index) => {
       lines.push(
-        `${index + 1}. ${activity.timeText ?? format(new Date(activity.at), 'HH:mm')} · ${TURJAWALI_LABELS[activity.category]} · ${activity.unitName ?? activity.senderName}`
+        `${index + 1}. ${activity.timeText ?? format(new Date(activity.at), 'HH:mm')} · ${TURJAWALI_LABELS[activity.category]} · ${activity.unitName ?? activity.senderName} · ${activity.address ?? '-'}`
       );
-      if (activity.address) lines.push(`   📍 ${activity.address}`);
       if (activity.supervisorName || activity.supervisorSandi) {
         lines.push(
           `   👁️ ${activity.supervisorSandi ? `[${activity.supervisorSandi}] ` : ''}${[activity.supervisorRank, activity.supervisorName].filter(Boolean).join(' ')}`
@@ -222,16 +241,30 @@ export async function buildCustomRecap(params: CustomRecapParams): Promise<Custo
     supervisors.forEach((item, index) => {
       lines.push(`${index + 1}. ${item.sandi ? `[${item.sandi}] ` : ''}${[item.rank, item.name].filter(Boolean).join(' ')} · ${item.count} laporan`);
     });
+    lines.push('_Perwira tidak dihitung dalam kewajiban pelaporan._');
+  }
+
+  lines.push('', '*SUDAH MELAPOR*');
+  if (anggotaSubmitted.length === 0) {
+    lines.push('_Belum ada anggota yang melapor._');
+  } else {
+    anggotaSubmitted.slice(0, 30).forEach((person, index) => {
+      const detail = `${person.photos} foto${person.links > 0 ? ` · ${person.links} link` : ''}`;
+      lines.push(`${index + 1}. ${person.name}${person.rankNrp ? ` (${person.rankNrp})` : ''} — ${detail}`);
+    });
+    if (anggotaSubmitted.length > 30) lines.push(`… dan ${anggotaSubmitted.length - 30} anggota lain.`);
   }
 
   lines.push('', '*BELUM MELAPOR*');
-  if (notSubmitted.length === 0) {
-    lines.push('_Semua personel roster sudah melapor._');
+  if (anggotaNotSubmitted.length === 0) {
+    lines.push('_Semua anggota roster sudah melapor._');
   } else {
-    notSubmitted.slice(0, 30).forEach((person, index) => {
+    anggotaNotSubmitted.slice(0, 30).forEach((person, index) => {
       lines.push(`${index + 1}. ${person.name}${person.rankNrp ? ` (${person.rankNrp})` : ''}`);
     });
-    if (notSubmitted.length > 30) lines.push(`… dan ${notSubmitted.length - 30} personel lain.`);
+    if (anggotaNotSubmitted.length > 30) {
+      lines.push(`… dan ${anggotaNotSubmitted.length - 30} anggota lain.`);
+    }
   }
 
   return {
