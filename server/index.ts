@@ -11,7 +11,7 @@ import { terminateOcrWorker } from './services/ocr/timemark-ocr.js';
 async function main(): Promise<void> {
   ensureRuntimeDirectories();
   await prisma.$queryRaw`SELECT 1`;
-  await getBotConfig();
+  const bot = await getBotConfig();
 
   const app = createApp();
   const server = createServer(app);
@@ -23,7 +23,7 @@ async function main(): Promise<void> {
       {
         port: config.port,
         environment: config.nodeEnv,
-        driver: config.waDriver,
+        driver: bot.waDriver,
         dashboard: config.isProduction ? `http://localhost:${config.port}` : config.appBaseUrl
       },
       'SIGAP API listening'
