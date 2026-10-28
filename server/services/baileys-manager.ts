@@ -185,15 +185,34 @@ class BaileysManager {
       const loggedOut = statusCode === DisconnectReason.loggedOut;
       this.socket = null;
       this.qrDataUrl = null;
-      this.statusValue = loggedOut ? 'disconnected' : 'error';
-      this.lastError = loggedOut ? 'Sesi WhatsApp di-logout.' : 'Koneksi WhatsApp terputus.';
-      await this.persist(this.statusValue);
-      await recordActivity({
-        type: 'wa_disconnected',
-        title: 'WhatsApp terputus',
-        description: this.lastError,
-        actor: 'SIGAP'
-      });
+      this.pairingCode = null;
+
+      if (loggedOut) {
+        this.statusValue = 'disconnected';
+        this.lastError = 'Sesi WhatsApp di-logout.';
+        await this.persist('disconnected');
+        await recordActivity({
+          type: 'wa_disconnected',
+          title: 'WhatsApp terputus',
+          description: this.lastError,
+          actor: 'SIGAP'
+        });
+        return;
+      }
+
+      // WhatsApp meminta restart (515) setelah QR terpindai, atau koneksi
+      // putus sementara. Sambungkan ulang otomatis — tanpa ini QR yang sudah
+      // dipindai berakhir "timeout".
+      this.statusValue = 'connecting';
+      this.lastError = `Koneksi terputus (kode ${statusCode ?? '?'}); menyambung ulang…`;
+      await this.persist('connecting');
+      setTimeout(() => {
+        if (!this.socket && !this.starting) {
+          void this.connect().catch((error) =>
+            logger.warn({ err: error }, 'Gagal menyambung ulang WhatsApp')
+          );
+        }
+      }, 2500);
     }
   }
 

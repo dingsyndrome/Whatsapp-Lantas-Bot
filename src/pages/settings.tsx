@@ -130,6 +130,24 @@ function ConnectionPanel({
   const [pairCode, setPairCode] = React.useState<string | null>(null);
   const [pairPending, setPairPending] = React.useState(false);
 
+  /**
+   * Ganti driver langsung tersimpan: halaman ini menerima pembaruan realtime,
+   * jadi pilihan yang hanya ada di state lokal akan kembali ke nilai server
+   * (itu sebabnya QR yang tampil dulu masih milik driver lama).
+   */
+  const applyDriver = (driver: 'mock' | 'webjs' | 'baileys') => {
+    setForm((current) => (current ? { ...current, waDriver: driver } : current));
+    void api
+      .put<SettingsDTO>('/settings', { waDriver: driver })
+      .then(() => {
+        setPairCode(null);
+        toast.success(`Driver ${driver} aktif`, {
+          description: driver === 'baileys' ? 'QR/proses login akan dibuat oleh Baileys.' : 'Pengaturan disimpan.'
+        });
+      })
+      .catch((error) => toast.error('Gagal mengganti driver', { description: errorMessage(error) }));
+  };
+
   const requestPairing = async () => {
     if (pairPhone.replace(/\D/g, '').length < 10) {
       toast.error('Masukkan nomor bot, contoh 08563639888.');
@@ -187,7 +205,7 @@ function ConnectionPanel({
           <div className="grid gap-2 sm:grid-cols-3">
             <button
               type="button"
-              onClick={() => setForm((current) => (current ? { ...current, waDriver: 'mock' } : current))}
+              onClick={() => applyDriver('mock')}
               className={cn(
                 'rounded-xl border p-4 text-left transition-all',
                 form.waDriver === 'mock'
@@ -206,7 +224,7 @@ function ConnectionPanel({
             </button>
             <button
               type="button"
-              onClick={() => setForm((current) => (current ? { ...current, waDriver: 'webjs' } : current))}
+              onClick={() => applyDriver('webjs')}
               className={cn(
                 'rounded-xl border p-4 text-left transition-all',
                 form.waDriver === 'webjs'
@@ -225,7 +243,7 @@ function ConnectionPanel({
             </button>
             <button
               type="button"
-              onClick={() => setForm((current) => (current ? { ...current, waDriver: 'baileys' } : current))}
+              onClick={() => applyDriver('baileys')}
               className={cn(
                 'rounded-xl border p-4 text-left transition-all',
                 form.waDriver === 'baileys'
