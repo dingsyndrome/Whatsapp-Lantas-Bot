@@ -3,8 +3,11 @@
  * - `12.1` … `12.6` untuk perwira Satlantas.
  * - `AGUNG 1` … `AGUNG 16` untuk jajaran Pejabat Utama (PJU) Polres.
  *
- * Label di bawah adalah jabatan yang lazim memegang sandi tersebut; nilainya
- * bisa ditimpa operator lewat Settings → Personel.
+ * Hanya sandi yang sudah dipastikan pemegangnya yang diberi label/pola jabatan:
+ * Agung 1 = Kapolres, Agung 2 = Wakapolres, Agung 4 = Kabag Ops,
+ * Agung 12 = Kasat Lantas. Sandi Agung lain sengaja dibiarkan tanpa terjemahan —
+ * bot menyimpan kode apa adanya sesuai caption, dan operator dapat memetakannya
+ * manual di Settings → Personel.
  */
 export interface SandiSlotDefinition {
   code: string;
@@ -22,24 +25,17 @@ export const SANDI_SLOTS: SandiSlotDefinition[] = [
   { code: '12.6', label: 'Kanit Gakkum', jabatanPattern: /KANIT\s*GAKKUM/ }
 ];
 
-export const AGUNG_SLOTS: SandiSlotDefinition[] = [
-  { code: 'AGUNG 1', label: 'Kapolres' },
-  { code: 'AGUNG 2', label: 'Wakapolres', jabatanPattern: /\bWAKA\b/ },
-  { code: 'AGUNG 3', label: 'Kabag Ops', jabatanPattern: /KABAG\s*OPS/ },
-  { code: 'AGUNG 4', label: 'Kabag Ren', jabatanPattern: /KABAG\s*REN/ },
-  { code: 'AGUNG 5', label: 'Kabag SDM', jabatanPattern: /KABAG\s*SDM/ },
-  { code: 'AGUNG 6', label: 'Kasat Lantas', jabatanPattern: /KASAT\s*LANTAS/ },
-  { code: 'AGUNG 7', label: 'Kasat Reskrim' },
-  { code: 'AGUNG 8', label: 'Kasat Narkoba' },
-  { code: 'AGUNG 9', label: 'Kasat Intelkam' },
-  { code: 'AGUNG 10', label: 'Kasat Sabhara' },
-  { code: 'AGUNG 11', label: 'Kasat Binmas' },
-  { code: 'AGUNG 12', label: 'Kasat Tahti' },
-  { code: 'AGUNG 13', label: 'Kasi Propam' },
-  { code: 'AGUNG 14', label: 'Kasi Humas' },
-  { code: 'AGUNG 15', label: 'Kasi Dokkes' },
-  { code: 'AGUNG 16', label: 'Kasi Was' }
-];
+const AGUNG_KNOWN: Record<number, SandiSlotDefinition> = {
+  1: { code: 'AGUNG 1', label: 'Kapolres' },
+  2: { code: 'AGUNG 2', label: 'Wakapolres', jabatanPattern: /\bWAKA/ },
+  4: { code: 'AGUNG 4', label: 'Kabag Ops', jabatanPattern: /KABAG\s*OPS/ },
+  12: { code: 'AGUNG 12', label: 'Kasat Lantas', jabatanPattern: /KASAT\s*LANTAS/ }
+};
+
+export const AGUNG_SLOTS: SandiSlotDefinition[] = Array.from({ length: 16 }, (_, index) => {
+  const number = index + 1;
+  return AGUNG_KNOWN[number] ?? { code: `AGUNG ${number}`, label: '' };
+});
 
 export const ALL_SANDI_SLOTS = [...SANDI_SLOTS, ...AGUNG_SLOTS];
 

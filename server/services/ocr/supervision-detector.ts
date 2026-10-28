@@ -109,7 +109,7 @@ export function analyzeSupervision(input: SupervisionAnalyzeInput): SupervisionO
   const senderIsPerwira = Boolean(senderPerson && isPerwira(senderPerson.rank));
   const textMentionsPerwira = rankMentions.length > 0;
 
-  if (sandiHits.length > 0) {
+  if (sandiCodes.length > 0) {
     reasons.push(`Sandi ${sandiCodes.join(', ')} terdeteksi pada caption/OCR.`);
   }
   if (senderIsPerwira) {
@@ -122,7 +122,7 @@ export function analyzeSupervision(input: SupervisionAnalyzeInput): SupervisionO
   }
 
   const isSupervision =
-    sandiHits.length > 0 || senderIsPerwira || (textMentionsPerwira && keywordHit);
+    sandiCodes.length > 0 || senderIsPerwira || (textMentionsPerwira && keywordHit);
 
   if (!isSupervision) {
     return { isSupervision: false, sandi: null, personnelId: null, name: null, rank: null, reasons };
@@ -136,6 +136,21 @@ export function analyzeSupervision(input: SupervisionAnalyzeInput): SupervisionO
       personnelId: primary.id,
       name: primary.name,
       rank: primary.rank,
+      reasons
+    };
+  }
+  // Sandi dikenali tetapi belum dipetakan ke personel: simpan kode apa adanya
+  // sesuai caption, jangan menebak pemegangnya.
+  if (sandiCodes.length > 0) {
+    reasons.push(
+      `Sandi ${sandiCodes[0]} belum dipetakan ke personel; kode disimpan sesuai caption.`
+    );
+    return {
+      isSupervision: true,
+      sandi: sandiCodes[0],
+      personnelId: null,
+      name: null,
+      rank: null,
       reasons
     };
   }

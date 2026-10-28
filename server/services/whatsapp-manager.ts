@@ -302,8 +302,8 @@ export class WhatsAppManager {
   }
 
   async getGroups(): Promise<AvailableGroup[]> {
+    const monitored = await prisma.monitoredGroup.findMany();
     if (!this.client || this.statusValue !== 'connected') {
-      const monitored = await prisma.monitoredGroup.findMany();
       if (monitored.length > 0) {
         return monitored.map((group) => ({ jid: group.jid, name: group.name, participants: 0 }));
       }
@@ -313,15 +313,22 @@ export class WhatsAppManager {
         { jid: '120363000000003@g.us', name: 'Personel Giat Pengamanan', participants: 16 }
       ];
     }
-    const chats = await this.client.getChats();
-    return chats
-      .filter((chat): chat is WAWebJS.GroupChat => chat.isGroup)
-      .map((chat) => ({
-        jid: chat.id._serialized,
-        name: chat.name || 'Grup tanpa nama',
-        participants: chat.participants?.length ?? 0
-      }))
-      .sort((a, b) => a.name.localeCompare(b.name));
+    try {
+      const chats = await this.client.getChats();
+      return chats
+        .filter((chat): chat is WAWebJS.GroupChat => chat.isGroup)
+        .map((chat) => ({
+          jid: chat.id._serialized,
+          name: chat.name || 'Grup tanpa nama',
+          participants: chat.participants?.length ?? 0
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+    } catch (error) {
+      // whatsapp-web.js kadang gagal membaca store chat (mis. versi WA Web baru).
+      // Jangan sampai endpoint ikut gagal: kembalikan grup termonitor + beri log.
+      logger.warn({ err: error }, 'Gagal membaca daftar grup dari WhatsApp Web');
+      return monitored.map((group) => ({ jid: group.jid, name: group.name, participants: 0 }));
+    }
   }
 
   async sendMessage(jid: string, text: string): Promise<boolean> {

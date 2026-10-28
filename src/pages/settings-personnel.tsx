@@ -148,7 +148,7 @@ export function PersonnelPanel() {
     },
     {
       title: 'Sandi Pejabat Utama (PJU) Polres',
-      hint: 'Agung 1 – Agung 16. Kosongkan bila belum diketahui.',
+      hint: 'Agung 1 = Kapolres · Agung 2 = Wakapolres · Agung 4 = Kabag Ops · Agung 12 = Kasat Lantas. Sandi Agung lain dibiarkan sesuai caption anggota — isi manual bila sudah pasti.',
       codes: Array.from({ length: 16 }, (_, index) => `AGUNG ${index + 1}`)
     }
   ];

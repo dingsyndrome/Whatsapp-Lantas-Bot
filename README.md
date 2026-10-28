@@ -400,18 +400,23 @@ perwira yang menyupervisi kegiatan.
 
 **Peta sandi (call sign)**
 
-| Sandi | Pemegang (default dari jabatan) |
+| Sandi | Pemegang |
 |---|---|
-| `12.1` – `12.6` | Kasat Lantas, KBO, Kaur Mintu, Kanit Regident, Kanit Turjagwali, Kanit Gakkum |
-| `AGUNG 1` – `AGUNG 16` | Jajaran Pejabat Utama Polres (Kapolres, Waka, Kabag, Kasat, Kasi) |
+| `12.1` – `12.6` | Kasat Lantas, KBO, Kaur Mintu, Kanit Regident, Kanit Turjagwali, Kanit Gakkum (otomatis dari jabatan) |
+| `AGUNG 1` | Kapolres |
+| `AGUNG 2` | Wakapolres |
+| `AGUNG 4` | Kabag Ops |
+| `AGUNG 12` | Kasat Lantas |
+| `AGUNG` lainnya | **Tidak diterjemahkan otomatis** — bot menyimpan kode apa adanya sesuai caption anggota; operator dapat memetakan manual bila sudah pasti |
 
-Pemetaan otomatis dari jabatan, bisa ditimpa manual di Settings. Peta disimpan pada
+Pemetaan otomatis dari jabatan hanya untuk sandi yang sudah dipastikan. Peta disimpan pada
 `BotConfig.officerSandiMap`.
 
 **Deteksi supervisi** ([`supervision-detector.ts`](server/services/ocr/supervision-detector.ts))
 dijalankan setiap foto Timemark masuk, memakai caption WhatsApp + teks OCR:
 
-1. **Sandi** — `12.1`…`12.6` (juga `12,1`) dan `Agung 1`…`Agung 16` (juga `AGUNG-6`).
+1. **Sandi** — `12.1`…`12.6` (juga `12,1`) dan `Agung 1`…`Agung 16` (juga `AGUNG-6`); kode yang
+   belum dipetakan tetap dicatat apa adanya.
 2. **Pengirim perwira** — nomor HP pengirim dicocokkan ke roster, lalu pangkat dicek
    (`IPDA`, `IPTU`, `AKP`, `KOMPOL`, `AKBP`).
 3. **Pangkat + kata kunci** — mis. “supervisi oleh AKP …”, “pengecekan lokasi”, “sidak”.
