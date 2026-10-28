@@ -14,7 +14,7 @@ import { prisma } from '../lib/prisma.js';
 
 export interface SettingsUpdate {
   botName?: string;
-  waDriver?: 'mock' | 'webjs';
+  waDriver?: 'mock' | 'webjs' | 'baileys';
   autoReplyEnabled?: boolean;
   autoReplyTemplate?: string;
   timemarkPrompt?: string;
@@ -104,7 +104,7 @@ export async function getBotConfig() {
   return prisma.botConfig.create({
     data: {
       id: 'singleton',
-      waDriver: config.waDriver === 'webjs' ? 'webjs' : 'mock',
+      waDriver: config.waDriver === 'baileys' ? 'baileys' : config.waDriver === 'webjs' ? 'webjs' : 'mock',
       timemarkPrompt: DEFAULT_TIMEMARK_PROMPT,
       documentPrompt: DEFAULT_DOCUMENT_PROMPT,
       autoReplyTemplate: DEFAULT_AUTO_REPLY
@@ -134,7 +134,7 @@ export async function getSettings(): Promise<SettingsDTO> {
   ]);
   return {
     botName: bot.botName,
-    waDriver: bot.waDriver === 'webjs' ? 'webjs' : 'mock',
+    waDriver: bot.waDriver === 'baileys' ? 'baileys' : bot.waDriver === 'webjs' ? 'webjs' : 'mock',
     autoReplyEnabled: bot.autoReplyEnabled,
     autoReplyTemplate: bot.autoReplyTemplate || DEFAULT_AUTO_REPLY,
     timemarkPrompt: bot.timemarkPrompt || DEFAULT_TIMEMARK_PROMPT,

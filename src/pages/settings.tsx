@@ -34,6 +34,7 @@ import {
   Wand2,
   Wifi,
   WifiOff,
+  Zap,
   X
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -155,7 +156,7 @@ function ConnectionPanel({
               placeholder="SIGAP Command Center"
             />
           </div>
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="grid gap-2 sm:grid-cols-3">
             <button
               type="button"
               onClick={() => setForm((current) => (current ? { ...current, waDriver: 'mock' } : current))}
@@ -192,6 +193,25 @@ function ConnectionPanel({
               <p className="mt-3 text-xs font-semibold">WhatsApp Web</p>
               <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
                 Scan QR dengan nomor bot. Membutuhkan Chrome/Chromium di server.
+              </p>
+            </button>
+            <button
+              type="button"
+              onClick={() => setForm((current) => (current ? { ...current, waDriver: 'baileys' } : current))}
+              className={cn(
+                'rounded-xl border p-4 text-left transition-all',
+                form.waDriver === 'baileys'
+                  ? 'border-primary/40 bg-primary/[0.06] shadow-[0_0_0_1px_hsl(var(--primary)/0.2)]'
+                  : 'border-border/70 bg-muted/10 hover:border-primary/20'
+              )}
+            >
+              <div className="flex items-center justify-between">
+                <Zap className={cn('h-5 w-5', form.waDriver === 'baileys' ? 'text-primary' : 'text-muted-foreground')} />
+                {form.waDriver === 'baileys' ? <CheckCircle2 className="h-4 w-4 text-primary" /> : null}
+              </div>
+              <p className="mt-3 text-xs font-semibold">Baileys</p>
+              <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
+                Protokol WebSocket, tanpa Chromium. Paling stabil untuk server.
               </p>
             </button>
           </div>

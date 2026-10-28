@@ -1,4 +1,4 @@
-import path from 'node:path';
+﻿import path from 'node:path';
 import fs from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import Tesseract from 'tesseract.js';
@@ -64,9 +64,44 @@ export async function terminateOcrWorker(): Promise<void> {
   }
 }
 
-async function preprocess(filePath: string, variant: 'enhanced' | 'threshold'): Promise<string> {
+type PreprocessVariant = 'enhanced' | 'threshold' | 'watermark';
+
+/** Bobot seberapa lengkap hasil ekstraksi, dipakai memilih pass OCR terbaik. */
+function scoreExtraction(extraction: TimemarkExtraction): number {
+  let score = 0;
+  if (extraction.timeText) score += 30;
+  if (extraction.capturedAt) score += 25;
+  if (extraction.address) score += 15;
+  if (extraction.unitName) score += 15;
+  if (extraction.latitude !== null && extraction.longitude !== null) score += 15;
+  return score + Math.round(extraction.confidence / 10);
+}
+
+async function preprocess(filePath: string, variant: PreprocessVariant): Promise<string> {
   await fs.mkdir(paths.timemark, { recursive: true });
   const target = path.join(paths.timemark, `.ocr-${randomUUID()}.png`);
+
+  if (variant === 'watermark') {
+    // Watermark Timemark berupa teks putih besar di sisi kiri foto yang terang.
+    // Crop area itu, naikkan kontras, lalu ambang tinggi agar hanya teks putih
+    // yang tersisa.
+    const meta = await sharp(filePath).metadata();
+    const width = meta.width ?? 1600;
+    const height = meta.height ?? 1200;
+    const cropWidth = Math.max(200, Math.round(width * 0.62));
+
+    await sharp(filePath)
+      .rotate()
+      .extract({ left: 0, top: 0, width: cropWidth, height })
+      .grayscale()
+      .normalize()
+      .threshold(190)
+      .resize({ width: 1500 })
+      .png({ compressionLevel: 6 })
+      .toFile(target);
+    return target;
+  }
+
   let pipeline = sharp(filePath)
     .rotate()
     .resize({ width: 1800, height: 1800, fit: 'inside', withoutEnlargement: true })
@@ -82,7 +117,10 @@ async function preprocess(filePath: string, variant: 'enhanced' | 'threshold'): 
   return target;
 }
 
-async function recognize(filePath: string, variant: 'enhanced' | 'threshold'): Promise<{ text: string; confidence: number }> {
+async function recognize(
+  filePath: string,
+  variant: PreprocessVariant
+): Promise<{ text: string; confidence: number }> {
   const worker = await getWorker();
   const processed = await preprocess(filePath, variant);
   try {
@@ -195,6 +233,28 @@ export async function extractTimemarkFromFile(filePath: string): Promise<Timemar
       }
     } catch (error) {
       logger.warn({ err: error }, 'Secondary OCR pass failed');
+    }
+  }
+
+  // Pass ketiga: watermark putih besar di sisi kiri foto terang.
+  const stillMissing =
+    !extraction.timeText || !extraction.capturedAt || !extraction.unitName;
+  if (stillMissing) {
+    try {
+      const third = await recognize(filePath, 'watermark');
+      if (third.text.trim().length > 0) {
+        const watermarkExtraction = parseTimemarkText(third.text, third.confidence, {
+          minConfidence
+        });
+        const gained = scoreExtraction(watermarkExtraction) > scoreExtraction(extraction);
+        if (gained) {
+          extraction = watermarkExtraction;
+          ocrText = `${ocrText}\n${third.text}`.trim();
+          engineConfidence = Math.max(engineConfidence, third.confidence);
+        }
+      }
+    } catch (error) {
+      logger.warn({ err: error }, 'Watermark OCR pass failed');
     }
   }
 

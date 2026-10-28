@@ -109,6 +109,16 @@ function parseTime(text: string): string | null {
       if (hours <= 23 && minutes <= 59) candidates.push(candidate);
     }
   }
+
+  if (candidates.length === 0) {
+    // OCR watermark sering kehilangan titik dua: "i) 08 47 enin".
+    for (const match of text.matchAll(/(?:^|[^\d])([0-2][0-9])[ ]{1,3}([0-5][0-9])(?![\d])/g)) {
+      const candidate = `${match[1]}:${match[2]}`;
+      const [hours, minutes] = candidate.split(':').map(Number);
+      if (hours <= 23 && minutes <= 59) candidates.push(candidate);
+    }
+  }
+
   return candidates[0] ?? null;
 }
 

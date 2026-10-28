@@ -21,7 +21,7 @@ const timeSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
 
 const settingsSchema = z.object({
   botName: z.string().min(1).max(120).optional(),
-  waDriver: z.enum(['mock', 'webjs']).optional(),
+  waDriver: z.enum(['mock', 'webjs', 'baileys']).optional(),
   autoReplyEnabled: z.boolean().optional(),
   autoReplyTemplate: z.string().max(10_000).optional(),
   timemarkPrompt: z.string().max(30_000).optional(),

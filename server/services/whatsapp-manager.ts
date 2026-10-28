@@ -7,6 +7,7 @@ import type { AvailableGroup, WhatsAppStatusDTO, WhatsAppStatusValue } from '../
 import { TURJAWALI_LABELS } from '../../shared/types.js';
 import { config, paths } from '../config.js';
 import { logger } from '../lib/logger.js';
+import { baileysManager } from './baileys-manager.js';
 import { prisma } from '../lib/prisma.js';
 import { realtime } from '../lib/realtime.js';
 import { recordActivity } from '../lib/activity.js';
@@ -57,9 +58,21 @@ export class WhatsAppManager {
   private qrGeneratedAt: Date | null = null;
   private starting = false;
 
+  /** True bila driver aktif adalah Baileys (tanpa Chromium). */
+  private async usesBaileys(): Promise<boolean> {
+    const bot = await getBotConfig();
+    return bot.waDriver === 'baileys';
+  }
+
   async initialize(): Promise<void> {
     const session = await ensureWhatsAppSessionRow();
     const bot = await getBotConfig();
+    if (bot.waDriver === 'baileys') {
+      this.activeDriver = 'baileys';
+      await baileysManager.connect();
+      return;
+    }
+    this.activeDriver = bot.waDriver === 'webjs' ? 'webjs' : 'mock';
     this.statusValue = bot.waDriver === 'webjs' ? 'disconnected' : 'mock';
     this.phone = session.phone;
     this.pushName = session.pushName;
@@ -76,6 +89,7 @@ export class WhatsAppManager {
   }
 
   getStatus(): WhatsAppStatusDTO {
+    if (this.activeDriver === 'baileys') return baileysManager.getStatus();
     return {
       status: this.statusValue,
       driver: this.isMock ? 'mock' : 'webjs',
@@ -89,8 +103,18 @@ export class WhatsAppManager {
     };
   }
 
+  /** Driver yang sedang dipakai facade ini (mock/webjs/baileys). */
+  private activeDriver: 'mock' | 'webjs' | 'baileys' = 'mock';
+
   async reflectConfig(): Promise<WhatsAppStatusDTO> {
     const bot = await getBotConfig();
+    if (bot.waDriver === 'baileys') {
+      await this.stopClient();
+      this.activeDriver = 'baileys';
+      await baileysManager.connect();
+      realtime.publish('wa-status', this.getStatus());
+      return this.getStatus();
+    }
     if (bot.waDriver === 'mock') {
       await this.stopClient();
       this.statusValue = 'mock';
@@ -153,6 +177,10 @@ export class WhatsAppManager {
   }
 
   async connect(): Promise<WhatsAppStatusDTO> {
+    if (await this.usesBaileys()) {
+      this.activeDriver = 'baileys';
+      return baileysManager.connect();
+    }
     if (this.starting) return this.getStatus();
     const bot = await getBotConfig();
     if (bot.waDriver !== 'webjs') {
@@ -297,11 +325,13 @@ export class WhatsAppManager {
   }
 
   async restart(): Promise<WhatsAppStatusDTO> {
+    if (this.activeDriver === 'baileys') return baileysManager.restart();
     await this.stopClient();
     return this.connect();
   }
 
   async disconnect(logout = false): Promise<WhatsAppStatusDTO> {
+    if (this.activeDriver === 'baileys') return baileysManager.disconnect(logout);
     if (this.client) {
       try {
         if (logout) await this.client.logout();
@@ -325,6 +355,7 @@ export class WhatsAppManager {
   }
 
   async getGroups(): Promise<AvailableGroup[]> {
+    if (this.activeDriver === 'baileys') return baileysManager.getGroups();
     const monitored = await prisma.monitoredGroup.findMany();
     if (!this.client || this.statusValue !== 'connected') {
       if (monitored.length > 0) {
@@ -355,6 +386,7 @@ export class WhatsAppManager {
   }
 
   async sendMessage(jid: string, text: string): Promise<boolean> {
+    if (this.activeDriver === 'baileys') return baileysManager.sendMessage(jid, text);
     if (this.isMock) {
       logger.info({ jid, preview: text.slice(0, 160) }, 'Mock WhatsApp send');
       await recordActivity({

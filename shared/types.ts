@@ -382,7 +382,7 @@ export interface DashboardStats {
 
 export interface SettingsDTO {
   botName: string;
-  waDriver: 'mock' | 'webjs';
+  waDriver: 'mock' | 'webjs' | 'baileys';
   autoReplyEnabled: boolean;
   autoReplyTemplate: string;
   timemarkPrompt: string;
