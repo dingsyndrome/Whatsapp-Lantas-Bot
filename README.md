@@ -648,6 +648,8 @@ Build       Vite build success
 | `spawn EPERM` saat install | Jalankan terminal biasa (bukan sandbox ketat), lalu `pnpm approve-builds --all` |
 | `EPERM rename query_engine...` saat setup | Hentikan API/dev server dulu (DLL Prisma sedang dipakai), lalu jalankan `pnpm setup` |
 | SQLite terkunci | Hanya satu proses API; jangan jalankan `pnpm dev:api` dan `pnpm start` bersamaan |
+| Dev server mati dengan `EBUSY: resource busy or locked, watch '...\data\wa-session\...Cookies'` | Watcher Vite menyentuh profil Chromium/LocalAuth. Sudah ditangani lewat `server.watch.ignored` di `vite.config.ts`; jika muncul lagi, pastikan daftar ignore memuat `**/data/**`, `**/server/**`, `**/*.tmpdir/**` |
+| API lambat siap saat driver `webjs` | Koneksi WhatsApp kini dijalankan di latar belakang setelah `server.listen`, jadi `/api/health` tetap langsung merespons |
 | Chat tidak diproses | Cek whitelist grup, bot harus anggota grup, dan pesan bukan dari bot sendiri |
 
 ### 7.7 Checklist produksi

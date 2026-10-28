@@ -16,7 +16,6 @@ async function main(): Promise<void> {
   const app = createApp();
   const server = createServer(app);
 
-  await whatsappManager.initialize();
   await rescheduleDailyRecap();
 
   server.listen(config.port, '0.0.0.0', () => {
@@ -32,6 +31,13 @@ async function main(): Promise<void> {
     console.log(`\n  SIGAP API  →  http://localhost:${config.port}`);
     console.log(`  Health     →  http://localhost:${config.port}/api/health`);
     if (!config.isProduction) console.log(`  Dashboard  →  ${config.appBaseUrl}\n`);
+  });
+
+  // Driver `webjs` butuh waktu membuka Chromium dan memuat sesi, jadi koneksi
+  // WhatsApp dijalankan di latar belakang agar API/health langsung tersedia
+  // (penting untuk healthcheck Docker dan dashboard yang dibuka lebih dulu).
+  void whatsappManager.initialize().catch((error) => {
+    logger.error({ err: error }, 'Gagal menginisialisasi WhatsApp saat startup');
   });
 
   let shuttingDown = false;
