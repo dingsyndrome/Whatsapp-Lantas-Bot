@@ -139,12 +139,16 @@ export async function buildLinkRecap(params: LinkRecapParams): Promise<LinkRecap
     notSubmitted
   };
 
+  const perwiraSenders = roster
+    .filter((person) => person.category === 'PERWIRA')
+    .map((person) => formatRankName(person.rank, person.name));
   return {
     range: { from, to, startTime, endTime },
     counts,
     platforms,
     accountability,
     text: buildLinkRecapText({
+      perwiraSenders,
       from,
       to,
       startTime,

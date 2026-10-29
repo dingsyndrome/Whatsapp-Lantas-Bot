@@ -90,6 +90,8 @@ export function buildLinkRecapText(input: {
   filterNote?: string | null;
   /** Label [pangkat] [nama] personel non-perwira yang belum mengirim link. */
   notSubmitted?: string[];
+  /** Label pengirim yang tergolong perwira; tidak ditampilkan sebagai pengirim. */
+  perwiraSenders?: string[];
   rosterTotal?: number;
 }): string {
   const counts = summarizeLinks(input.links);
@@ -127,9 +129,11 @@ export function buildLinkRecapText(input: {
 
   // Satu baris per pengirim: nama diambil dari roster (label), jumlah link
   // dihitung — anggota yang mengirim berkali-kali tidak diulang barisnya.
+  const perwiraSet = new Set(input.perwiraSenders ?? []);
   const perSender = new Map<string, { count: number; invalid: number }>();
   for (const link of input.links) {
     const person = link.senderLabel?.trim() || link.senderName;
+    if (perwiraSet.has(person)) continue;
     const entry = perSender.get(person) ?? { count: 0, invalid: 0 };
     entry.count += 1;
     if (link.status === 'invalid') entry.invalid += 1;

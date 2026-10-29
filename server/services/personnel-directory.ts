@@ -9,14 +9,14 @@ export interface DirectoryPerson {
   name: string;
   rank: string | null;
   phone: string | null;
-}
+  category?: string | null;}
 
 const RANK_PREFIX =
   /^(AKBP|AKP|KOMPOL|IPDA|IPTU|AIPTU|AIPDA|BRIGADIR|BRIGPOL|BRIPKA|BRIPTU|BRIPDA|BHARADA|BHARA|PENATA MUDA|PENATA|PEMBINA|PRATU|PRAKA|BHAYANGKARA)\b\s*/i;
 
 /** Nama untuk pencocokan: tanpa gelar, tanpa pangkat, tanpa tanda baca. */
 export function normalizePersonnelName(value: string | null | undefined): string {
-  return cleanPersonnelName(value)
+  return cleanPersonnelName(value).normalize('NFKC')
     .toUpperCase()
     .replace(RANK_PREFIX, '')
     .replace(/[^A-Z0-9 ]/g, ' ')
