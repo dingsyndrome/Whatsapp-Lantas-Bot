@@ -5,6 +5,7 @@ import { format } from 'date-fns';
 import type { Prisma } from '@prisma/client';
 import { paths } from '../config.js';
 import { prisma } from '../lib/prisma.js';
+import { findPhone } from '../lib/phone.js';
 import { recordActivity } from '../lib/activity.js';
 import {
   serializeSprin,
@@ -77,6 +78,7 @@ function personnelCreateData(parsed: ParsedSprinDocument) {
     jabatan: person.jabatan,
     penugasan: person.penugasan,
     ket: person.ket,
+    phone: person.phone ?? findPhone(person.ket) ?? findPhone(person.rawText),
     page: person.page,
     rawText: person.rawText
   }));
@@ -402,6 +404,7 @@ export async function importSprinPersonnel(
       jabatan: person.jabatan,
       penugasan: person.penugasan,
       ket: person.ket,
+    phone: person.phone ?? findPhone(person.ket) ?? findPhone(person.rawText),
       page: person.page,
       rawText: person.rawText
     }));

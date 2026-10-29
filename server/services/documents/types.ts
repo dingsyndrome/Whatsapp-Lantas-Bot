@@ -7,6 +7,8 @@ export interface ParsedPersonnel {
   jabatan: string | null;
   penugasan: string | null;
   ket: string | null;
+  /** Nomor HP bila tertulis di lampiran. */
+  phone?: string | null;
   page: number;
   rawText: string;
 }

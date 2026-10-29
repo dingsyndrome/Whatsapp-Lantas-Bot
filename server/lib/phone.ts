@@ -21,3 +21,14 @@ export function samePhone(left: string | null | undefined, right: string | null 
   const tail = 9;
   return a.length >= tail && b.length >= tail && a.slice(-tail) === b.slice(-tail);
 }
+/**
+ * Ambil nomor HP Indonesia pertama dari teks bebas (mis. kolom KET lampiran
+ * Sprin: "08113671001 nomor hp"). Mengembalikan format 62xxxxxxxxxx.
+ */
+export function findPhone(text: string | null | undefined): string | null {
+  if (!text) return null;
+  // Izinkan pemisah spasi/titik/strip di antara digit (mis. "+62 811 3671 001").
+  const match = String(text).match(/(?:\+?62|0)[\s.-]?8(?:\d[\s.-]?){7,11}/);
+  if (!match) return null;
+  return normalizePhone(match[0]);
+}
