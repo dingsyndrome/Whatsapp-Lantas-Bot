@@ -1,0 +1,75 @@
+name: Deploy
+
+# Deploy otomatis ke VPS setelah CI ("verify: Typecheck · Test · Build") sukses
+# pada branch main. Bisa juga dijalankan manual dari tab Actions.
+on:
+  workflow_run:
+    workflows: ['CI']
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy ke VPS
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    # Hanya jalan bila CI sukses, atau bila dipicu manual.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+
+    env:
+      VPS_HOST: ${{ secrets.VPS_HOST }}
+      VPS_USER: ${{ secrets.VPS_USER }}
+      VPS_PORT: ${{ secrets.VPS_PORT || '22' }}
+
+    steps:
+      - name: Siapkan SSH key
+        run: |
+          set -eu
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p "$VPS_PORT" -H "$VPS_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Tarik kode & rebuild container di VPS
+        run: |
+          set -eu
+          ssh -i ~/.ssh/deploy_key -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          cd ~/sigap
+
+          echo "→ Menarik kode terbaru…"
+          git fetch --prune origin
+          git reset --hard origin/main
+
+          echo "→ Membangun & menjalankan container…"
+          docker compose up -d --build
+
+          echo "→ Membersihkan image lama…"
+          docker image prune -f --filter "until=168h" >/dev/null 2>&1 || true
+
+          echo "→ Status container…"
+          docker compose ps
+          REMOTE
+
+      - name: Verifikasi health endpoint
+        run: |
+          set -eu
+          for i in $(seq 1 30); do
+            if curl -fsS "http://$VPS_HOST:3000/api/health" >/dev/null 2>&1; then
+              echo "✅ Health check OK"
+              curl -s "http://$VPS_HOST:3000/api/health"
+              exit 0
+            fi
+            echo "menunggu container siap… ($i/30)"
+            sleep 5
+          done
+          echo "❌ Health check gagal: http://$VPS_HOST:3000/api/health"
+          exit 1
