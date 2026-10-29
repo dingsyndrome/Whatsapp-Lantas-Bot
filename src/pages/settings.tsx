@@ -698,6 +698,12 @@ function AiPanel({
   setForm: React.Dispatch<React.SetStateAction<SettingsDTO | null>>;
 }) {
   const [promptTab, setPromptTab] = React.useState('timemark');
+  const visionPresets: Array<{ label: string; baseUrl: string; model: string }> = [
+    { label: 'DeepSeek Vision', baseUrl: 'https://api.deepseek.com', model: 'deepseek-v4-flash-vision-exp' },
+    { label: 'OpenAI', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
+    { label: 'Gemini', baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai', model: 'gemini-2.5-flash' },
+    { label: 'GLM', baseUrl: 'https://open.bigmodel.cn/api/paas/v4', model: 'glm-4.5v' }
+  ];
   const set = <K extends keyof SettingsDTO>(key: K, value: SettingsDTO[K]) =>
     setForm((current) => (current ? { ...current, [key]: value } : current));
   return (
@@ -718,6 +724,23 @@ function AiPanel({
           <div className="space-y-1.5 md:col-span-2">
             <Label htmlFor="ai-base">Base URL</Label>
             <Input id="ai-base" value={form.aiBaseUrl} onChange={(event) => set('aiBaseUrl', event.target.value)} placeholder="https://api.openai.com/v1" />
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {visionPresets.map((preset) => (
+                <Button
+                  key={preset.label}
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-6 px-2 text-[9px]"
+                  onClick={() => {
+                    set('aiBaseUrl', preset.baseUrl);
+                    set('aiModel', preset.model);
+                  }}
+                >
+                  {preset.label}
+                </Button>
+              ))}
+            </div>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="ai-model">Model</Label>

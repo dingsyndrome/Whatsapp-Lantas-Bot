@@ -370,10 +370,24 @@ export async function extractTimemarkFromFile(filePath: string): Promise<Timemar
       );
     } else {
       try {
-        const image = await sharp(filePath)
-          .rotate()
-          .resize({ width: 1800, height: 1800, fit: 'inside', withoutEnlargement: true })
-          .jpeg({ quality: 88 })
+        // Kirim crop area watermark (kiri-bawah) ke AI: lebih fokus, lebih murah,
+        // dan menghindari AI "menebak" dari latar foto yang ramai.
+        const meta = await sharp(filePath).metadata();
+        const width = meta.width ?? 0;
+        const height = meta.height ?? 0;
+        const top = Math.round(height * 0.45);
+        let pipeline = sharp(filePath).rotate();
+        if (width > 0 && height > top + 10) {
+          pipeline = pipeline.extract({
+            left: 0,
+            top,
+            width: Math.round(width * 0.66),
+            height: height - top
+          });
+        }
+        const image = await pipeline
+          .resize({ width: 1400, withoutEnlargement: false })
+          .jpeg({ quality: 90 })
           .toBuffer();
         const aiRaw = await extractTimemarkWithAi(
           {
