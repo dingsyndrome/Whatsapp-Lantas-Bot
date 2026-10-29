@@ -1,12 +1,16 @@
 name: Deploy
 
-# Deploy otomatis ke VPS setelah CI ("verify: Typecheck · Test · Build") sukses
-# pada branch main. Bisa juga dijalankan manual dari tab Actions.
+# Deploy otomatis ke VPS setiap push ke branch main.
+# Bisa juga dijalankan manual dari tab Actions.
+#
+# Catatan: build di VPS menjalankan `pnpm build` (tsc typecheck + vite build),
+# jadi kode yang gagal typecheck tidak akan pernah menggantikan container lama.
 on:
-  workflow_run:
-    workflows: ['CI']
-    types: [completed]
+  push:
     branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
   workflow_dispatch:
 
 concurrency:
@@ -18,11 +22,6 @@ jobs:
     name: Deploy ke VPS
     runs-on: ubuntu-latest
     timeout-minutes: 30
-
-    # Hanya jalan bila CI sukses, atau bila dipicu manual.
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      github.event.workflow_run.conclusion == 'success'
 
     env:
       VPS_HOST: ${{ secrets.VPS_HOST }}
