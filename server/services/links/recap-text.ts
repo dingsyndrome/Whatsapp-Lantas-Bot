@@ -10,7 +10,7 @@ export const LINK_RECAP_STATUS_LABELS: Record<string, string> = {
   unchecked: 'Belum dicek'
 };
 
-const MAX_DETAIL_LINKS = 200;
+const MAX_SENDER_ROWS = 60;
 
 /** Apakah jam sebuah tanggal berada di dalam rentang menit yang diminta. */
 export function isWithinTimeWindow(
@@ -123,38 +123,42 @@ export function buildLinkRecapText(input: {
     `📊 Status         : ✅ ${counts.valid} valid · ⚠️ ${counts.restricted} dibatasi · ❌ ${counts.invalid} tidak valid · ⏳ ${counts.unchecked} belum dicek`
   );
   lines.push('');
-  lines.push('*DAFTAR LINK*');
+  lines.push('*DAFTAR PENGIRIM*');
 
-  if (input.links.length === 0) {
+  // Satu baris per pengirim: nama diambil dari roster (label), jumlah link
+  // dihitung — anggota yang mengirim berkali-kali tidak diulang barisnya.
+  const perSender = new Map<string, { count: number; invalid: number }>();
+  for (const link of input.links) {
+    const person = link.senderLabel?.trim() || link.senderName;
+    const entry = perSender.get(person) ?? { count: 0, invalid: 0 };
+    entry.count += 1;
+    if (link.status === 'invalid') entry.invalid += 1;
+    perSender.set(person, entry);
+  }
+  const senderRows = [...perSender.entries()].sort(
+    (a, b) => b[1].count - a[1].count || a[0].localeCompare(b[0])
+  );
+
+  if (senderRows.length === 0) {
     lines.push('_Tidak ada link anggota pada periode ini._');
   } else {
-    input.links.slice(0, MAX_DETAIL_LINKS).forEach((link, index) => {
-      const time = format(new Date(link.receivedAt), 'HH:mm');
-      const status = LINK_RECAP_STATUS_LABELS[link.status] ?? link.status;
-      const person = link.senderLabel?.trim() || link.senderName;
-      lines.push(
-        `${index + 1}. *${time}* · *${person}* · ${link.platform} · ${status}`
-      );
+    senderRows.slice(0, MAX_SENDER_ROWS).forEach(([person, entry], index) => {
+      const invalidNote = entry.invalid > 0 ? ` (${entry.invalid} tidak valid)` : '';
+      lines.push(`${index + 1}. *${person}* : ${entry.count} link${invalidNote}`);
     });
-    if (input.links.length > MAX_DETAIL_LINKS) {
-      lines.push(
-        `_… dan ${input.links.length - MAX_DETAIL_LINKS} link lainnya. Persempit periode atau filter untuk melihat sisanya._`
-      );
+    if (senderRows.length > MAX_SENDER_ROWS) {
+      lines.push(`_… dan ${senderRows.length - MAX_SENDER_ROWS} pengirim lainnya._`);
     }
   }
 
-  const invalid = input.links.filter((link) => link.status === 'invalid');
-  if (invalid.length > 0) {
+  const invalidRows = senderRows.filter(([, entry]) => entry.invalid > 0);
+  if (invalidRows.length > 0) {
+    const invalidTotal = invalidRows.reduce((total, [, entry]) => total + entry.invalid, 0);
     lines.push('');
-    lines.push(`❌ *${invalid.length} LINK TIDAK VALID*`);
-    invalid.slice(0, 50).forEach((link, index) => {
-      const time = format(new Date(link.receivedAt), 'HH:mm');
-      const person = link.senderLabel?.trim() || link.senderName;
-      lines.push(`${index + 1}. ${person} · ${time} · ${link.platform}`);
+    lines.push(`❌ *${invalidTotal} LINK TIDAK VALID*`);
+    invalidRows.slice(0, MAX_SENDER_ROWS).forEach(([person, entry], index) => {
+      lines.push(`${index + 1}. ${person} : ${entry.invalid} link`);
     });
-    if (invalid.length > 50) {
-      lines.push(`_… dan ${invalid.length - 50} link tidak valid lainnya._`);
-    }
   }
 
   if (input.notSubmitted) {

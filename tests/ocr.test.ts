@@ -1,4 +1,19 @@
-import { afterAll, describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it, vi } from 'vitest';
+
+// Hasil OCR harus deterministik: jangan bergantung pada isi database mesin
+// pengembang (mis. AI vision yang sedang aktif dengan API key nyata).
+vi.mock('../server/services/settings.js', () => ({
+  getBotConfig: async () => ({
+    aiEnabled: false,
+    aiApiKey: '',
+    aiBaseUrl: '',
+    aiModel: '',
+    minOcrConfidence: 50,
+    timemarkPrompt: '',
+    botName: 'SIGAP Test'
+  })
+}));
+
 import { ensureFixtures } from '../scripts/fixture-generator.js';
 import {
   extractTimemarkFromFile,

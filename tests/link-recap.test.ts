@@ -59,8 +59,8 @@ describe('rekap link anggota', () => {
     expect(text).toContain('🔗 Total link     : *2*');
     expect(text).toContain('👤 Pengirim unik  : *2*');
     expect(text).toContain('Instagram 1 · TikTok 1');
-    expect(text).toContain('*08:25* · *BRIPKA ANDI* · Instagram · Valid');
-    expect(text).toContain('*09:05* · *BRIPTU CITRA* · TikTok · Dibatasi');
+    expect(text).toContain('*BRIPKA ANDI* : 1 link');
+    expect(text).toContain('*BRIPTU CITRA* : 1 link');
     expect(text).not.toContain('https://');
     expect(text).not.toContain('instagram.com');
     expect(text).toContain('✅ 1 valid');
@@ -99,8 +99,27 @@ describe('rekap link anggota', () => {
     });
 
     expect(text).toContain('❌ *1 LINK TIDAK VALID*');
-    expect(text).toContain('1. BRIPDA MUHAMMAD ARVIN FIRDAUS · 08:25 · Instagram');
+    expect(text).toContain('1. BRIPDA MUHAMMAD ARVIN FIRDAUS : 1 link');
     expect(text).not.toContain('https://instagram.com/p/abc');
+  });
+
+  it('menggabungkan pengirim yang sama menjadi satu baris berjumlah link', () => {
+    const text = buildLinkRecapText({
+      from: '2026-10-29',
+      to: '2026-10-29',
+      startTime: null,
+      endTime: null,
+      links: [
+        sampleLink({ senderLabel: 'BRIPDA ANTO' }),
+        sampleLink({ senderLabel: 'BRIPDA ANTO' }),
+        sampleLink({ senderLabel: 'BRIPDA ANTO' }),
+        sampleLink({ senderLabel: 'BRIPTU BUDI' })
+      ]
+    });
+
+    expect(text).toContain('1. *BRIPDA ANTO* : 3 link');
+    expect(text).toContain('2. *BRIPTU BUDI* : 1 link');
+    expect(text.match(/BRIPDA ANTO/g)?.length).toBe(1);
   });
 
   it('menampilkan personel non-perwira yang belum mengirim link', () => {
