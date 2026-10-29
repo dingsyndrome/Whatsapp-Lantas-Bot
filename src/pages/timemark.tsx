@@ -75,6 +75,16 @@ import { formatDate, formatDateTime, formatNumber, truncate } from '@/lib/format
 
 const PAGE_SIZE = 12;
 
+/** Tanggal lokal (bukan UTC) untuk input type="date". */
+function toLocalDateInput(iso: string | null): string {
+  if (!iso) return '';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return [date.getFullYear(), month, day].join('-');
+}
+
 const ACTIVE_TURJAWALI: Exclude<TurjawaliType, 'LAINNYA'>[] = [
   'PENGATURAN',
   'PENJAGAAN',
@@ -336,7 +346,7 @@ function DetailDialog({
     if (!photo) return;
     setOverrideType(photo.turjawaliType);
     setEditTime(photo.timeText ?? '');
-    setEditDate(photo.capturedAt ? photo.capturedAt.slice(0, 10) : '');
+    setEditDate(toLocalDateInput(photo.capturedAt));
     setEditUnit(photo.unitName ?? '');
     setEditAddress(photo.address ?? '');
   }, [photo]);

@@ -384,6 +384,11 @@ export async function updateTimemarkFields(
   await rematchTimemark(id).catch((error) =>
     logger.warn({ err: error }, 'Rematch setelah koreksi manual gagal')
   );
+  // Koreksi jam/tanggal TIDAK boleh mengubah kategori yang sudah dipilih admin.
+  await prisma.timemarkPhoto.update({
+    where: { id },
+    data: { turjawaliType: existing.turjawaliType }
+  });
 
   await recordActivity({
     type: 'timemark_corrected',

@@ -177,7 +177,9 @@ function parseDate(text: string): DateResult | null {
       if (swapped > 31) continue;
     }
     if (day < 1 || day > 31 || month < 1 || month > 12 || year < 2000 || year > 2100) continue;
-    const date = new Date(year, month - 1, day);
+    // Tengah hari lokal: menghindari tanggal bergeser ke hari sebelumnya saat
+    // disimpan sebagai UTC (WIB = UTC+7).
+    const date = new Date(year, month - 1, day, 12, 0, 0);
     if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) continue;
     const dayName = pattern.nameGroup > 0 ? normalizeDay(match[pattern.nameGroup]) : null;
     return {
