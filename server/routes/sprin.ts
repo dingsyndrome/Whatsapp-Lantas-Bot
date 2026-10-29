@@ -2,7 +2,9 @@ import { Router } from 'express';
 import multer from 'multer';
 import { z } from 'zod';
 import { config } from '../config.js';
+import { prisma } from '../lib/prisma.js';
 import { HttpError } from '../lib/http-error.js';
+import { findPhone } from '../lib/phone.js';
 import {
   createManualSprin,
   deleteSprin,
@@ -140,6 +142,25 @@ sprinRouter.post('/:id/notify/draft', async (req, res) => {
   });
   if (!result) throw new HttpError(404, 'Surat Perintah tidak ditemukan.');
   res.json(result);
+});
+
+sprinRouter.get('/:id/personnel-phones', async (req, res) => {
+  const sprin = await prisma.sprin.findUnique({
+    where: { id: String(req.params.id) },
+    include: { personnel: { orderBy: [{ page: 'asc' }, { no: 'asc' }] } }
+  });
+  if (!sprin) throw new HttpError(404, 'Surat Perintah tidak ditemukan.');
+  res.json(
+    sprin.personnel.map((person) => ({
+      no: person.no,
+      name: person.name,
+      rank: person.rank,
+      ket: person.ket,
+      phone: person.phone,
+      detected: findPhone(person.ket) ?? findPhone(person.rawText),
+      rawText: person.rawText.slice(0, 300)
+    }))
+  );
 });
 
 sprinRouter.post('/:id/notify', async (req, res) => {
