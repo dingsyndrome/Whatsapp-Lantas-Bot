@@ -40,6 +40,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # storage/ di-.gitignore, jadi foto/PDF/DOCX demo tidak ikut checkout.
+      # Smoke test butuh file itu → dibuat ulang di runner.
+      - name: Generate demo fixtures
+        run: pnpm fixtures
+
       - name: Prepare database
         run: |
           pnpm db:deploy
