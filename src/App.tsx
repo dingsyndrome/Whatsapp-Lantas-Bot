@@ -6,6 +6,7 @@ import { TimemarkPage } from '@/src/pages/timemark';
 import { SprinPage } from '@/src/pages/sprin';
 import { LinksPage } from '@/src/pages/links';
 import { SettingsPage } from '@/src/pages/settings';
+import { LoginPage } from '@/src/pages/login';
 import { useTheme } from '@/src/lib/theme';
 
 function NotFoundPage() {
@@ -17,16 +18,24 @@ export default function App() {
 
   return (
     <>
-      <DashboardWithCollapsibleSidebar isDark={isDark} onToggleTheme={toggleTheme}>
-        <Routes>
-          <Route path="/" element={<DashboardPage />} />
-          <Route path="/timemark" element={<TimemarkPage />} />
-          <Route path="/sprin" element={<SprinPage />} />
-          <Route path="/links" element={<LinksPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="*" element={<NotFoundPage />} />
-        </Routes>
-      </DashboardWithCollapsibleSidebar>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route
+          path="*"
+          element={
+            <DashboardWithCollapsibleSidebar isDark={isDark} onToggleTheme={toggleTheme}>
+              <Routes>
+                <Route path="/" element={<DashboardPage />} />
+                <Route path="/timemark" element={<TimemarkPage />} />
+                <Route path="/sprin" element={<SprinPage />} />
+                <Route path="/links" element={<LinksPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
+                <Route path="*" element={<NotFoundPage />} />
+              </Routes>
+            </DashboardWithCollapsibleSidebar>
+          }
+        />
+      </Routes>
       <Toaster
         theme={isDark ? 'dark' : 'light'}
         position="top-right"
