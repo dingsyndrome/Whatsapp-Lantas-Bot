@@ -33,21 +33,56 @@ jobs:
       - name: Siapkan SSH key
         run: |
           set -eu
+          if [ -z "${VPS_HOST:-}" ] || [ -z "${VPS_USER:-}" ]; then
+            echo "❌ Secret VPS_HOST / VPS_USER belum diisi."
+            exit 1
+          fi
+          if [ -z "${{ secrets.VPS_SSH_KEY }}" ]; then
+            echo "❌ Secret VPS_SSH_KEY kosong."
+            exit 1
+          fi
           mkdir -p ~/.ssh
           printf '%s\n' "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -p "$VPS_PORT" -H "$VPS_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          ssh-keyscan -p "$VPS_PORT" -H "$VPS_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          echo "✅ Key disiapkan"
+
+      - name: Diagnosa koneksi SSH
+        run: |
+          set -eu
+          echo "Menguji TCP ke VPS:${VPS_PORT}…"
+          if ! timeout 20 bash -c "cat < /dev/null > /dev/tcp/${VPS_HOST}/${VPS_PORT}"; then
+            echo "❌ TCP ke ${VPS_HOST}:${VPS_PORT} gagal."
+            echo "   Periksa: firewall VPS (port ${VPS_PORT} terbuka?), atau secret VPS_PORT salah."
+            exit 1
+          fi
+          echo "✅ TCP terbuka"
+          echo "Menguji login SSH…"
+          if ! ssh -i ~/.ssh/deploy_key -p "$VPS_PORT" \
+                -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 \
+                -o IdentitiesOnly=yes -o BatchMode=yes \
+                "$VPS_USER@$VPS_HOST" 'echo "✅ Login SSH OK"; uname -srm'; then
+            echo "❌ Login SSH gagal (exit 255)."
+            echo "   Periksa: VPS_SSH_KEY (kunci publik sudah dipasang di ~/.ssh/authorized_keys?),"
+            echo "            VPS_USER (harus user yang memiliki kunci itu), VPS_PORT."
+            exit 1
+          fi
 
       - name: Tarik kode & rebuild container di VPS
         run: |
           set -eu
-          ssh -i ~/.ssh/deploy_key -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'bash -s' <<'REMOTE'
+          ssh -i ~/.ssh/deploy_key -p "$VPS_PORT" \
+            -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 \
+            -o IdentitiesOnly=yes -o BatchMode=yes \
+            -o ServerAliveInterval=15 \
+            "$VPS_USER@$VPS_HOST" 'bash -s' <<'REMOTE'
           set -euo pipefail
           cd ~/sigap
 
           echo "→ Menarik kode terbaru…"
           git fetch --prune origin
           git reset --hard origin/main
+          echo "   commit: $(git rev-parse --short HEAD)"
 
           echo "→ Membangun & menjalankan container…"
           docker compose up -d --build
@@ -62,14 +97,14 @@ jobs:
       - name: Verifikasi health endpoint
         run: |
           set -eu
-          for i in $(seq 1 30); do
-            if curl -fsS "http://$VPS_HOST:3000/api/health" >/dev/null 2>&1; then
+          for i in $(seq 1 40); do
+            if curl -fsS "http://${VPS_HOST}:3000/api/health" >/dev/null 2>&1; then
               echo "✅ Health check OK"
-              curl -s "http://$VPS_HOST:3000/api/health"
+              curl -s "http://${VPS_HOST}:3000/api/health"
               exit 0
             fi
-            echo "menunggu container siap… ($i/30)"
+            echo "menunggu container siap… ($i/40)"
             sleep 5
           done
-          echo "❌ Health check gagal: http://$VPS_HOST:3000/api/health"
+          echo "❌ Health check gagal: http://${VPS_HOST}:3000/api/health"
           exit 1
