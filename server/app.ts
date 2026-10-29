@@ -11,6 +11,7 @@ import { config, paths } from './config.js';
 import { logger } from './lib/logger.js';
 import { HttpError } from './lib/http-error.js';
 import { prisma } from './lib/prisma.js';
+import { buildAuthContext } from './lib/auth-guard.js';
 import { apiRouter } from './routes/index.js';
 import { SprinValidationError } from './services/sprin-service.js';
 import { PersonnelValidationError } from './services/personnel-service.js';
@@ -21,25 +22,27 @@ export function createApp(): express.Express {
   app.set('trust proxy', 1);
 
 
-  // Basic Auth opsional: aktif hanya bila APP_USER & APP_PASS diisi.
-  // /api/health dikecualikan agar healthcheck Docker/monitoring tetap jalan
-  // tanpa kredensial.
+  // Autentikasi: kredensial admin (Basic Auth) ATAU sesi cookie milik manajer.
+  // /api/health dan /api/auth/* dibiarkan terbuka agar healthcheck dan login
+  // manajer bisa diakses tanpa kredensial.
   if (config.appUser && config.appPass) {
+    const openPaths = ['/api/health', '/api/auth/'];
+
     app.use((req, res, next) => {
-      if (req.path === '/api/health') {
+      if (openPaths.some((prefix) => req.path.startsWith(prefix))) {
         next();
         return;
       }
-      const header = req.headers.authorization ?? '';
-      if (header.startsWith('Basic ')) {
-        const [user, pass] = Buffer.from(header.slice(6), 'base64').toString('utf8').split(':');
-        if (user === config.appUser && pass === config.appPass) {
+      void (async () => {
+        const context = await buildAuthContext(req);
+        if (context.admin || context.user) {
+          res.locals.auth = context;
           next();
           return;
         }
-      }
-      res.setHeader('WWW-Authenticate', 'Basic realm=\"SIGAP\"');
-      res.status(401).send('Autentikasi diperlukan.');
+        res.setHeader('WWW-Authenticate', 'Basic realm="SIGAP"');
+        res.status(401).send('Autentikasi diperlukan.');
+      })().catch(next);
     });
   }
 

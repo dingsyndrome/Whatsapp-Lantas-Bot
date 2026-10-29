@@ -7,11 +7,14 @@ import { settingsRouter } from './settings.js';
 import { whatsappRouter } from './whatsapp.js';
 import { exportsRouter } from './exports.js';
 import { reportsRouter } from './reports.js';
+import { authRouter, managersRouter } from './auth.js';
 import { eventsRouter } from './events.js';
 import { personnelRouter } from './personnel.js';
 
 export const apiRouter = Router();
 
+apiRouter.use('/auth', authRouter);
+apiRouter.use('/managers', managersRouter);
 apiRouter.use('/events', eventsRouter);
 apiRouter.use(statsRouter);
 apiRouter.use('/timemark', timemarkRouter);
