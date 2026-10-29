@@ -1,6 +1,7 @@
 import * as React from 'react';
 import {
   AlertTriangle,
+  Bell,
   CalendarDays,
   CheckCircle2,
   Download,
@@ -14,7 +15,6 @@ import {
   Plus,
   RefreshCw,
   Search,
-  Send,
   ShieldCheck,
   Trash2,
   UploadCloud,
@@ -49,6 +49,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
+import { SprinNotifyPanel } from '@/components/sigap/sprin-notify-panel';
 import { useApi, useDebouncedValue } from '@/src/hooks/use-api';
 import { useRealtimeVersion } from '@/src/lib/realtime';
 import { api, downloadFile, errorMessage, exportUrl } from '@/lib/api';
@@ -64,21 +65,52 @@ const PENUGASAN_VARIANT: Record<string, 'default' | 'info' | 'success' | 'warnin
   WASKAT: 'success'
 };
 
-function SummaryCards({ data, stats, activeTotal }: { data: Paginated<SprinDTO>; stats: DashboardStats | null; activeTotal: number }) {
+function SummaryCards({
+  data,
+  stats,
+  activeTotal,
+  reviewTotal,
+  onReviewClick
+}: {
+  data: Paginated<SprinDTO>;
+  stats: DashboardStats | null;
+  activeTotal: number;
+  reviewTotal: number;
+  onReviewClick: () => void;
+}) {
   const personnel = stats?.totalPersonnel ?? data.items.reduce((sum, item) => sum + item.personnelCount, 0);
   const links = data.items.reduce((sum, item) => sum + item.reportedLinks, 0);
   const cards = [
-    { label: 'Total Sprin', value: formatNumber(data.total), icon: FileText, color: 'text-primary bg-primary/10 border-primary/20' },
-    { label: 'Sprin aktif', value: formatNumber(activeTotal), icon: ShieldCheck, color: 'text-info bg-info/10 border-info/20' },
-    { label: 'Personel', value: formatNumber(personnel), icon: UsersRound, color: 'text-violet-400 bg-violet-500/10 border-violet-500/20' },
-    { label: 'Link terkait', value: formatNumber(links), icon: Link2, color: 'text-success bg-success/10 border-success/20' }
+    { label: 'Total Sprin', value: formatNumber(data.total), icon: FileText, color: 'text-primary bg-primary/10 border-primary/20', onClick: undefined },
+    { label: 'Sprin aktif', value: formatNumber(activeTotal), icon: ShieldCheck, color: 'text-info bg-info/10 border-info/20', onClick: undefined },
+    { label: 'Personel', value: formatNumber(personnel), icon: UsersRound, color: 'text-violet-400 bg-violet-500/10 border-violet-500/20', onClick: undefined },
+    { label: 'Link terkait', value: formatNumber(links), icon: Link2, color: 'text-success bg-success/10 border-success/20', onClick: undefined },
+    {
+      label: 'Notif perlu review',
+      value: formatNumber(reviewTotal),
+      icon: Bell,
+      color: 'text-warning bg-warning/10 border-warning/20',
+      onClick: onReviewClick
+    }
   ];
   return (
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
       {cards.map((card) => {
         const Icon = card.icon;
         return (
-          <div key={card.label} className="flex items-center gap-3 rounded-xl border border-border/80 bg-card p-4 shadow-soft">
+          <div
+            key={card.label}
+            role={card.onClick ? 'button' : undefined}
+            tabIndex={card.onClick ? 0 : undefined}
+            onClick={card.onClick}
+            onKeyDown={(event) => {
+              if (card.onClick && (event.key === 'Enter' || event.key === ' ')) card.onClick();
+            }}
+            className={cn(
+              'flex items-center gap-3 rounded-xl border border-border/80 bg-card p-4 shadow-soft',
+              card.onClick && 'cursor-pointer transition-colors hover:border-warning/40'
+            )}
+          >
             <div className={cn('flex h-9 w-9 items-center justify-center rounded-lg border', card.color)}>
               <Icon className="h-4 w-4" />
             </div>
@@ -205,28 +237,8 @@ function SprinDetailDialog({
   const [importOpen, setImportOpen] = React.useState(false);
   const [deleteOpen, setDeleteOpen] = React.useState(false);
   const [deleting, setDeleting] = React.useState(false);
-  const [notifying, setNotifying] = React.useState(false);
   const sprin = detailApi.data;
 
-  const notifyPersonnel = async () => {
-    if (!sprin) return;
-    setNotifying(true);
-    try {
-      const result = await api.post<{
-        sent: number;
-        failed: number;
-        skipped: number;
-        matchedRoster: number;
-      }>(`/sprin/${sprin.id}/notify`, { force: true });
-      toast.success('Notifikasi diproses', {
-        description: `Terkirim ${result.sent} · gagal ${result.failed} · dilewati ${result.skipped} · cocok roster ${result.matchedRoster}`
-      });
-    } catch (error) {
-      toast.error('Gagal mengirim notifikasi', { description: errorMessage(error) });
-    } finally {
-      setNotifying(false);
-    }
-  };
   const removeSprin = async () => {
     if (!sprin) return;
     setDeleting(true);
@@ -331,9 +343,12 @@ function SprinDetailDialog({
                     <RefreshCw className="h-3.5 w-3.5" /> Aktifkan kembali
                   </Button>
                 )}
-                <Button size="sm" variant="secondary" disabled={notifying} onClick={() => void notifyPersonnel()}>
-                  {notifying ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
-                  Kirim notifikasi personel
+                <Button size="sm" variant="secondary" onClick={() => setTab('notifikasi')}>
+                  <Bell className="h-3.5 w-3.5" />
+                  Notifikasi
+                  {sprin.notification?.requiresReview ? (
+                    <Badge variant="warning" className="ml-1 text-[8px]">perlu review</Badge>
+                  ) : null}
                 </Button>
                 <Button size="sm" variant="destructive" onClick={() => setDeleteOpen(true)}>
                   <Trash2 className="h-3.5 w-3.5" /> Hapus Sprin
@@ -347,6 +362,12 @@ function SprinDetailDialog({
                   <TabsTrigger value="ringkasan">Ringkasan</TabsTrigger>
                   <TabsTrigger value="personel">
                     Personel <Badge variant="muted" className="ml-1">{sprin.personnelCount}</Badge>
+                  </TabsTrigger>
+                  <TabsTrigger value="notifikasi">
+                    Notifikasi
+                    {sprin.notification?.requiresReview ? (
+                      <Badge variant="warning" className="ml-1 text-[8px]">review</Badge>
+                    ) : null}
                   </TabsTrigger>
                 </TabsList>
                 <TabsContent value="ringkasan" className="mt-4 space-y-4">
@@ -365,6 +386,10 @@ function SprinDetailDialog({
                       </div>
                     ))}
                   </div>
+                  <p className="text-[9px] leading-relaxed text-muted-foreground">
+                    Catatan: “Tempat kegiatan” di atas adalah metadata dokumen. Rincian lokasi per anggota dan
+                    arahan apel ada di tab <span className="font-semibold text-foreground">Notifikasi</span>.
+                  </p>
                   <div className="rounded-lg border border-border/60 bg-muted/20 p-4">
                     <p className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">
                       Uraian tugas (“Untuk”)
@@ -390,6 +415,15 @@ function SprinDetailDialog({
                     </Button>
                   </div>
                   <PersonnelTable personnel={sprin.personnel ?? []} />
+                </TabsContent>
+                <TabsContent value="notifikasi" className="mt-4">
+                  <SprinNotifyPanel
+                    sprin={sprin}
+                    onChanged={() => {
+                      void detailApi.refresh();
+                      onChanged();
+                    }}
+                  />
                 </TabsContent>
               </Tabs>
               <ImportPersonnelDialog
@@ -909,6 +943,7 @@ export function SprinPage() {
   const [page, setPage] = React.useState(1);
   const [search, setSearch] = React.useState('');
   const [status, setStatus] = React.useState('all');
+  const [notify, setNotify] = React.useState('all');
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const [uploadOpen, setUploadOpen] = React.useState(false);
   const [manualOpen, setManualOpen] = React.useState(false);
@@ -919,24 +954,27 @@ export function SprinPage() {
     const params = new URLSearchParams({ page: String(page), pageSize: '20' });
     if (debounced) params.set('search', debounced);
     if (status !== 'all') params.set('status', status);
+    if (notify !== 'all') params.set('notify', notify);
     return params.toString();
-  }, [page, debounced, status]);
+  }, [page, debounced, status, notify]);
 
   const listApi = useApi<Paginated<SprinDTO>>(`/sprin?${query}`);
   const activeApi = useApi<Paginated<SprinDTO>>('/sprin?status=active&pageSize=1');
+  const reviewApi = useApi<Paginated<SprinDTO>>('/sprin?notify=review&pageSize=1');
   const statsApi = useApi<DashboardStats>('/stats');
 
   React.useEffect(() => {
     if (version === 0) return;
     void listApi.refresh();
     void activeApi.refresh();
+    void reviewApi.refresh();
     void statsApi.refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [version]);
 
   React.useEffect(() => {
     setPage(1);
-  }, [debounced, status]);
+  }, [debounced, status, notify]);
 
   const data = listApi.data;
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;
@@ -963,7 +1001,13 @@ export function SprinPage() {
       />
 
       {data ? (
-        <SummaryCards data={data} stats={statsApi.data} activeTotal={activeApi.data?.total ?? 0} />
+        <SummaryCards
+          data={data}
+          stats={statsApi.data}
+          activeTotal={activeApi.data?.total ?? 0}
+          reviewTotal={reviewApi.data?.total ?? 0}
+          onReviewClick={() => setNotify((current) => (current === 'review' ? 'all' : 'review'))}
+        />
       ) : null}
 
       <Card>
@@ -988,6 +1032,16 @@ export function SprinPage() {
                   <SelectItem value="active">Aktif</SelectItem>
                   <SelectItem value="completed">Selesai</SelectItem>
                   <SelectItem value="archived">Diarsipkan</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={notify} onValueChange={setNotify}>
+                <SelectTrigger className="h-9 w-full text-xs sm:w-[175px]">
+                  <SelectValue placeholder="Notifikasi" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua notifikasi</SelectItem>
+                  <SelectItem value="review">Perlu review</SelectItem>
+                  <SelectItem value="sent">Sudah terkirim</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -1055,6 +1109,15 @@ export function SprinPage() {
                       <Badge variant="outline" className="text-[9px]">
                         {sprin.source === 'whatsapp' ? 'WhatsApp' : sprin.source === 'seed' ? 'Demo' : 'Dashboard'}
                       </Badge>
+                      {sprin.notification?.requiresReview ? (
+                        <Badge variant="warning" className="text-[9px]">
+                          Notif perlu review
+                        </Badge>
+                      ) : sprin.notification?.status === 'sent' ? (
+                        <Badge variant="success" className="text-[9px]">
+                          Notif terkirim
+                        </Badge>
+                      ) : null}
                     </div>
                     <p className="mt-1.5 line-clamp-1 text-[12px] text-muted-foreground">
                       {sprin.about ?? 'Tanpa perihal'}
@@ -1126,6 +1189,7 @@ export function SprinPage() {
         onChanged={() => {
           void listApi.refresh();
           void activeApi.refresh();
+          void reviewApi.refresh();
           void statsApi.refresh();
         }}
       />
@@ -1135,6 +1199,7 @@ export function SprinPage() {
         onUploaded={() => {
           void listApi.refresh();
           void activeApi.refresh();
+          void reviewApi.refresh();
           void statsApi.refresh();
         }}
       />
@@ -1144,6 +1209,7 @@ export function SprinPage() {
         onSaved={(sprin) => {
           void listApi.refresh();
           void activeApi.refresh();
+          void reviewApi.refresh();
           void statsApi.refresh();
           setSelectedId(sprin.id);
         }}

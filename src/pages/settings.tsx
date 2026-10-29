@@ -1,6 +1,7 @@
 import * as React from 'react';
 import {
   AlertTriangle,
+  Bell,
   Bot,
   CalendarClock,
   Check,
@@ -89,6 +90,7 @@ import { cn } from '@/lib/utils';
 import { formatDateTime } from '@/lib/format';
 import { PersonnelPanel } from './settings-personnel';
 import { RecapPanel } from './settings-recap';
+import { NotifySettingsPanel } from './settings-notify';
 
 type SimulatorLog = {
   id: string;
@@ -1442,7 +1444,11 @@ export function SettingsPage() {
         patrolNightStart: form.patrolNightStart,
         patrolNightEnd: form.patrolNightEnd,
         matchTimeToleranceMinutes: form.matchTimeToleranceMinutes,
-        matchLocationRadiusMeters: form.matchLocationRadiusMeters
+        matchLocationRadiusMeters: form.matchLocationRadiusMeters,
+        sprinNotifyMode: form.sprinNotifyMode,
+        sprinNotifyDefaultFunctions: form.sprinNotifyDefaultFunctions,
+        sprinNotifyExcludePerwira: form.sprinNotifyExcludePerwira,
+        sprinNotifyTemplate: form.sprinNotifyTemplate
       };
       const updated = await api.put<SettingsDTO>('/settings', payload);
       setForm({ ...updated, aiApiKey: '' });
@@ -1618,6 +1624,7 @@ export function SettingsPage() {
             <TabsTrigger value="ai" className="text-[11px]"><Cpu className="h-3.5 w-3.5" /> AI & Prompt</TabsTrigger>
             <TabsTrigger value="turjawali" className="text-[11px]"><Route className="h-3.5 w-3.5" /> Turjawali</TabsTrigger>
             <TabsTrigger value="personel" className="text-[11px]"><UsersRound className="h-3.5 w-3.5" /> Personel</TabsTrigger>
+            <TabsTrigger value="notifikasi" className="text-[11px]"><Bell className="h-3.5 w-3.5" /> Notifikasi</TabsTrigger>
             <TabsTrigger value="jadwal" className="text-[11px]"><CalendarClock className="h-3.5 w-3.5" /> Jadwal Rekap</TabsTrigger>
             <TabsTrigger value="rekap" className="text-[11px]"><ClipboardCopy className="h-3.5 w-3.5" /> Rekap Kustom</TabsTrigger>
             <TabsTrigger value="simulator" className="text-[11px]"><Sparkles className="h-3.5 w-3.5" /> Simulator</TabsTrigger>
@@ -1652,6 +1659,10 @@ export function SettingsPage() {
 
         <TabsContent value="personel" className="mt-5">
           <PersonnelPanel />
+        </TabsContent>
+
+        <TabsContent value="notifikasi" className="mt-5">
+          <NotifySettingsPanel form={form} setForm={setForm} />
         </TabsContent>
 
         <TabsContent value="rekap" className="mt-5">

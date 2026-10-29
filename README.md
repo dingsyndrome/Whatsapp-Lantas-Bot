@@ -2,7 +2,7 @@
 
 Sistem full-stack untuk memantau laporan anggota dari WhatsApp: **OCR foto Timemark**, **parser Surat Perintah PDF/DOCX multi-halaman**, **rekap link anggota lintas platform**, **Smart Matching Turjawali (Pengaturan, Penjagaan, Pengawalan, Patroli)**, dan **dashboard React** dengan panel kustomisasi bot.
 
-> **Status validasi (28 Okt 2026):** `pnpm typecheck` bersih, `pnpm test` **47/47 lulus**, smoke test API **49/49 asersi lulus**, dan dashboard telah diuji di Chrome (desktop + mobile, mode gelap/terang) tanpa console error. Basis data personel Satlantas (96 orang, 7 perwira) sudah diimpor dan terverifikasi, termasuk deteksi supervisi perwira dari caption. Proyek dipulihkan dari log sesi DSH dan dijalankan ulang dari nol (`pnpm install` → migrasi Prisma → seed) di `C:\Users\dings\Documents\deepseek-harness\default-workspace\sigap`.
+> **Status validasi (28 Okt 2026):** `pnpm typecheck` bersih, `pnpm test` **56/56 lulus**, smoke test API **49/49 asersi lulus**, dan dashboard telah diuji di Chrome (desktop + mobile, mode gelap/terang) tanpa console error. Basis data personel Satlantas (96 orang, 7 perwira) sudah diimpor dan terverifikasi, termasuk deteksi supervisi perwira dari caption. Proyek dipulihkan dari log sesi DSH dan dijalankan ulang dari nol (`pnpm install` → migrasi Prisma → seed) di `C:\Users\dings\Documents\deepseek-harness\default-workspace\sigap`.
 
 ![Dashboard SIGAP](docs/screenshots/dashboard.png)
 
@@ -129,7 +129,7 @@ Proyek ini sengaja memakai **satu paket full-stack** (bukan monorepo multi-packa
 │   ├── e2e-turjawali.mjs            ← uji UI filter/override/settings
 │   ├── test-wa-connect.mjs          ← uji QR WhatsApp Web
 │   └── docker-entrypoint.sh
-├── tests/                           ← Vitest (47 tes: Turjawali, impor Sprin, roster personel, supervisi)
+├── tests/                           ← Vitest (56 tes: Turjawali, impor Sprin, roster personel, supervisi, lokasi Sprin)
 ├── tessdata/eng.traineddata         ← model OCR lokal (5.2 MB)
 ├── Dockerfile / docker-compose.yml
 ├── .env.example
@@ -466,6 +466,32 @@ File: [`extractor.ts`](server/services/links/extractor.ts) + [`validator.ts`](se
 - Link dikaitkan ke Sprin bila pesan menyebut nomor Sprin, atau berdasarkan tanggal kegiatan ±3 hari.
 - Validasi berjalan di background, tidak memperlambat pesan masuk.
 
+**Rekap link per periode.** Tombol **Rekap ke WA** pada halaman Rekap Link Anggota membuka
+dialog tanggal + rentang jam (mis. Kamis, 29 Oktober 2026 pukul 08:20–09:20). Teks yang dihasilkan
+hanya berisi link anggota — tanpa foto Timemark, Sprin, maupun rekap Gatur/Turjawali — dan bisa
+disalin atau dikirim langsung ke grup WhatsApp tujuan. Filter platform/status/pencarian pada tabel
+ikut diterapkan.
+
+- `GET /api/links/recap?from=2026-10-29&to=2026-10-29&hourFrom=08:20&hourTo=09:20`
+  → `{ range, counts, platforms, text }`.
+- `POST /api/links/recap/send` dengan body yang sama (+ `groupJid` opsional) → kirim teks ke grup
+  rekap yang dikonfigurasi, atau grup terpantau pertama bila belum diatur.
+- Jam boleh dikosongkan (berarti 00:00–23:59), hanya salah satu batas, atau format `8`, `08.20`.
+- Bila lebih dari 200 link, teks menampilkan 200 link pertama dan jumlah sisanya.
+
+**Format nama di semua rekap WhatsApp.** Nama anggota ditampilkan sebagai
+`[PANGKAT] [NAMA]` (mis. `BRIPTU RIZKI INDRA SUSANTO`) pada rekap link, rekap
+harian, rekap kustom, dan pengingat personel. Pangkat dicocokkan dari roster
+berdasarkan nomor HP/nama; bila nama tidak dapat dipastikan, nama WhatsApp
+ditampilkan apa adanya. URL link tidak lagi ditampilkan di rekap. Daftar
+`LINK TIDAK VALID` juga menampilkan pangkat dan nama pengirimnya.
+
+Rekap link dan rekap harian juga memuat bagian **`BELUM MENGIRIM LINK`** berisi
+seluruh personel aktif roster Satlantas yang belum mengirim link pada periode
+tersebut, dengan format `[PANGKAT] [NAMA]`. Personel berkategori **PERWIRA**
+dikecualikan, dan daftar dihitung dari seluruh link pada periode (bukan hanya
+hasil filter platform/status/pencarian).
+
 ### 5.5 Smart Matching Turjawali
 
 Engine: [`turjawali-matcher.ts`](server/services/ocr/turjawali-matcher.ts)  
@@ -557,7 +583,76 @@ Contoh bagian Turjawali pada `daily.txt`:
 ──────────────────────
 ```
 
-### 5.7 Ringkasan endpoint API
+### 5.7 Notifikasi Sprin per fungsi kepolisian
+
+Fitur ini menjawab kebutuhan “notifikasi fokus ke satu kesatuan”: bot tidak lagi
+mengirim ke semua personel Sprin, tetapi hanya ke fungsi yang dipilih admin.
+
+**Alur**
+
+1. Buka detail Sprin → tab **Notifikasi**.
+2. Pilih fungsi tujuan. Saat ini default dan satu-satunya fungsi yang punya
+   database nomor HP adalah **Satlantas** (89 anggota non-perwira).
+3. Aktifkan **Kecualikan perwira** (default). Pangkat IPDA, IPTU, AKP, KOMPOL,
+   AKBP dan di atasnya tidak dikirimi notifikasi.
+4. Periksa panel **Lokasi yang tercantum di Sprin**, lalu edit **Pesan notifikasi**
+   bila perlu.
+5. **Simpan draf** atau **Verifikasi & kirim**. Pada mode *Tinjau admin dulu*,
+   pengiriman otomatis selalu ditahan sampai admin menyetujui.
+6. Gunakan filter **Notifikasi → Perlu review** di halaman Data Surat Perintah
+   atau klik kartu **Notif perlu review** untuk melihat semua draf yang belum
+   disetujui.
+
+**Cara fungsi dideteksi**
+
+- Sumber utama: kolom **Jabatan** pada Sprin (mis. `BA SATLANTAS`,
+  `KANITTURJAGWALI SATLANTAS`, `BA POLSEK BOYOLANGU`).
+- Bila tidak ada, dipakai kolom Jabatan/Satuan pada database personel.
+- Fungsi disimpan di tabel `NotificationFunction` (kode, nama, kata kunci,
+  kecualikan perwira, aktif). Admin dapat menambah fungsi baru dari
+  **Settings → Notifikasi → Tambah fungsi**.
+- Nomor HP dicocokkan lewat NRP lebih dulu, lalu nama. Personel tanpa nomor HP
+  atau bukan fungsi terpilih dilewati dan alasannya ditampilkan.
+
+**Lokasi per anggota (tanpa menyimpulkan)**
+
+- Arahan apel per nomor dibaca apa adanya dari bagian **“Untuk”**, termasuk
+  rentang `nomor 1 s.d. 12 dan 26 s.d. 113`, `nomor 13 s.d. 25`, jam, dan
+  pengecualian seperti `kecuali Pam Kejaksaan apel di lokasi Kantor Kejaksaan`.
+- Lokasi tugas per orang diambil dari kolom **KET**; bila KET kosong, dari teks
+  **Jabatan** yang memuat lokasi (mis. `DEPAN SMPN 6 TULUNGAGUNG`,
+  `SIMP 4 TT`). Baris yang menempel dengan personel berikutnya dipotong agar
+  tidak menjadi lokasi palsu.
+- Jadwal diambil dari kalimat `pelaksanaan tugas hari ... tanggal ... pukul ...`
+  pada teks Sprin, bukan hanya metadata.
+- Bila teks tidak memuat lokasi yang pasti, pesan menulis
+  “Tidak tercantum pada baris personel; mengacu lampiran Sprin” dan draf
+  ditandai **perlu verifikasi**. Bot tidak mengarang lokasi.
+- Contoh Sprin/1848: teks memuat apel umum di halaman Kantor DPRD, apel
+  kelompok di halaman Pemkab (kecuali Pam Kejaksaan), dan apel kelompok
+  Polsek Boyolangu. Ketiganya ditampilkan sebagai kutipan; admin memverifikasi
+  sebelum kirim.
+
+**Template pesan**
+
+Template global ada di **Settings → Notifikasi**. Template per Sprin dapat
+diedit langsung di tab Notifikasi dan disimpan sebagai draf. Placeholder:
+`{botName}`, `{nama}`, `{pangkat_nrp}`, `{sprin}`, `{kategori}`, `{tugas}`,
+`{kegiatan}`, `{lokasi_tugas}`, `{lokasi_apel}`, `{jadwal}`, `{catatan_lokasi}`.
+
+Selain template, admin dapat mengedit **pesan per anggota**: klik baris penerima,
+ubah teksnya, lalu **Simpan draf** atau **Kirim**. Pesan manual disimpan di
+`SprinNotification.overrides` dan ditandai **Diedit admin**; tombol **Otomatis**
+mengembalikan pesan anggota itu ke hasil template.
+
+**Menambah fungsi lain**
+
+Impor database personel yang memuat kolom `SATUAN`/`JABATAN` untuk fungsi
+tersebut, lalu tambahkan fungsi di Settings dengan kata kunci jabatannya.
+Selama belum ada nomor HP, fungsi tetap muncul tetapi diberi tanda
+**Belum ada nomor HP** dan tidak bisa menjadi penerima.
+
+### 5.8 Ringkasan endpoint API
 
 | Method | Endpoint | Fungsi |
 |---|---|---|
@@ -575,10 +670,17 @@ Contoh bagian Turjawali pada `daily.txt`:
 | POST | `/api/sprin/manual` | Buat/perbarui header Sprin tanpa dokumen |
 | POST | `/api/sprin/:id/personnel/import` | Impor personel dari XLSX/CSV (`mode=replace\|append`) |
 | GET | `/api/sprin/:id` | Detail + seluruh personel |
+| POST | `/api/sprin/:id/notify/preview` | Pratinjau penerima, lokasi, dan pesan per fungsi |
+| POST | `/api/sprin/:id/notify/draft` | Simpan draf + template + override pesan per anggota |
+| POST | `/api/sprin/:id/notify` | Kirim; `confirmReview=true` untuk menyetujui draf |
 | PATCH | `/api/sprin/:id/status` | Aktif/selesai/arsip |
 | DELETE | `/api/sprin/:id` | Hapus Sprin + personel + dokumen tersimpan |
+| GET/POST | `/api/settings/notification-functions` | Daftar/tambah fungsi notifikasi |
+| PATCH/DELETE | `/api/settings/notification-functions/:id` | Ubah/hapus fungsi notifikasi |
 | GET | `/api/links` | List/filter link |
 | GET | `/api/links/summary` | Agregat status/platform |
+| GET | `/api/links/recap` | Rekap link saja per tanggal + rentang jam |
+| POST | `/api/links/recap/send` | Kirim rekap link ke grup WhatsApp |
 | POST | `/api/links/:id/validate` | Validasi ulang |
 | GET/PUT | `/api/settings` | Baca/simpan konfigurasi bot |
 | GET | `/api/personnel` | Roster personel + statistik (cari/filter) |
@@ -618,7 +720,7 @@ Halaman:
 | Dashboard | [`src/pages/dashboard.tsx`](src/pages/dashboard.tsx) | KPI, **Rekap Giat Turjawali realtime**, toggle harian/mingguan, matriks 4 kategori, **dialog cakupan personel**, area chart, donut platform, foto terbaru, aktivitas, progres Sprin |
 | Foto Timemark | [`src/pages/timemark.tsx`](src/pages/timemark.tsx) | Tab 4 kategori, filter status match, badge kategori/skor, galeri + tabel, upload, detail, override kategori |
 | Sprin | [`src/pages/sprin.tsx`](src/pages/sprin.tsx) | Daftar + badge Turjawali, upload, metadata, personel lintas halaman, filter, unduh, ubah status |
-| Link Anggota | [`src/pages/links.tsx`](src/pages/links.tsx) | Agregat platform, filter, validasi ulang, salin, ekspor CSV/XLSX/WA/Turjawali |
+| Link Anggota | [`src/pages/links.tsx`](src/pages/links.tsx) | Agregat platform, filter, validasi ulang, **rekap link per tanggal/jam + kirim WA**, ekspor CSV/XLSX/Turjawali |
 | Settings | [`src/pages/settings.tsx`](src/pages/settings.tsx) | QR/connect, whitelist, auto-reply, prompt AI, **aturan Turjawali + rematch massal**, jadwal, simulator |
 
 Contoh visual:
@@ -699,7 +801,7 @@ Kedua skrip menerima `SIGAP_API` sehingga bisa diarahkan ke base URL mana pun (l
 
 ```bash
 pnpm typecheck       # frontend + backend + tests
-pnpm test            # 47 tes Vitest
+pnpm test            # 56 tes Vitest
 pnpm build           # build produksi
 ```
 

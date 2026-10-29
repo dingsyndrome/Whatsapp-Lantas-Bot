@@ -3,6 +3,7 @@ import { recordActivity } from '../lib/activity.js';
 import { getBotConfig } from './settings.js';
 import { getTurjawaliRecap } from './turjawali-recap-service.js';
 import { whatsappManager } from './whatsapp-manager.js';
+import { formatRankName, rankFromRankNrp } from '../../shared/personnel-name.js';
 import type { TurjawaliRecap } from '../../shared/types.js';
 
 export interface ReminderResult {
@@ -32,7 +33,7 @@ export function buildPersonnelReminderText(recap: TurjawaliRecap): string {
     lines.push('*DAFTAR BELUM MELAPOR*');
     pending.forEach((person, index) => {
       lines.push(
-        `${index + 1}. *${person.name}* (${person.rankNrp ?? '-'}) — ${person.sprinNumber}`
+        `${index + 1}. *${formatRankName(rankFromRankNrp(person.rankNrp), person.name)}* — ${person.sprinNumber}`
       );
     });
     lines.push('');

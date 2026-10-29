@@ -5,6 +5,13 @@ import { prisma } from '../lib/prisma.js';
 import { getSettings, updateSettings } from '../services/settings.js';
 import { rescheduleDailyRecap } from '../services/scheduler-service.js';
 import { whatsappManager } from '../services/whatsapp-manager.js';
+import {
+  createNotificationFunction,
+  deleteNotificationFunction,
+  listNotificationFunctions,
+  NotificationFunctionError,
+  updateNotificationFunction
+} from '../services/notification-function-service.js';
 
 export const settingsRouter = Router();
 
@@ -46,7 +53,11 @@ const settingsSchema = z.object({
   patrolNightStart: timeSchema.optional(),
   patrolNightEnd: timeSchema.optional(),
   matchTimeToleranceMinutes: z.number().int().min(0).max(720).optional(),
-  matchLocationRadiusMeters: z.number().int().min(25).max(50_000).optional()
+  matchLocationRadiusMeters: z.number().int().min(25).max(50_000).optional(),
+  sprinNotifyMode: z.enum(['auto', 'review']).optional(),
+  sprinNotifyDefaultFunctions: z.array(z.string().min(2).max(32)).max(30).optional(),
+  sprinNotifyExcludePerwira: z.boolean().optional(),
+  sprinNotifyTemplate: z.string().max(20_000).optional()
 });
 
 settingsRouter.get('/', async (_req, res) => {
@@ -99,5 +110,44 @@ settingsRouter.delete('/groups/:id', async (req, res) => {
   const existing = await prisma.monitoredGroup.findUnique({ where: { id: req.params.id } });
   if (!existing) throw new HttpError(404, 'Grup tidak ditemukan.');
   await prisma.monitoredGroup.delete({ where: { id: req.params.id } });
+  res.status(204).end();
+});
+
+const functionSchema = z.object({
+  code: z.string().min(2).max(32).optional(),
+  name: z.string().min(1).max(120).optional(),
+  keywords: z.array(z.string().min(1).max(80)).max(30).optional(),
+  excludePerwira: z.boolean().optional(),
+  active: z.boolean().optional(),
+  sortOrder: z.number().int().min(0).max(10_000).optional()
+});
+
+settingsRouter.get('/notification-functions', async (_req, res) => {
+  res.json(await listNotificationFunctions());
+});
+
+settingsRouter.post('/notification-functions', async (req, res) => {
+  try {
+    const body = functionSchema.parse(req.body);
+    res.status(201).json(await createNotificationFunction(body));
+  } catch (error) {
+    if (error instanceof NotificationFunctionError) throw new HttpError(400, error.message);
+    throw error;
+  }
+});
+
+settingsRouter.patch('/notification-functions/:id', async (req, res) => {
+  try {
+    const body = functionSchema.parse(req.body);
+    res.json(await updateNotificationFunction(String(req.params.id), body));
+  } catch (error) {
+    if (error instanceof NotificationFunctionError) throw new HttpError(400, error.message);
+    throw error;
+  }
+});
+
+settingsRouter.delete('/notification-functions/:id', async (req, res) => {
+  const deleted = await deleteNotificationFunction(String(req.params.id));
+  if (!deleted) throw new HttpError(404, 'Fungsi notifikasi tidak ditemukan.');
   res.status(204).end();
 });

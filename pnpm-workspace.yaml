@@ -6,7 +6,9 @@ minimumReleaseAgeExclude:
 allowBuilds:
   '@prisma/client': true
   '@prisma/engines': true
+  baileys: true
   esbuild: true
   prisma: true
+  protobufjs: true
   puppeteer: true
   tesseract.js: true

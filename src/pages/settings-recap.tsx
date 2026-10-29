@@ -51,6 +51,22 @@ function today(): string {
   return [now.getFullYear(), String(now.getMonth() + 1).padStart(2, '0'), String(now.getDate()).padStart(2, '0')].join('-');
 }
 
+const TIME_PATTERN = /^([01]?\d|2[0-3])(?:[:.]([0-5]\d))?$/;
+
+/**
+ * Terima "7", "07", "07:15", atau "7.15" lalu kembalikan "HH:MM".
+ * Mengembalikan '' untuk input kosong dan null bila format tidak dikenali.
+ */
+function normalizeTime(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  const match = trimmed.match(TIME_PATTERN);
+  if (!match) return null;
+  const hour = Number(match[1]);
+  const minute = Number(match[2] ?? 0);
+  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+}
+
 export function RecapPanel() {
   const [from, setFrom] = React.useState(today());
   const [to, setTo] = React.useState(today());
@@ -61,13 +77,30 @@ export function RecapPanel() {
   const [result, setResult] = React.useState<CustomRecapResponse | null>(null);
 
   const run = async () => {
+    const start = normalizeTime(hourFrom);
+    const end = normalizeTime(hourTo);
+    if (start === null || end === null) {
+      toast.error('Format jam tidak dikenali', {
+        description: 'Gunakan format 24 jam HH:MM, contoh 07:15.'
+      });
+      return;
+    }
+    if (start !== '' && end !== '' && start > end) {
+      toast.error('Rentang jam tidak valid', {
+        description: 'Jam mulai harus lebih awal dari jam selesai.'
+      });
+      return;
+    }
+
     setLoading(true);
     try {
       const params = new URLSearchParams({ from, to, category, rosterOnly: 'true' });
-      if (hourFrom !== '') params.set('hourFrom', hourFrom);
-      if (hourTo !== '') params.set('hourTo', hourTo);
+      if (start !== '') params.set('hourFrom', start);
+      if (end !== '') params.set('hourTo', end);
       const data = await api.get<CustomRecapResponse>(`/reports/custom?${params.toString()}`);
       setResult(data);
+      setHourFrom(start);
+      setHourTo(end);
       toast.success('Rekap dibuat', {
         description: `${data.counts.photos} foto · ${data.counts.links} link · ${data.personnel.submitted.length}/${data.personnel.rosterTotal} personel melapor`
       });
@@ -84,7 +117,8 @@ export function RecapPanel() {
         <CardHeader className="pb-2">
           <h3 className="text-sm font-semibold">Rekap Kustom</h3>
           <p className="text-[10px] text-muted-foreground">
-            Pilih tanggal, rentang jam, dan jenis kegiatan. Personel mengikuti roster Satlantas.
+            Pilih tanggal, rentang jam (24 jam, mis. 05:00–07:20), dan jenis kegiatan. Personel mengikuti
+            roster Satlantas.
           </p>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -98,20 +132,22 @@ export function RecapPanel() {
               <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="mt-1 h-9 text-xs" />
             </div>
             <div>
-              <Label className="text-[9px] uppercase tracking-wider text-muted-foreground">Jam mulai (0–23)</Label>
+              <Label className="text-[9px] uppercase tracking-wider text-muted-foreground">Jam mulai</Label>
               <Input
+                type="time"
                 value={hourFrom}
                 onChange={(e) => setHourFrom(e.target.value)}
-                placeholder="mis. 13"
+                placeholder="07:15"
                 className="mt-1 h-9 text-xs"
               />
             </div>
             <div>
-              <Label className="text-[9px] uppercase tracking-wider text-muted-foreground">Jam selesai (0–23)</Label>
+              <Label className="text-[9px] uppercase tracking-wider text-muted-foreground">Jam selesai</Label>
               <Input
+                type="time"
                 value={hourTo}
                 onChange={(e) => setHourTo(e.target.value)}
-                placeholder="mis. 16"
+                placeholder="07:20"
                 className="mt-1 h-9 text-xs"
               />
             </div>

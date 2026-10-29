@@ -43,6 +43,7 @@ import {
 } from 'recharts';
 import type { ActivityDTO, DashboardStats, TurjawaliRecap, TurjawaliType } from '@/shared/types';
 import { TURJAWALI_LABELS } from '@/shared/types';
+import { formatRankName, rankFromRankNrp } from '@/shared/personnel-name';
 import { PageHeader } from '@/components/sigap/page-header';
 import { StatCard } from '@/components/sigap/stat-card';
 import { StatusBadge } from '@/components/sigap/status-badge';
@@ -262,7 +263,7 @@ function PersonnelCoverageDialog({
       '',
       ...pending.map(
         (person, index) =>
-          `${index + 1}. ${person.name} (${person.rankNrp ?? '-'}) — ${person.sprinNumber}`
+          `${index + 1}. ${formatRankName(rankFromRankNrp(person.rankNrp), person.name)} — ${person.sprinNumber}`
       ),
       '',
       '_Mohon segera mengirim foto Timemark dan link laporan._'

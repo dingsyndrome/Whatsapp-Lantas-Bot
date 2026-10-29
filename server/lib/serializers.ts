@@ -24,6 +24,7 @@ export type LinkWithSprin = Prisma.LinkSubmissionGetPayload<{
 export type SprinWithCounts = Prisma.SprinGetPayload<{
   include: {
     _count: { select: { personnel: true; links: true; timemarks: true } };
+    notification: true;
   };
 }>;
 
@@ -140,6 +141,24 @@ export function serializeSprin(sprin: SprinWithCounts | SprinWithPersonnel): Spr
     personnelCount: sprin._count.personnel,
     reportedLinks: sprin._count.links,
     timemarkCount: sprin._count.timemarks,
+    notification: sprin.notification
+      ? {
+          status: sprin.notification.status,
+          requiresReview: sprin.notification.requiresReview,
+          functionCodes: (() => {
+            try {
+              const parsed = JSON.parse(sprin.notification.functionCodes) as unknown;
+              return Array.isArray(parsed)
+                ? parsed.filter((value): value is string => typeof value === 'string')
+                : [];
+            } catch {
+              return [];
+            }
+          })(),
+          updatedAt: sprin.notification.updatedAt.toISOString(),
+          sentAt: sprin.notification.sentAt?.toISOString() ?? null
+        }
+      : null,
     personnel
   };
 }

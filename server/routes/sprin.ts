@@ -12,7 +12,12 @@ import {
   listSprins,
   updateSprinStatus
 } from '../services/sprin-service.js';
-import { autoNotifySprin, notifySprinPersonnel } from '../services/sprin-notify-service.js';
+import {
+  autoNotifySprin,
+  previewSprinNotification,
+  saveSprinNotificationDraft,
+  sendSprinNotification
+} from '../services/sprin-notify-service.js';
 
 export const sprinRouter = Router();
 const upload = multer({
@@ -24,7 +29,8 @@ const querySchema = z.object({
   page: z.coerce.number().int().positive().optional(),
   pageSize: z.coerce.number().int().positive().max(100).optional(),
   search: z.string().max(200).optional(),
-  status: z.enum(['all', 'active', 'completed', 'archived']).optional()
+  status: z.enum(['all', 'active', 'completed', 'archived']).optional(),
+  notify: z.enum(['all', 'review', 'sent']).optional()
 });
 
 sprinRouter.get('/', async (req, res) => {
@@ -104,14 +110,43 @@ sprinRouter.post('/:id/personnel/import', upload.single('file'), async (req, res
   void autoNotifySprin(sprinId);
 });
 
+const notifySchema = z.object({
+  functionCodes: z.array(z.string().min(2).max(32)).max(30).optional(),
+  excludePerwira: z.boolean().optional(),
+  template: z.string().max(20_000).optional(),
+  overrides: z.record(z.string().min(1).max(64), z.string().max(10_000)).optional(),
+  force: z.boolean().optional(),
+  dryRun: z.boolean().optional(),
+  limit: z.number().int().min(1).max(1000).optional(),
+  confirmReview: z.boolean().optional(),
+  reviewNote: z.string().max(2000).optional()
+});
+
+sprinRouter.post('/:id/notify/preview', async (req, res) => {
+  const body = notifySchema.parse(req.body ?? {});
+  const result = await previewSprinNotification(String(req.params.id), {
+    ...body,
+    persist: false
+  });
+  if (!result) throw new HttpError(404, 'Surat Perintah tidak ditemukan.');
+  res.json(result);
+});
+
+sprinRouter.post('/:id/notify/draft', async (req, res) => {
+  const body = notifySchema.parse(req.body ?? {});
+  const result = await saveSprinNotificationDraft(String(req.params.id), {
+    ...body,
+    actor: 'Dashboard'
+  });
+  if (!result) throw new HttpError(404, 'Surat Perintah tidak ditemukan.');
+  res.json(result);
+});
+
 sprinRouter.post('/:id/notify', async (req, res) => {
-  const body = z
-    .object({ force: z.boolean().optional(), dryRun: z.boolean().optional(), limit: z.number().int().min(1).max(200).optional() })
-    .parse(req.body ?? {});
-  const result = await notifySprinPersonnel(String(req.params.id), {
-    force: body.force,
-    dryRun: body.dryRun,
-    limit: body.limit
+  const body = notifySchema.parse(req.body ?? {});
+  const result = await sendSprinNotification(String(req.params.id), {
+    ...body,
+    actor: 'Dashboard'
   });
   if (!result) throw new HttpError(404, 'Surat Perintah tidak ditemukan.');
   res.json(result);

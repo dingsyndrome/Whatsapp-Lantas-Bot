@@ -22,8 +22,14 @@ export function createApp(): express.Express {
 
 
   // Basic Auth opsional: aktif hanya bila APP_USER & APP_PASS diisi.
+  // /api/health dikecualikan agar healthcheck Docker/monitoring tetap jalan
+  // tanpa kredensial.
   if (config.appUser && config.appPass) {
     app.use((req, res, next) => {
+      if (req.path === '/api/health') {
+        next();
+        return;
+      }
       const header = req.headers.authorization ?? '';
       if (header.startsWith('Basic ')) {
         const [user, pass] = Buffer.from(header.slice(6), 'base64').toString('utf8').split(':');

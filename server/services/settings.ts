@@ -1,6 +1,7 @@
 import {
   DEFAULT_AUTO_REPLY,
   DEFAULT_DOCUMENT_PROMPT,
+  DEFAULT_SPRIN_NOTIFY_TEMPLATE,
   DEFAULT_TIMEMARK_PROMPT,
   DEFAULT_TURJAWALI_KEYWORDS,
   type MonitoredGroupDTO,
@@ -39,6 +40,25 @@ export interface SettingsUpdate {
   patrolNightEnd?: string;
   matchTimeToleranceMinutes?: number;
   matchLocationRadiusMeters?: number;
+  sprinNotifyMode?: 'auto' | 'review';
+  sprinNotifyDefaultFunctions?: string[];
+  sprinNotifyExcludePerwira?: boolean;
+  sprinNotifyTemplate?: string;
+}
+
+function parseCodeList(raw: string | null | undefined): string[] {
+  if (!raw) return ['SATLANTAS'];
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return ['SATLANTAS'];
+    const codes = parsed
+      .filter((value): value is string => typeof value === 'string')
+      .map((value) => value.trim().toUpperCase())
+      .filter(Boolean);
+    return codes.length > 0 ? [...new Set(codes)] : ['SATLANTAS'];
+  } catch {
+    return ['SATLANTAS'];
+  }
 }
 
 const TURJAWALI_CATEGORIES: TurjawaliActivityType[] = [
@@ -161,6 +181,10 @@ export async function getSettings(): Promise<SettingsDTO> {
     patrolNightEnd: bot.patrolNightEnd,
     matchTimeToleranceMinutes: bot.matchTimeToleranceMinutes,
     matchLocationRadiusMeters: bot.matchLocationRadiusMeters,
+    sprinNotifyMode: bot.sprinNotifyMode === 'auto' ? 'auto' : 'review',
+    sprinNotifyDefaultFunctions: parseCodeList(bot.sprinNotifyDefaultFunctions),
+    sprinNotifyExcludePerwira: bot.sprinNotifyExcludePerwira,
+    sprinNotifyTemplate: bot.sprinNotifyTemplate || DEFAULT_SPRIN_NOTIFY_TEMPLATE,
     groups: groups.map(serializeGroup)
   };
 }
@@ -205,7 +229,16 @@ export async function updateSettings(input: SettingsUpdate): Promise<SettingsDTO
       matchTimeToleranceMinutes:
         input.matchTimeToleranceMinutes ?? current.matchTimeToleranceMinutes,
       matchLocationRadiusMeters:
-        input.matchLocationRadiusMeters ?? current.matchLocationRadiusMeters
+        input.matchLocationRadiusMeters ?? current.matchLocationRadiusMeters,
+      sprinNotifyMode: input.sprinNotifyMode ?? current.sprinNotifyMode,
+      sprinNotifyDefaultFunctions: input.sprinNotifyDefaultFunctions
+        ? JSON.stringify(
+            [...new Set(input.sprinNotifyDefaultFunctions.map((code) => code.trim().toUpperCase()).filter(Boolean))]
+          )
+        : current.sprinNotifyDefaultFunctions,
+      sprinNotifyExcludePerwira:
+        input.sprinNotifyExcludePerwira ?? current.sprinNotifyExcludePerwira,
+      sprinNotifyTemplate: input.sprinNotifyTemplate ?? current.sprinNotifyTemplate
     }
   });
   return getSettings();

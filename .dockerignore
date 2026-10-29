@@ -10,6 +10,10 @@ storage
 test-output
 coverage
 *.log
+.venv-ocr
+.tmp-build
+.wwebjs_cache
+pip-*
 docs/screenshots
 scripts/screenshot.mjs
 scripts/screenshot-interactions.mjs

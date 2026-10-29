@@ -26,6 +26,10 @@ model BotConfig {
   scheduleGroupName  String   @default("")
   minOcrConfidence   Int      @default(50)
   notifyOnSprinUpload Boolean @default(true)
+  sprinNotifyMode    String   @default("review")
+  sprinNotifyDefaultFunctions String @default("[\"SATLANTAS\"]")
+  sprinNotifyExcludePerwira Boolean @default(true)
+  sprinNotifyTemplate String  @default("")
   officerSandiMap    String   @default("{}")
   turjawaliMatchingEnabled Boolean @default(true)
   turjawaliKeywords   String   @default("")
@@ -138,10 +142,49 @@ model Sprin {
   personnel      SprinPersonnel[]
   links          LinkSubmission[]
   timemarks      TimemarkPhoto[]
+  notification   SprinNotification?
 
   @@index([activityDate])
   @@index([status])
   @@index([turjawaliType])
+}
+
+model NotificationFunction {
+  id            String   @id @default(cuid())
+  code          String   @unique
+  name          String
+  keywords      String   @default("[]")
+  excludePerwira Boolean @default(true)
+  active        Boolean  @default(true)
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([active])
+}
+
+model SprinNotification {
+  id             String   @id @default(cuid())
+  sprinId        String   @unique
+  sprin          Sprin    @relation(fields: [sprinId], references: [id], onDelete: Cascade)
+  status         String   @default("draft")
+  functionCodes  String   @default("[\"SATLANTAS\"]")
+  excludePerwira Boolean  @default(true)
+  template       String?
+  overrides      String   @default("{}")
+  analysis       String   @default("{}")
+  requiresReview Boolean  @default(false)
+  reviewReasons  String   @default("[]")
+  reviewNote     String?
+  reviewedBy     String?
+  reviewedAt     DateTime?
+  sentAt         DateTime?
+  sentCount      Int      @default(0)
+  failedCount    Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([status])
 }
 
 model Personnel {

@@ -7,6 +7,7 @@ import { ingestSprin } from '../server/services/sprin-service.js';
 import {
   DEFAULT_AUTO_REPLY,
   DEFAULT_DOCUMENT_PROMPT,
+  DEFAULT_SPRIN_NOTIFY_TEMPLATE,
   DEFAULT_TIMEMARK_PROMPT,
   DEFAULT_TURJAWALI_KEYWORDS
 } from '../shared/types.js';
@@ -60,7 +61,11 @@ await prisma.botConfig.upsert({
     patrolNightStart: '21:00',
     patrolNightEnd: '04:00',
     matchTimeToleranceMinutes: 60,
-    matchLocationRadiusMeters: 500
+    matchLocationRadiusMeters: 500,
+    sprinNotifyMode: 'review',
+    sprinNotifyDefaultFunctions: JSON.stringify(['SATLANTAS']),
+    sprinNotifyExcludePerwira: true,
+    sprinNotifyTemplate: DEFAULT_SPRIN_NOTIFY_TEMPLATE
   },
   update: {
     botName: 'SIGAP Command Center',
@@ -80,8 +85,25 @@ await prisma.botConfig.upsert({
     patrolNightStart: '21:00',
     patrolNightEnd: '04:00',
     matchTimeToleranceMinutes: 60,
-    matchLocationRadiusMeters: 500
+    matchLocationRadiusMeters: 500,
+    sprinNotifyMode: 'review',
+    sprinNotifyDefaultFunctions: JSON.stringify(['SATLANTAS']),
+    sprinNotifyExcludePerwira: true,
+    sprinNotifyTemplate: DEFAULT_SPRIN_NOTIFY_TEMPLATE
   }
+});
+
+await prisma.notificationFunction.upsert({
+  where: { code: 'SATLANTAS' },
+  create: {
+    code: 'SATLANTAS',
+    name: 'Satlantas',
+    keywords: JSON.stringify(['SATLANTAS', 'TURJAGWALI', 'REGIDENT', 'KAMSEL', 'GAKKUM', 'PATWAL']),
+    excludePerwira: true,
+    active: true,
+    sortOrder: 10
+  },
+  update: {}
 });
 
 await prisma.whatsAppSession.upsert({

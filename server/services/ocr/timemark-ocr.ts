@@ -1,3 +1,4 @@
+import os from 'node:os';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
@@ -199,6 +200,52 @@ function aiExtraction(
   };
 }
 
+/**
+ * Lapis 1: baca ulang area jam/tanggal (kiri-bawah) dengan crop + upscale.
+ *
+ * Angka watermark putih besar sering kehilangan digit "1" saat OCR membaca
+ * seluruh foto (14:29 terbaca 04:09). Crop yang diperbesar 3x lalu di-threshold
+ * mengembalikan ketebalan garis angka tersebut.
+ */
+async function readWatermarkRegion(
+  filePath: string
+): Promise<{ text: string; confidence: number } | null> {
+  try {
+    const meta = await sharp(filePath).metadata();
+    const width = meta.width ?? 0;
+    const height = meta.height ?? 0;
+    if (!width || !height) return null;
+
+    const crop = {
+      left: 0,
+      top: Math.round(height * 0.5),
+      width: Math.round(width * 0.62),
+      height: Math.round(height * 0.3)
+    };
+
+    const buffer = await sharp(filePath)
+      .extract(crop)
+      .grayscale()
+      .resize({ width: Math.round(crop.width * 3), kernel: 'lanczos3' })
+      .normalize()
+      .sharpen()
+      .png()
+      .toBuffer();
+
+    const tmpPath = path.join(os.tmpdir(), `sigap-jam-${randomUUID()}.png`);
+    await fs.writeFile(tmpPath, buffer);
+    try {
+      const result = await recognize(tmpPath, 'threshold');
+      return { text: result.text, confidence: result.confidence };
+    } finally {
+      await fs.unlink(tmpPath).catch(() => undefined);
+    }
+  } catch (error) {
+    logger.warn({ err: error }, 'OCR area jam gagal');
+    return null;
+  }
+}
+
 export async function extractTimemarkFromFile(filePath: string): Promise<TimemarkOcrResult> {
   const bot = await getBotConfig();
   const minConfidence = bot.minOcrConfidence;
@@ -275,35 +322,84 @@ export async function extractTimemarkFromFile(filePath: string): Promise<Timemar
     }
   }
 
-  let aiUsed = false;
-  if (bot.aiEnabled && (criticalMissing || !ocrText)) {
-    try {
-      const image = await sharp(filePath)
-        .rotate()
-        .resize({ width: 1800, height: 1800, fit: 'inside', withoutEnlargement: true })
-        .jpeg({ quality: 88 })
-        .toBuffer();
-      const aiRaw = await extractTimemarkWithAi(
+  // Lapis 1: crop area jam (kiri-bawah) — menyelamatkan digit "1" yang hilang
+  // dan jam yang tidak terbaca sama sekali pada foto watermark putih besar.
+  const region = await readWatermarkRegion(filePath);
+  if (region && region.text.trim().length > 0) {
+    const regionExtraction = parseTimemarkText(region.text, region.confidence, {
+      minConfidence
+    });
+    const fullHour = Number((extraction.timeText ?? '').slice(0, 2));
+    const regionHour = Number((regionExtraction.timeText ?? '').slice(0, 2));
+    const fullTimeImplausible =
+      Boolean(extraction.timeText) && fullHour >= 0 && fullHour < 5 && regionHour >= 5;
+    const regionBetter =
+      regionExtraction.timeText &&
+      (!extraction.timeText ||
+        fullTimeImplausible ||
+        region.confidence >= extraction.confidence + 5);
+
+    if (regionBetter) {
+      logger.info(
         {
-          enabled: true,
-          baseUrl: bot.aiBaseUrl,
-          apiKey: bot.aiApiKey,
-          model: bot.aiModel
+          jamLama: extraction.timeText,
+          jamBaru: regionExtraction.timeText,
+          confidence: region.confidence
         },
-        bot.timemarkPrompt,
-        image.toString('base64'),
-        'image/jpeg'
+        'Jam dikoreksi dari crop area watermark'
       );
-      if (aiRaw) {
-        const fallback = aiExtraction(aiRaw, ocrText);
-        if (fallback) {
-          extraction = mergeTimemarkExtractions(extraction, fallback);
-          extraction.confidence = Math.max(extraction.confidence, Math.round(Number(aiRaw.confidence ?? 84)));
-          aiUsed = true;
+      extraction = {
+        ...extraction,
+        timeText: regionExtraction.timeText,
+        capturedAt: regionExtraction.capturedAt ?? extraction.capturedAt,
+        dateText: regionExtraction.dateText ?? extraction.dateText,
+        confidence: Math.max(extraction.confidence, region.confidence)
+      };
+      ocrText = `${ocrText}\n${region.text}`.trim();
+      engineConfidence = Math.max(engineConfidence, region.confidence);
+    }
+  }
+
+  let aiUsed = false;
+  const lowConfidence = extraction.confidence < minConfidence;
+  if (bot.aiEnabled && (criticalMissing || lowConfidence || !ocrText)) {
+    if (!bot.aiApiKey) {
+      logger.info(
+        { confidence: extraction.confidence, threshold: minConfidence },
+        'AI vision dilewati: API key belum diisi'
+      );
+    } else {
+      try {
+        const image = await sharp(filePath)
+          .rotate()
+          .resize({ width: 1800, height: 1800, fit: 'inside', withoutEnlargement: true })
+          .jpeg({ quality: 88 })
+          .toBuffer();
+        const aiRaw = await extractTimemarkWithAi(
+          {
+            enabled: true,
+            baseUrl: bot.aiBaseUrl,
+            apiKey: bot.aiApiKey,
+            model: bot.aiModel
+          },
+          bot.timemarkPrompt,
+          image.toString('base64'),
+          'image/jpeg'
+        );
+        if (aiRaw) {
+          const fallback = aiExtraction(aiRaw, ocrText);
+          if (fallback) {
+            extraction = mergeTimemarkExtractions(extraction, fallback);
+            extraction.confidence = Math.max(
+              extraction.confidence,
+              Math.round(Number(aiRaw.confidence ?? 84))
+            );
+            aiUsed = true;
+          }
         }
+      } catch (error) {
+        logger.warn({ err: error }, 'AI vision extraction failed');
       }
-    } catch (error) {
-      logger.warn({ err: error }, 'AI vision extraction failed');
     }
   }
 

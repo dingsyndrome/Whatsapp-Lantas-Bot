@@ -51,6 +51,40 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false,
-    chunkSizeWarningLimit: 1600
+    chunkSizeWarningLimit: 1600,
+    rollupOptions: {
+      output: {
+        // Pisahkan vendor besar agar setiap chunk tetap di bawah batas
+        // transform esbuild. Ini juga mempercepat cache antar rilis.
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return undefined;
+          // Kelompokkan vendor agar jumlah request tetap wajar, tetapi setiap
+          // chunk tetap di bawah batas transform esbuild (<1 MB).
+          const tail = id.split('node_modules/')[1];
+          if (!tail) return 'vendor';
+          const parts = tail.split('/');
+          const pkg = parts[0]?.startsWith('@') ? `${parts[0]}/${parts[1]}` : parts[0];
+
+          if (
+            /^(react|react-dom|react-router|react-router-dom|@remix-run\/router|scheduler|react-is|use-sync-external-store|object-assign|loose-envify|react-redux|redux|redux-thunk|@reduxjs\/toolkit|immer|reselect)$/.test(
+              pkg
+            )
+          ) {
+            return 'vendor-react';
+          }
+          if (/^(recharts|victory-vendor|d3-.+|decimal\.js-light|eventemitter3)$/.test(pkg)) {
+            return 'charts';
+          }
+          if (
+            /^(@radix-ui\/.+|@floating-ui\/.+|lucide-react|sonner|clsx|tailwind-merge|class-variance-authority|date-fns|aria-hidden|react-remove-scroll|react-remove-scroll-bar|get-nonce|react-style-singleton|use-sidecar|use-callback-ref|tslib)$/.test(
+              pkg
+            )
+          ) {
+            return 'vendor-ui';
+          }
+          return 'vendor';
+        }
+      }
+    }
   }
 });

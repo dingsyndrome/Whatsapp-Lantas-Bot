@@ -1,6 +1,7 @@
 import * as React from 'react';
 import {
   AlertTriangle,
+  CalendarClock,
   Check,
   ClipboardCopy,
   Download,
@@ -8,6 +9,7 @@ import {
   FileSpreadsheet,
   FileText,
   Link2,
+  Loader2,
   RefreshCw,
   Search,
   Send,
@@ -16,14 +18,23 @@ import {
   UsersRound
 } from 'lucide-react';
 import { toast } from 'sonner';
-import type { DailyReport, LinkDTO, Paginated } from '@/shared/types';
+import type { LinkDTO, LinkRecapResult, Paginated } from '@/shared/types';
 import { PageHeader, EmptyState } from '@/components/sigap/page-header';
 import { StatusBadge } from '@/components/sigap/status-badge';
 import { PlatformIcon } from '@/components/sigap/platform-badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from '@/components/ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -228,12 +239,266 @@ function LinksTable({
   );
 }
 
+function localToday(): string {
+  const now = new Date();
+  return [
+    now.getFullYear(),
+    String(now.getMonth() + 1).padStart(2, '0'),
+    String(now.getDate()).padStart(2, '0')
+  ].join('-');
+}
+
+interface LinkRecapSendResponse extends LinkRecapResult {
+  sent: boolean;
+  target: string | null;
+  reason?: string;
+}
+
+function LinkRecapDialog({
+  open,
+  onOpenChange,
+  platform,
+  status,
+  search
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  platform: string;
+  status: string;
+  search: string;
+}) {
+  const [from, setFrom] = React.useState(localToday);
+  const [to, setTo] = React.useState(localToday);
+  const [hourFrom, setHourFrom] = React.useState('');
+  const [hourTo, setHourTo] = React.useState('');
+  const [loading, setLoading] = React.useState(false);
+  const [sending, setSending] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const [result, setResult] = React.useState<LinkRecapResult | null>(null);
+  const requestId = React.useRef(0);
+
+  const buildPayload = (): Record<string, string> | null => {
+    if (!from || !to) {
+      toast.error('Tanggal belum lengkap', { description: 'Isi tanggal mulai dan tanggal selesai.' });
+      return null;
+    }
+    if (from > to) {
+      toast.error('Rentang tanggal tidak valid', {
+        description: 'Tanggal mulai harus sama atau lebih awal dari tanggal selesai.'
+      });
+      return null;
+    }
+    if (hourFrom && hourTo && hourFrom > hourTo) {
+      toast.error('Rentang jam tidak valid', {
+        description: 'Jam mulai harus lebih awal dari jam selesai.'
+      });
+      return null;
+    }
+
+    const payload: Record<string, string> = { from, to };
+    if (hourFrom) payload.hourFrom = hourFrom;
+    if (hourTo) payload.hourTo = hourTo;
+    if (platform !== 'all') payload.platform = platform;
+    if (status !== 'all') payload.status = status;
+    if (search.trim()) payload.search = search.trim();
+    return payload;
+  };
+
+  const load = async () => {
+    const payload = buildPayload();
+    if (!payload) return;
+    const id = ++requestId.current;
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await api.get<LinkRecapResult>(
+        `/links/recap?${new URLSearchParams(payload).toString()}`
+      );
+      if (id === requestId.current) setResult(data);
+    } catch (err) {
+      if (id !== requestId.current) return;
+      setResult(null);
+      setError(errorMessage(err));
+      toast.error('Gagal menyiapkan rekap link', { description: errorMessage(err) });
+    } finally {
+      if (id === requestId.current) setLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    if (open) void load();
+    // Muat ulang hanya saat dialog dibuka; perubahan filter menunggu tombol Tampilkan.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  React.useEffect(() => {
+    // Pratinjau lama tidak boleh dikirim setelah periode/filter diubah.
+    requestId.current += 1;
+    setResult(null);
+    setError(null);
+    setLoading(false);
+  }, [from, to, hourFrom, hourTo, platform, status, search]);
+
+  const copy = async () => {
+    if (!result) return;
+    try {
+      await copyText(result.text);
+      toast.success('Rekap link disalin', {
+        description: `${result.counts.total} link · siap ditempel ke grup WhatsApp.`
+      });
+    } catch {
+      toast.error('Gagal menyalin rekap link');
+    }
+  };
+
+  const send = async () => {
+    const payload = buildPayload();
+    if (!payload) return;
+    setSending(true);
+    try {
+      const data = await api.post<LinkRecapSendResponse>('/links/recap/send', payload);
+      setResult({
+        range: data.range,
+        counts: data.counts,
+        platforms: data.platforms,
+        accountability: data.accountability,
+        text: data.text
+      });
+      if (data.sent) {
+        toast.success('Rekap link dikirim ke WhatsApp', { description: `Tujuan: ${data.target}` });
+      } else {
+        toast.warning('Rekap link belum terkirim', {
+          description: data.reason ?? 'Bot WhatsApp belum terhubung atau grup tujuan belum diatur.'
+        });
+      }
+    } catch (err) {
+      toast.error('Gagal mengirim rekap link', { description: errorMessage(err) });
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-3xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <CalendarClock className="h-4 w-4 text-primary" /> Rekap Link ke WhatsApp
+          </DialogTitle>
+          <DialogDescription>
+            Pilih tanggal dan rentang jam. Yang disalin hanya laporan link anggota — tanpa foto
+            Timemark, Sprin, atau rekap Gatur.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div>
+            <Label className="text-[9px] uppercase tracking-wider text-muted-foreground">
+              Dari tanggal
+            </Label>
+            <Input
+              type="date"
+              value={from}
+              onChange={(event) => setFrom(event.target.value)}
+              className="mt-1 h-9 text-xs"
+            />
+          </div>
+          <div>
+            <Label className="text-[9px] uppercase tracking-wider text-muted-foreground">
+              Sampai tanggal
+            </Label>
+            <Input
+              type="date"
+              value={to}
+              onChange={(event) => setTo(event.target.value)}
+              className="mt-1 h-9 text-xs"
+            />
+          </div>
+          <div>
+            <Label className="text-[9px] uppercase tracking-wider text-muted-foreground">
+              Jam mulai
+            </Label>
+            <Input
+              type="time"
+              value={hourFrom}
+              onChange={(event) => setHourFrom(event.target.value)}
+              className="mt-1 h-9 text-xs"
+            />
+          </div>
+          <div>
+            <Label className="text-[9px] uppercase tracking-wider text-muted-foreground">
+              Jam selesai
+            </Label>
+            <Input
+              type="time"
+              value={hourTo}
+              onChange={(event) => setHourTo(event.target.value)}
+              className="mt-1 h-9 text-xs"
+            />
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-[10px] text-muted-foreground">
+            Kosongkan jam untuk mencakup 00:00–23:59. Filter platform/status/pencarian di tabel ikut
+            diterapkan.
+          </p>
+          <Button size="sm" onClick={() => void load()} disabled={loading}>
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+            Tampilkan
+          </Button>
+        </div>
+
+        {error ? (
+          <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-[11px] text-destructive">
+            {error}
+          </p>
+        ) : null}
+
+        <div className="rounded-lg border border-border/60 bg-[#0b141a] p-3">
+          <pre className="max-h-[42vh] min-h-[120px] overflow-auto whitespace-pre-wrap font-mono text-[10px] leading-relaxed text-[#e9edef]">
+            {result?.text ??
+              (loading
+                ? 'Menyiapkan rekap link…'
+                : 'Pilih periode lalu klik Tampilkan untuk melihat pratinjau.')}
+          </pre>
+        </div>
+
+        {result ? (
+          <p className="text-[10px] text-muted-foreground">
+            {formatNumber(result.counts.total)} link · {formatNumber(result.counts.senders)} pengirim ·
+            rentang {result.range.from === result.range.to ? result.range.from : `${result.range.from}–${result.range.to}`}
+            {result.range.startTime || result.range.endTime
+              ? ` · ${result.range.startTime ?? '00:00'}–${result.range.endTime ?? '23:59'}`
+              : ''}
+            {' · '}
+            {formatNumber(result.accountability.notSubmitted.length)} belum mengirim
+          </p>
+        ) : null}
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Tutup
+          </Button>
+          <Button variant="outline" disabled={!result || loading} onClick={() => void copy()}>
+            <ClipboardCopy className="h-4 w-4" /> Salin teks
+          </Button>
+          <Button disabled={!result || loading || sending} onClick={() => void send()}>
+            {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            Kirim ke grup WA
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function LinksPage() {
   const [page, setPage] = React.useState(1);
   const [search, setSearch] = React.useState('');
   const [platform, setPlatform] = React.useState('all');
   const [status, setStatus] = React.useState('all');
-  const [copying, setCopying] = React.useState(false);
+  const [recapOpen, setRecapOpen] = React.useState(false);
   const debounced = useDebouncedValue(search);
   const version = useRealtimeVersion();
 
@@ -262,21 +527,6 @@ export function LinksPage() {
   const data = listApi.data;
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;
 
-  const copyRecap = async () => {
-    setCopying(true);
-    try {
-      const report = await api.get<DailyReport>('/reports/preview');
-      await copyText(report.text);
-      toast.success('Rekap WhatsApp disalin', {
-        description: `${report.counts.links} link · ${report.counts.timemark} foto · siap ditempel ke grup.`
-      });
-    } catch (error) {
-      toast.error('Gagal menyiapkan rekap', { description: errorMessage(error) });
-    } finally {
-      setCopying(false);
-    }
-  };
-
   return (
     <div className="animate-slide-up space-y-6">
       <PageHeader
@@ -285,9 +535,9 @@ export function LinksPage() {
         description="Tautan laporan dari Instagram, TikTok, Facebook, YouTube, X, Drive, maps, dan portal berita — terekam otomatis."
         actions={
           <>
-            <Button variant="outline" size="sm" onClick={() => void copyRecap()} disabled={copying}>
-              {copying ? <RefreshCw className="h-4 w-4 animate-spin" /> : <ClipboardCopy className="h-4 w-4" />}
-              Salin Rekap WA
+            <Button variant="outline" size="sm" onClick={() => setRecapOpen(true)}>
+              <CalendarClock className="h-4 w-4" />
+              Rekap ke WA
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -296,7 +546,7 @@ export function LinksPage() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Rekap hari ini</DropdownMenuLabel>
+                <DropdownMenuLabel>Ekspor data</DropdownMenuLabel>
                 <DropdownMenuItem onClick={() => downloadFile(exportUrl('daily.xlsx'))}>
                   <FileSpreadsheet className="h-4 w-4 text-success" /> Excel semua data
                 </DropdownMenuItem>
@@ -306,12 +556,13 @@ export function LinksPage() {
                 <DropdownMenuItem onClick={() => downloadFile(exportUrl('turjawali.csv'))}>
                   <FileSpreadsheet className="h-4 w-4 text-warning" /> CSV rekap Turjawali
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => downloadFile(exportUrl('daily.txt'))}>
-                  <FileText className="h-4 w-4" /> Teks WhatsApp
-                </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => void copyRecap()}>
-                  <ClipboardCopy className="h-4 w-4" /> Salin ke clipboard
+                <DropdownMenuLabel>WhatsApp</DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => setRecapOpen(true)}>
+                  <ClipboardCopy className="h-4 w-4" /> Rekap link ke WA
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => downloadFile(exportUrl('daily.txt'))}>
+                  <FileText className="h-4 w-4" /> Teks harian lengkap
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -461,6 +712,14 @@ export function LinksPage() {
         <span className="hidden h-3 w-px bg-border sm:block" />
         <span>Status “Dibatasi” berarti situs menolak bot (401/403/429), bukan laporan hilang.</span>
       </div>
+
+      <LinkRecapDialog
+        open={recapOpen}
+        onOpenChange={setRecapOpen}
+        platform={platform}
+        status={status}
+        search={debounced}
+      />
     </div>
   );
 }

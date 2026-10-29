@@ -35,7 +35,8 @@ export interface SprinIngestInput {
 }
 
 const includeCounts = {
-  _count: { select: { personnel: true, links: true, timemarks: true } }
+  _count: { select: { personnel: true, links: true, timemarks: true } },
+  notification: true
 } satisfies Prisma.SprinInclude;
 
 async function saveDocument(
@@ -212,6 +213,7 @@ export async function ingestSprin(input: SprinIngestInput): Promise<{
 export async function listSprins(options: {
   search?: string;
   status?: string;
+  notify?: 'all' | 'review' | 'sent';
   page?: number;
   pageSize?: number;
 }): Promise<{ items: SprinDTO[]; total: number; page: number; pageSize: number }> {
@@ -219,6 +221,11 @@ export async function listSprins(options: {
   const pageSize = Math.min(100, Math.max(1, options.pageSize ?? 20));
   const where: Prisma.SprinWhereInput = {};
   if (options.status && options.status !== 'all') where.status = options.status;
+  if (options.notify === 'review') {
+    where.notification = { is: { status: 'pending_review' } };
+  } else if (options.notify === 'sent') {
+    where.notification = { is: { status: 'sent' } };
+  }
   if (options.search) {
     where.OR = [
       { number: { contains: options.search } },

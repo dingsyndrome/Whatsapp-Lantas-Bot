@@ -41,6 +41,144 @@ Laporan Anda sudah diterima SIGAP dan sedang diverifikasi otomatis.
 
 {summary}`;
 
+export const DEFAULT_SPRIN_NOTIFY_TEMPLATE = `*{botName}*
+Halo {nama}{pangkat_nrp},
+
+Anda tercatat dalam *{sprin}* ({kategori}).
+
+*Tugas:* {tugas}
+*Kegiatan:* {kegiatan}
+
+*Lokasi tugas:* {lokasi_tugas}
+*Lokasi apel:* {lokasi_apel}
+*Jadwal:* {jadwal}
+
+{catatan_lokasi}
+Mohon melaksanakan tugas, lalu kirim *foto Timemark* dan *link laporan* ke grup ini.
+
+_Pesan otomatis SIGAP._`;
+
+export const SPRIN_NOTIFY_PLACEHOLDERS = [
+  '{botName}',
+  '{nama}',
+  '{pangkat_nrp}',
+  '{sprin}',
+  '{kategori}',
+  '{tugas}',
+  '{kegiatan}',
+  '{lokasi_tugas}',
+  '{lokasi_apel}',
+  '{jadwal}',
+  '{catatan_lokasi}'
+] as const;
+
+export interface NotificationFunctionDTO {
+  id: string;
+  code: string;
+  name: string;
+  keywords: string[];
+  excludePerwira: boolean;
+  active: boolean;
+  sortOrder: number;
+  /** Ada nomor HP pada roster untuk fungsi ini. */
+  phoneReady: boolean;
+  /** Jumlah personel aktif yang punya nomor HP pada fungsi ini. */
+  availableCount: number;
+}
+
+export interface SprinLocationRange {
+  from: number;
+  to: number;
+}
+
+export interface SprinLocationDirectiveDTO {
+  rangeText: string;
+  ranges: SprinLocationRange[];
+  location: string;
+  time: string | null;
+  exception: string | null;
+  sourceText: string;
+  confidence: 'high' | 'medium' | 'low';
+}
+
+export interface SprinLocationAnalysisDTO {
+  directives: SprinLocationDirectiveDTO[];
+  preTaskApel: { location: string; time: string | null; sourceText: string } | null;
+  place: { value: string; confidence: 'high' | 'medium' | 'low'; reason: string } | null;
+  schedule: { text: string; sourceText: string } | null;
+  ambiguous: boolean;
+  reasons: string[];
+}
+
+export interface SprinNotifyRecipientDTO {
+  personnelId: string;
+  no: number;
+  name: string;
+  rankNrp: string | null;
+  jabatan: string | null;
+  phone: string;
+  functionCode: string;
+  functionName: string;
+  /** Pesan final yang akan dikirim (sudah termasuk override admin). */
+  message: string;
+  /** Hasil template otomatis sebelum override, untuk tombol "Otomatis". */
+  generatedMessage: string;
+  locationTask: string;
+  locationTaskSource: string;
+  locationApel: string;
+  locationNotes: string[];
+  issues: string[];
+  previouslyNotified: boolean;
+  /** Pesan ini diedit admin, bukan hasil template otomatis. */
+  isOverride: boolean;
+}
+
+export interface SprinNotifySkippedDTO {
+  personnelId: string;
+  no: number;
+  name: string;
+  status:
+    | 'skipped_no_phone'
+    | 'skipped_excluded'
+    | 'skipped_other_function'
+    | 'skipped_already'
+    | 'skipped_unmatched';
+  reason: string;
+}
+
+export interface SprinNotifyPreviewDTO {
+  sprinId: string;
+  sprinNumber: string;
+  functionCodes: string[];
+  excludePerwira: boolean;
+  template: string;
+  /** personnelId → pesan yang diedit admin. */
+  overrides: Record<string, string>;
+  recipients: SprinNotifyRecipientDTO[];
+  skipped: SprinNotifySkippedDTO[];
+  totals: {
+    personnel: number;
+    selected: number;
+    withPhone: number;
+    perwiraExcluded: number;
+    noPhone: number;
+    otherFunction: number;
+    already: number;
+  };
+  analysis: SprinLocationAnalysisDTO;
+  requiresReview: boolean;
+  reviewReasons: string[];
+  notificationStatus: string;
+  draftUpdatedAt: string | null;
+}
+
+export interface SprinNotifySendResultDTO extends SprinNotifyPreviewDTO {
+  blocked: boolean;
+  sent: number;
+  failed: number;
+  dryRun: boolean;
+}
+
 export const TURJAWALI_TYPES = [
   'PENGATURAN',
   'PENJAGAAN',
@@ -240,6 +378,9 @@ export interface TimemarkDTO {
   id: string;
   source: string;
   senderName: string;
+  /** Label siap tampil: [pangkat] [nama] bila berhasil dicocokkan ke roster. */
+  senderLabel?: string;
+  senderRank?: string | null;
   senderNumber: string;
   groupName: string | null;
   imageUrl: string;
@@ -316,6 +457,13 @@ export interface SprinDTO {
   personnelCount: number;
   reportedLinks: number;
   timemarkCount: number;
+  notification: {
+    status: string;
+    requiresReview: boolean;
+    functionCodes: string[];
+    updatedAt: string;
+    sentAt: string | null;
+  } | null;
   personnel?: PersonnelDTO[];
 }
 
@@ -323,6 +471,9 @@ export interface LinkDTO {
   id: string;
   messageId: string | null;
   senderName: string;
+  /** Label siap tampil: [pangkat] [nama] bila berhasil dicocokkan ke roster. */
+  senderLabel?: string;
+  senderRank?: string | null;
   senderNumber: string;
   groupName: string | null;
   url: string;
@@ -424,6 +575,10 @@ export interface SettingsDTO {
   patrolNightEnd: string;
   matchTimeToleranceMinutes: number;
   matchLocationRadiusMeters: number;
+  sprinNotifyMode: 'auto' | 'review';
+  sprinNotifyDefaultFunctions: string[];
+  sprinNotifyExcludePerwira: boolean;
+  sprinNotifyTemplate: string;
   groups: MonitoredGroupDTO[];
 }
 
@@ -477,6 +632,38 @@ export interface DailyReport {
   links: LinkDTO[];
   sprins: SprinDTO[];
   turjawali: TurjawaliRecap;
+}
+
+export interface LinkRecapCounts {
+  total: number;
+  senders: number;
+  valid: number;
+  restricted: number;
+  invalid: number;
+  unchecked: number;
+  platforms: number;
+}
+
+export interface LinkRecapAccountability {
+  /** Jumlah personel non-perwira pada roster Satlantas. */
+  rosterTotal: number;
+  /** Personel non-perwira yang sudah mengirim minimal satu link. */
+  submitted: number;
+  /** Personel non-perwira yang belum mengirim link pada periode ini. */
+  notSubmitted: Array<{ id: string; label: string }>;
+}
+
+export interface LinkRecapResult {
+  range: {
+    from: string;
+    to: string;
+    startTime: string | null;
+    endTime: string | null;
+  };
+  counts: LinkRecapCounts;
+  platforms: PlatformCount[];
+  accountability: LinkRecapAccountability;
+  text: string;
 }
 
 export interface Paginated<T> {

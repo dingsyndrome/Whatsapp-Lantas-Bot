@@ -1,9 +1,11 @@
 import { endOfDay, format, startOfDay } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { prisma } from '../lib/prisma.js';
-import { samePhone } from '../lib/phone.js';
+import { formatTimeOfDay, minutesOfDay } from '../lib/time.js';
 import { findSandiCodes } from './sandi-config.js';
 import { resolveSandiAssignments } from './personnel-service.js';
+import { PersonnelDirectory } from './personnel-directory.js';
+import { formatRankName } from '../../shared/personnel-name.js';
 import { TURJAWALI_LABELS, type TurjawaliType } from '../../shared/types.js';
 
 export type RecapCategory =
@@ -19,8 +21,10 @@ export type RecapCategory =
 export interface CustomRecapParams {
   from: string;
   to: string;
-  hourFrom?: number;
-  hourTo?: number;
+  /** Awal rentang jam dalam menit sejak 00:00, mis. 07:15 → 435. */
+  startMinutes?: number | null;
+  /** Akhir rentang jam dalam menit sejak 00:00 (inklusif sampai detik terakhir menit itu). */
+  endMinutes?: number | null;
   category?: RecapCategory;
   rosterOnly?: boolean;
 }
@@ -32,6 +36,7 @@ export interface CustomRecapActivity {
   category: TurjawaliType;
   address: string | null;
   senderName: string;
+  senderLabel: string;
   unitName: string | null;
   matchStatus: string;
   supervisorSandi: string | null;
@@ -40,28 +45,31 @@ export interface CustomRecapActivity {
 }
 
 export interface CustomRecapResult {
-  range: { from: string; to: string; hourFrom: number | null; hourTo: number | null };
+  range: { from: string; to: string; startTime: string | null; endTime: string | null };
   category: RecapCategory;
   counts: { photos: number; links: number; activities: number; supervisors: number };
   activities: CustomRecapActivity[];
   supervisors: Array<{ sandi: string | null; name: string; rank: string | null; count: number }>;
   personnel: {
     rosterTotal: number;
-    submitted: Array<{ name: string; rankNrp: string | null; photos: number; links: number }>;
-    notSubmitted: Array<{ name: string; rankNrp: string | null; phone: string | null }>;
+    submitted: Array<{
+      name: string;
+      displayName: string;
+      rank: string | null;
+      rankNrp: string | null;
+      photos: number;
+      links: number;
+    }>;
+    notSubmitted: Array<{
+      name: string;
+      displayName: string;
+      rank: string | null;
+      rankNrp: string | null;
+      phone: string | null;
+    }>;
   };
   text: string;
 }
-
-function normalizeName(value: string): string {
-  return value
-    .toUpperCase()
-    .replace(/\b(S\.?H\.?|S\.?I\.?K\.?|S\.?TR\.?K\.?|M\.?H\.?|M\.?M\.?|CPHR|S\.?E\.?)\b/g, ' ')
-    .replace(/[^A-Z\s]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
 
 /** Ringkas alamat menjadi kecamatan saja, sesuai kebutuhan laporan. */
 function shortLocation(address: string | null, district: string | null): string {
@@ -74,16 +82,14 @@ function shortLocation(address: string | null, district: string | null): string 
   return address.split(',')[0].trim().slice(0, 40);
 }
 
-function hourOf(date: Date): number {
-  return date.getHours();
-}
-
 export async function buildCustomRecap(params: CustomRecapParams): Promise<CustomRecapResult> {
   const from = startOfDay(new Date(`${params.from}T00:00:00`));
   const to = endOfDay(new Date(`${params.to}T00:00:00`));
   const category: RecapCategory = params.category ?? 'ALL';
-  const hourFrom = typeof params.hourFrom === 'number' ? params.hourFrom : null;
-  const hourTo = typeof params.hourTo === 'number' ? params.hourTo : null;
+  const startMinutes = typeof params.startMinutes === 'number' ? params.startMinutes : null;
+  const endMinutes = typeof params.endMinutes === 'number' ? params.endMinutes : null;
+  const startTime = formatTimeOfDay(startMinutes);
+  const endTime = formatTimeOfDay(endMinutes);
   const rosterOnly = params.rosterOnly !== false;
 
   const bot = await prisma.botConfig.findUnique({ where: { id: 'singleton' } });
@@ -97,13 +103,22 @@ export async function buildCustomRecap(params: CustomRecapParams): Promise<Custo
     resolveSandiAssignments()
   ]);
 
+  const directory = new PersonnelDirectory(
+    roster.map((person) => ({
+      id: person.id,
+      name: person.name,
+      rank: person.rank,
+      phone: person.phone
+    }))
+  );
+
   const morningStart = bot?.gaturMorningStart ?? '06:00';
   const morningEnd = bot?.gaturMorningEnd ?? '08:00';
 
   const timeMatches = (date: Date): boolean => {
-    const hour = hourOf(date);
-    if (hourFrom !== null && hour < hourFrom) return false;
-    if (hourTo !== null && hour > hourTo) return false;
+    const minutes = minutesOfDay(date);
+    if (startMinutes !== null && minutes < startMinutes) return false;
+    if (endMinutes !== null && minutes > endMinutes) return false;
     if (category === 'POS_PAGI') {
       const hhmm = format(date, 'HH:mm');
       return hhmm >= morningStart && hhmm <= morningEnd;
@@ -122,6 +137,7 @@ export async function buildCustomRecap(params: CustomRecapParams): Promise<Custo
 
   const activities: CustomRecapActivity[] = filteredPhotos.map((photo) => {
     const current = photo.supervisorSandi ? sandiMap[photo.supervisorSandi] : undefined;
+    const person = directory.resolve(photo.senderName, photo.senderNumber);
     return {
       id: photo.id,
       at: (photo.capturedAt ?? photo.createdAt).toISOString(),
@@ -129,6 +145,9 @@ export async function buildCustomRecap(params: CustomRecapParams): Promise<Custo
       category: photo.turjawaliType as TurjawaliType,
       address: shortLocation(photo.address, photo.district),
       senderName: photo.senderName,
+      senderLabel: person
+        ? formatRankName(person.rank, person.name)
+        : formatRankName(null, photo.senderName),
       unitName: photo.unitName,
       matchStatus: photo.matchStatus,
       supervisorSandi: photo.supervisorSandi,
@@ -158,14 +177,8 @@ export async function buildCustomRecap(params: CustomRecapParams): Promise<Custo
   }
 
   const submittedMap = new Map<string, { photos: number; links: number }>();
-  const matchRoster = (senderName: string, senderNumber: string) => {
-    const name = normalizeName(senderName);
-    return roster.find(
-      (person) =>
-        samePhone(person.phone, senderNumber) ||
-        (name.length > 4 && normalizeName(person.name).includes(name.split(' ').slice(0, 2).join(' ')))
-    );
-  };
+  const matchRoster = (senderName: string, senderNumber: string) =>
+    directory.resolve(senderName, senderNumber);
 
   const rosterView = rosterOnly ? roster : roster;
   const isPerwira = (row: { category: string }) => row.category === 'PERWIRA';
@@ -188,6 +201,8 @@ export async function buildCustomRecap(params: CustomRecapParams): Promise<Custo
     .filter((person) => submittedMap.has(person.id))
     .map((person) => ({
       name: person.name,
+      displayName: formatRankName(person.rank, person.name),
+      rank: person.rank,
       rankNrp: [person.rank, person.nrp].filter(Boolean).join('/') || null,
       category: person.category,
       photos: submittedMap.get(person.id)?.photos ?? 0,
@@ -197,6 +212,8 @@ export async function buildCustomRecap(params: CustomRecapParams): Promise<Custo
     .filter((person) => !submittedMap.has(person.id))
     .map((person) => ({
       name: person.name,
+      displayName: formatRankName(person.rank, person.name),
+      rank: person.rank,
       rankNrp: [person.rank, person.nrp].filter(Boolean).join('/') || null,
       category: person.category,
       phone: person.phone
@@ -212,7 +229,7 @@ export async function buildCustomRecap(params: CustomRecapParams): Promise<Custo
 
   const lines: string[] = [
     `*REKAP ${label.toUpperCase()}*`,
-    `${format(from, 'dd MMMM yyyy', { locale: localeId })}${params.to !== params.from ? ` – ${format(to, 'dd MMMM yyyy', { locale: localeId })}` : ''}${hourFrom !== null || hourTo !== null ? ` · ${String(hourFrom ?? 0).padStart(2, '0')}:00–${String(hourTo ?? 23).padStart(2, '0')}:59` : ''}`,
+    `${format(from, 'dd MMMM yyyy', { locale: localeId })}${params.to !== params.from ? ` – ${format(to, 'dd MMMM yyyy', { locale: localeId })}` : ''}${startTime !== null || endTime !== null ? ` · ${startTime ?? '00:00'}–${endTime ?? '23:59'}` : ''}`,
     '',
     `📸 Foto Timemark: ${filteredPhotos.length}`,
     `🔗 Link anggota: ${filteredLinks.length} (dari ${anggotaSubmitted.filter((p) => p.links > 0).length} anggota)`,
@@ -224,11 +241,11 @@ export async function buildCustomRecap(params: CustomRecapParams): Promise<Custo
     lines.push('*KEGIATAN*');
     activities.slice(0, 20).forEach((activity, index) => {
       lines.push(
-        `${index + 1}. ${activity.timeText ?? format(new Date(activity.at), 'HH:mm')} · ${TURJAWALI_LABELS[activity.category]} · ${activity.unitName ?? activity.senderName} · ${activity.address ?? '-'}`
+        `${index + 1}. ${activity.timeText ?? format(new Date(activity.at), 'HH:mm')} · ${TURJAWALI_LABELS[activity.category]} · ${activity.unitName ?? activity.senderLabel} · ${activity.address ?? '-'}`
       );
       if (activity.supervisorName || activity.supervisorSandi) {
         lines.push(
-          `   👁️ ${activity.supervisorSandi ? `[${activity.supervisorSandi}] ` : ''}${[activity.supervisorRank, activity.supervisorName].filter(Boolean).join(' ')}`
+          `   👁️ ${activity.supervisorSandi ? `[${activity.supervisorSandi}] ` : ''}${formatRankName(activity.supervisorRank, activity.supervisorName)}`
         );
       }
     });
@@ -239,7 +256,7 @@ export async function buildCustomRecap(params: CustomRecapParams): Promise<Custo
   if (supervisors.length > 0) {
     lines.push('', '*PERWIRA PENGAWAS*');
     supervisors.forEach((item, index) => {
-      lines.push(`${index + 1}. ${item.sandi ? `[${item.sandi}] ` : ''}${[item.rank, item.name].filter(Boolean).join(' ')} · ${item.count} laporan`);
+      lines.push(`${index + 1}. ${item.sandi ? `[${item.sandi}] ` : ''}${formatRankName(item.rank, item.name)} · ${item.count} laporan`);
     });
     lines.push('_Perwira tidak dihitung dalam kewajiban pelaporan._');
   }
@@ -250,7 +267,7 @@ export async function buildCustomRecap(params: CustomRecapParams): Promise<Custo
   } else {
     anggotaSubmitted.slice(0, 30).forEach((person, index) => {
       const detail = `${person.photos} foto${person.links > 0 ? ` · ${person.links} link` : ''}`;
-      lines.push(`${index + 1}. ${person.name}${person.rankNrp ? ` (${person.rankNrp})` : ''} — ${detail}`);
+      lines.push(`${index + 1}. ${person.displayName} — ${detail}`);
     });
     if (anggotaSubmitted.length > 30) lines.push(`… dan ${anggotaSubmitted.length - 30} anggota lain.`);
   }
@@ -260,7 +277,7 @@ export async function buildCustomRecap(params: CustomRecapParams): Promise<Custo
     lines.push('_Semua anggota roster sudah melapor._');
   } else {
     anggotaNotSubmitted.slice(0, 30).forEach((person, index) => {
-      lines.push(`${index + 1}. ${person.name}${person.rankNrp ? ` (${person.rankNrp})` : ''}`);
+      lines.push(`${index + 1}. ${person.displayName}`);
     });
     if (anggotaNotSubmitted.length > 30) {
       lines.push(`… dan ${anggotaNotSubmitted.length - 30} anggota lain.`);
@@ -268,7 +285,7 @@ export async function buildCustomRecap(params: CustomRecapParams): Promise<Custo
   }
 
   return {
-    range: { from: params.from, to: params.to, hourFrom, hourTo },
+    range: { from: params.from, to: params.to, startTime, endTime },
     category,
     counts: {
       photos: filteredPhotos.length,

@@ -12,8 +12,10 @@ import {
   MATCH_STATUS_LABELS,
   TURJAWALI_LABELS
 } from '../../shared/types.js';
+import { formatRankName } from '../../shared/personnel-name.js';
 import { prisma } from '../lib/prisma.js';
 import { serializeLink, serializeSprin, serializeTimemark, type LinkWithSprin, type SprinWithPersonnel, type TimemarkWithSprin } from '../lib/serializers.js';
+import { PersonnelDirectory } from './personnel-directory.js';
 import { getTurjawaliRecap } from './turjawali-recap-service.js';
 
 export type ExportFormat = 'xlsx' | 'csv' | 'txt';
@@ -29,6 +31,11 @@ export interface DailyBundle extends DailyReport {
     ket: string | null;
     page: number;
   }>;
+  /** Personel non-perwira yang belum mengirim link pada tanggal rekap. */
+  linkAccountability?: {
+    rosterTotal: number;
+    notSubmitted: string[];
+  };
 }
 
 export function reportDate(value?: string | null): Date {
@@ -44,7 +51,7 @@ export async function getDailyBundle(dateInput?: string | null): Promise<DailyBu
   const start = startOfDay(day);
   const end = endOfDay(day);
 
-  const [timemarks, links, sprins, turjawali] = await Promise.all([
+  const [timemarks, links, sprins, turjawali, roster] = await Promise.all([
     prisma.timemarkPhoto.findMany({
       where: { createdAt: { gte: start, lte: end } },
       include: {
@@ -71,12 +78,47 @@ export async function getDailyBundle(dateInput?: string | null): Promise<DailyBu
       },
       orderBy: { createdAt: 'asc' }
     }),
-    getTurjawaliRecap({ period: 'daily', date: format(day, 'yyyy-MM-dd') })
+    getTurjawaliRecap({ period: 'daily', date: format(day, 'yyyy-MM-dd') }),
+    prisma.personnel.findMany({
+      where: { active: true },
+      select: { id: true, name: true, rank: true, phone: true, category: true },
+      orderBy: [{ no: 'asc' }]
+    })
   ]);
 
-  const timemarkDtos = timemarks.map((row) => serializeTimemark(row as TimemarkWithSprin));
-  const linkDtos = links.map((row) => serializeLink(row as LinkWithSprin));
+  const directory = new PersonnelDirectory(roster);
+  const timemarkDtos = timemarks.map((row) => {
+    const item = serializeTimemark(row as TimemarkWithSprin);
+    const person = directory.resolve(item.matchedPersonnelName ?? item.senderName, item.senderNumber)
+      ?? directory.resolve(item.senderName, item.senderNumber);
+    return {
+      ...item,
+      senderRank: person?.rank ?? null,
+      senderLabel: person
+        ? formatRankName(person.rank, person.name)
+        : directory.label(item.senderName, item.senderNumber)
+    };
+  });
+  const linkDtos = links.map((row) => {
+    const item = serializeLink(row as LinkWithSprin);
+    const person = directory.resolve(item.senderName, item.senderNumber);
+    return {
+      ...item,
+      senderRank: person?.rank ?? null,
+      senderLabel: directory.label(item.senderName, item.senderNumber)
+    };
+  });
   const sprinDtos = sprins.map((row) => serializeSprin(row as SprinWithPersonnel));
+
+  turjawali.supervisions.items = turjawali.supervisions.items.map((item) => {
+    if (item.rank && item.name) return item;
+    const person = directory.resolve(item.senderName, item.senderNumber);
+    return {
+      ...item,
+      rank: item.rank ?? person?.rank ?? null,
+      name: item.name ?? person?.name ?? null
+    };
+  });
 
   const personnel = sprins.flatMap((sprin) =>
     sprin.personnel.map((person) => ({
@@ -90,6 +132,16 @@ export async function getDailyBundle(dateInput?: string | null): Promise<DailyBu
       page: person.page
     }))
   );
+
+  const submittedLinkIds = new Set<string>();
+  for (const link of linkDtos) {
+    const person = directory.resolve(link.senderName, link.senderNumber);
+    if (person) submittedLinkIds.add(person.id);
+  }
+  const nonPerwira = roster.filter((person) => person.category !== 'PERWIRA');
+  const notSubmitted = nonPerwira
+    .filter((person) => !submittedLinkIds.has(person.id))
+    .map((person) => formatRankName(person.rank, person.name));
 
   return {
     date: format(day, 'yyyy-MM-dd'),
@@ -105,7 +157,11 @@ export async function getDailyBundle(dateInput?: string | null): Promise<DailyBu
     links: linkDtos,
     sprins: sprinDtos,
     turjawali,
-    personnel
+    personnel,
+    linkAccountability: {
+      rosterTotal: nonPerwira.length,
+      notSubmitted
+    }
   };
 }
 
@@ -163,7 +219,7 @@ export function buildWaText(bundle: DailyBundle): string {
       `👁️ ${bundle.turjawali.supervisions.total} laporan supervisi dari ${bundle.turjawali.supervisions.uniqueOfficers} perwira`
     );
     bundle.turjawali.supervisions.items.slice(0, 10).forEach((item, index) => {
-      const who = [item.rank, item.name].filter(Boolean).join(' ') || item.senderName;
+      const who = formatRankName(item.rank, item.name ?? item.senderName);
       lines.push(
         `${index + 1}. ${item.sandi ? `[${item.sandi}] ` : ''}*${who}* · ${TURJAWALI_LABELS[item.turjawaliType as keyof typeof TURJAWALI_LABELS] ?? item.turjawaliType}`
       );
@@ -180,13 +236,19 @@ export function buildWaText(bundle: DailyBundle): string {
     lines.push('_Belum ada foto masuk._');
   } else {
     bundle.timemarks.slice(0, 30).forEach((photo, index) => {
+      const person = photo.senderLabel ?? photo.senderName;
+      const matched =
+        photo.matchedPersonnelName &&
+        !person.toUpperCase().includes(photo.matchedPersonnelName.toUpperCase())
+          ? ` · ${photo.matchedPersonnelName}`
+          : '';
       lines.push(
-        `${index + 1}. *${photo.timeText ?? '--:--'}* · ${TURJAWALI_LABELS[photo.turjawaliType]} · ${photo.unitName ?? photo.senderName}`
+        `${index + 1}. *${photo.timeText ?? '--:--'}* · ${TURJAWALI_LABELS[photo.turjawaliType]} · ${photo.unitName ?? person}`
       );
       if (photo.address) lines.push(`   📍 ${photo.address}`);
       if (photo.coordinateText) lines.push(`   🗺️ ${photo.coordinateText}`);
       lines.push(
-        `   👤 ${photo.senderName}${photo.matchedPersonnelName ? ` · ${photo.matchedPersonnelName}` : ''} · ${MATCH_STATUS_LABELS[photo.matchStatus]} ${photo.matchScore}%`
+        `   👤 ${person}${matched} · ${MATCH_STATUS_LABELS[photo.matchStatus]} ${photo.matchScore}%`
       );
     });
     if (bundle.timemarks.length > 30) lines.push(`_+${bundle.timemarks.length - 30} foto lainnya di dashboard._`);
@@ -200,10 +262,38 @@ export function buildWaText(bundle: DailyBundle): string {
     lines.push('_Belum ada link masuk._');
   } else {
     bundle.links.slice(0, 30).forEach((link, index) => {
-      lines.push(`${index + 1}. [${link.platform}] ${link.senderName} — ${waDate(link.receivedAt)}`);
-      lines.push(`   ${link.normalizedUrl}`);
+      const person = link.senderLabel ?? link.senderName;
+      lines.push(`${index + 1}. [${link.platform}] ${person} — ${waDate(link.receivedAt)}`);
     });
     if (bundle.links.length > 30) lines.push(`_+${bundle.links.length - 30} link lainnya di dashboard._`);
+
+    const invalidLinks = bundle.links.filter((link) => link.status === 'invalid');
+    if (invalidLinks.length > 0) {
+      lines.push('');
+      lines.push(`❌ *${invalidLinks.length} LINK TIDAK VALID*`);
+      invalidLinks.slice(0, 20).forEach((link, index) => {
+        const person = link.senderLabel ?? link.senderName;
+        lines.push(`${index + 1}. ${person} · ${link.platform} · ${waDate(link.receivedAt)}`);
+      });
+      if (invalidLinks.length > 20) {
+        lines.push(`_… dan ${invalidLinks.length - 20} link tidak valid lainnya._`);
+      }
+    }
+  }
+
+  if (bundle.linkAccountability) {
+    lines.push('');
+    lines.push('*BELUM MENGIRIM LINK*');
+    if (bundle.linkAccountability.notSubmitted.length === 0) {
+      lines.push('_Seluruh anggota roster sudah mengirim link._');
+    } else {
+      bundle.linkAccountability.notSubmitted.forEach((person, index) => {
+        lines.push(`${index + 1}. ${person}`);
+      });
+      lines.push(
+        `_${bundle.linkAccountability.notSubmitted.length} dari ${bundle.linkAccountability.rosterTotal} anggota belum mengirim link · perwira dikecualikan._`
+      );
+    }
   }
   lines.push('');
 
