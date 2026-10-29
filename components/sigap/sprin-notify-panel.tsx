@@ -223,10 +223,26 @@ export function SprinNotifyPanel({ sprin, onChanged }: { sprin: SprinDTO; onChan
                 dicocokkan ke database personel. Perwira dikecualikan agar notifikasi fokus ke anggota pelaksana.
               </CardDescription>
             </div>
-            <Button size="sm" variant="outline" onClick={applyPreview} disabled={loading}>
-              {loading ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-              Muat pratinjau
-            </Button>
+            <div className="flex flex-col items-end gap-1.5">
+              <div className="flex items-center gap-2">
+                <Button size="sm" variant="outline" onClick={applyPreview} disabled={loading}>
+                  {loading ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                  Muat pratinjau
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    window.open(`/api/sprin/${sprin.id}/personnel-phones`, '_blank', 'noopener');
+                  }}
+                >
+                  Diagnosa nomor
+                </Button>
+              </div>
+              <p className="text-[9px] text-muted-foreground">
+                Diagnosa membuka daftar nomor yang terbaca dari lampiran.
+              </p>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
