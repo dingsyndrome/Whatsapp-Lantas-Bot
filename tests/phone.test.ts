@@ -29,4 +29,14 @@ describe('nomor HP personel dari lampiran Sprin', () => {
     expect(row?.rank).toBe('AIPTU');
     expect(findPhone(row?.rawText)).toBe('628113671001');
   });
+
+  it('tidak menempelkan blok tanda tangan ke baris personel', () => {
+    const row = parseLampiranRow(
+      "8. ROHMAN YUWONO AIPTU BANIT TURJAGWALI Dikeluarkan di: Tulungagung pada tanggal : 29 Oktober 2026 a.n. KEPALA KEPOLISIAN RESOR TULUNGAGUNG KASATLANTAS IVAN DANARA OKTAVIAN AJUN KOMISARIS POLISI NRP 94101244",
+      1
+    );
+    expect(row?.name).toBe('ROHMAN YUWONO');
+    expect(row?.rawText ?? '').not.toMatch(/Dikeluarkan|KEPOLISIAN/i);
+    expect(row?.rawText ?? '').not.toMatch(/IVAN DANARA/);
+  });
 });

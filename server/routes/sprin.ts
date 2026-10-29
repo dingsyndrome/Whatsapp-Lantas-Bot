@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { config } from '../config.js';
 import { prisma } from '../lib/prisma.js';
 import { HttpError } from '../lib/http-error.js';
-import { findPhone } from '../lib/phone.js';
+import { findPhone, normalizePhone } from '../lib/phone.js';
 import {
   createManualSprin,
   deleteSprin,
@@ -142,6 +142,19 @@ sprinRouter.post('/:id/notify/draft', async (req, res) => {
   });
   if (!result) throw new HttpError(404, 'Surat Perintah tidak ditemukan.');
   res.json(result);
+});
+
+sprinRouter.patch('/:id/personnel/:personnelId', async (req, res) => {
+  const body = z
+    .object({ phone: z.string().max(20).nullable() })
+    .parse(req.body ?? {});
+  const phone = body.phone ? normalizePhone(body.phone) : null;
+  if (body.phone && !phone) throw new HttpError(400, 'Nomor HP tidak valid.');
+  const updated = await prisma.sprinPersonnel.update({
+    where: { id: String(req.params.personnelId) },
+    data: { phone }
+  });
+  res.json({ id: updated.id, phone: updated.phone });
 });
 
 sprinRouter.get('/:id/personnel-phones', async (req, res) => {

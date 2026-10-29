@@ -125,7 +125,15 @@ function SummaryCards({
   );
 }
 
-function PersonnelTable({ personnel }: { personnel: PersonnelDTO[] }) {
+function PersonnelTable({
+  personnel,
+  sprinId,
+  onUpdated
+}: {
+  personnel: PersonnelDTO[];
+  sprinId: string;
+  onUpdated: () => void;
+}) {
   const [search, setSearch] = React.useState('');
   const [assignment, setAssignment] = React.useState('all');
   const filtered = React.useMemo(() => {
@@ -178,6 +186,7 @@ function PersonnelTable({ personnel }: { personnel: PersonnelDTO[] }) {
               <TableHead className="hidden sm:table-cell">Jabatan</TableHead>
               <TableHead>Penugasan</TableHead>
               <TableHead className="hidden md:table-cell">KET</TableHead>
+              <TableHead className="w-40">No. HP</TableHead>
               <TableHead className="w-12 text-center">Hal.</TableHead>
             </TableRow>
           </TableHeader>
@@ -204,6 +213,9 @@ function PersonnelTable({ personnel }: { personnel: PersonnelDTO[] }) {
                 <TableCell className="hidden max-w-[110px] md:table-cell">
                   <p className="truncate text-[9px] text-muted-foreground">{person.ket ?? '-'}</p>
                 </TableCell>
+                <TableCell>
+                  <PhoneCell person={person} sprinId={sprinId} onUpdated={onUpdated} />
+                </TableCell>
                 <TableCell className="text-center font-mono text-[9px] text-muted-foreground">
                   {person.page}
                 </TableCell>
@@ -219,6 +231,54 @@ function PersonnelTable({ personnel }: { personnel: PersonnelDTO[] }) {
         Menampilkan {filtered.length} dari {personnel.length} personel lintas halaman.
       </p>
     </div>
+  );
+}
+
+
+/** Kolom nomor HP: bisa dikoreksi langsung bila PDF tidak memuat nomornya. */
+function PhoneCell({
+  person,
+  sprinId,
+  onUpdated
+}: {
+  person: PersonnelDTO;
+  sprinId: string;
+  onUpdated: () => void;
+}) {
+  const [value, setValue] = React.useState(person.phone ?? '');
+  const [saving, setSaving] = React.useState(false);
+
+  React.useEffect(() => {
+    setValue(person.phone ?? '');
+  }, [person.phone]);
+
+  const save = async () => {
+    const next = value.trim();
+    if (next === (person.phone ?? '')) return;
+    setSaving(true);
+    try {
+      await api.patch(`/sprin/${sprinId}/personnel/${person.id}`, { phone: next || null });
+      toast.success(`Nomor ${person.name} disimpan`);
+      onUpdated();
+    } catch (error) {
+      toast.error('Gagal menyimpan nomor', { description: errorMessage(error) });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Input
+      value={value}
+      onChange={(event) => setValue(event.target.value)}
+      onBlur={() => void save()}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter') void save();
+      }}
+      placeholder="08xxxxxxxxxx"
+      disabled={saving}
+      className="h-7 font-mono text-[10px]"
+    />
   );
 }
 
@@ -414,7 +474,14 @@ function SprinDetailDialog({
                       <FileSpreadsheet className="h-3.5 w-3.5" /> Impor Excel/CSV
                     </Button>
                   </div>
-                  <PersonnelTable personnel={sprin.personnel ?? []} />
+                  <PersonnelTable
+                    personnel={sprin.personnel ?? []}
+                    sprinId={sprin.id}
+                    onUpdated={() => {
+                      void detailApi.refresh();
+                      onChanged();
+                    }}
+                  />
                 </TabsContent>
                 <TabsContent value="notifikasi" className="mt-4">
                   <SprinNotifyPanel

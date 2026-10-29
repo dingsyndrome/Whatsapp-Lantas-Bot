@@ -457,7 +457,13 @@ export function parseLampiranRow(line: string, page: number): ParsedPersonnel | 
   const no = Number(match[1]);
   if (!Number.isFinite(no) || no < 1 || no > 2000) return null;
 
-  const body = match[2].replace(/\s+/g, ' ').trim();
+  // Buang blok tanda tangan di akhir lampiran agar tidak menempel ke baris
+  // personel terakhir (nama penandatangan ikut terbaca sebagai personel).
+  const signatureIndex = match[2].search(
+    /Dikeluarkan\s+di|a\.n\.\s*KEPALA|KEPALA\s+KEPOLISIAN|AJUN\s+KOMISARIS\s+POLISI|NRP\s*\d{6,}/i
+  );
+  const rowText = signatureIndex > 0 ? match[2].slice(0, signatureIndex) : match[2];
+  const body = rowText.replace(/\s+/g, ' ').trim();
   const rankMatch = LAMPIRAN_RANK_RE.exec(body);
   if (!rankMatch) return null;
 
