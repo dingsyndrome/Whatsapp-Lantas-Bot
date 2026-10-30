@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { HttpError } from '../lib/http-error.js';
-import { parseTimeOfDay } from '../lib/time.js';
+import { isTimeRangeOrderValid, parseTimeOfDay } from '../lib/time.js';
 import { buildWaText, getDailyBundle } from '../services/export-service.js';
 import { sendDailyRecap } from '../services/scheduler-service.js';
 import { sendPersonnelReminder } from '../services/reminder-service.js';
@@ -60,14 +60,18 @@ reportsRouter.get('/custom', async (req, res) => {
 
   const startMinutes = parseOptionalTime(q.hourFrom, 'jam mulai');
   const endMinutes = parseOptionalTime(q.hourTo, 'jam selesai');
-  if (startMinutes !== null && endMinutes !== null && startMinutes > endMinutes) {
-    throw new HttpError(400, 'Jam mulai tidak boleh lebih besar dari jam selesai.');
+  const to = q.to ?? q.from;
+  if (!isTimeRangeOrderValid(q.from, to, startMinutes, endMinutes)) {
+    throw new HttpError(
+      400,
+      'Jam selesai harus setelah jam mulai bila tanggal mulai dan tanggal selesai sama.'
+    );
   }
 
   res.json(
     await buildCustomRecap({
       from: q.from,
-      to: q.to ?? q.from,
+      to,
       startMinutes,
       endMinutes,
       category: q.category,

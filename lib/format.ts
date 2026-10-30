@@ -20,6 +20,23 @@ export function formatTime(value: string | Date | null | undefined): string {
   return formatDate(value, 'HH:mm');
 }
 
+const TIME_INPUT_PATTERN = /^([01]?\d|2[0-3])(?:[:.]([0-5]\d))?$/;
+
+/**
+ * Normalisasi input jam pengguna menjadi "HH:MM" 24 jam.
+ * Menerima "7", "07", "7.15", "07.15", dan "07:15".
+ * Mengembalikan '' untuk input kosong dan null bila format tidak dikenali.
+ */
+export function normalizeTimeInput(value: string | null | undefined): string | null {
+  const trimmed = (value ?? '').trim();
+  if (!trimmed) return '';
+  const match = trimmed.match(TIME_INPUT_PATTERN);
+  if (!match) return null;
+  const hour = Number(match[1]);
+  const minute = Number(match[2] ?? 0);
+  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+}
+
 export function timeAgo(value: string | Date | null | undefined): string {
   if (!value) return '-';
   const date = value instanceof Date ? value : new Date(value);

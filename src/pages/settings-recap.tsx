@@ -13,7 +13,7 @@ import {
   SelectValue
 } from '@/components/ui/select';
 import { api, copyText, errorMessage } from '@/lib/api';
-import { formatNumber } from '@/lib/format';
+import { formatNumber, normalizeTimeInput } from '@/lib/format';
 
 type Category =
   | 'ALL'
@@ -51,22 +51,6 @@ function today(): string {
   return [now.getFullYear(), String(now.getMonth() + 1).padStart(2, '0'), String(now.getDate()).padStart(2, '0')].join('-');
 }
 
-const TIME_PATTERN = /^([01]?\d|2[0-3])(?:[:.]([0-5]\d))?$/;
-
-/**
- * Terima "7", "07", "07:15", atau "7.15" lalu kembalikan "HH:MM".
- * Mengembalikan '' untuk input kosong dan null bila format tidak dikenali.
- */
-function normalizeTime(value: string): string | null {
-  const trimmed = value.trim();
-  if (!trimmed) return '';
-  const match = trimmed.match(TIME_PATTERN);
-  if (!match) return null;
-  const hour = Number(match[1]);
-  const minute = Number(match[2] ?? 0);
-  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
-}
-
 export function RecapPanel() {
   const [from, setFrom] = React.useState(today());
   const [to, setTo] = React.useState(today());
@@ -77,17 +61,18 @@ export function RecapPanel() {
   const [result, setResult] = React.useState<CustomRecapResponse | null>(null);
 
   const run = async () => {
-    const start = normalizeTime(hourFrom);
-    const end = normalizeTime(hourTo);
+    const start = normalizeTimeInput(hourFrom);
+    const end = normalizeTimeInput(hourTo);
     if (start === null || end === null) {
       toast.error('Format jam tidak dikenali', {
-        description: 'Gunakan format 24 jam HH:MM, contoh 07:15.'
+        description: 'Gunakan format 24 jam HH:MM, contoh 13:36.'
       });
       return;
     }
-    if (start !== '' && end !== '' && start > end) {
+    // Jam selesai lebih kecil hanya sah bila tanggalnya berbeda (lintas hari).
+    if (from === to && start !== '' && end !== '' && start > end) {
       toast.error('Rentang jam tidak valid', {
-        description: 'Jam mulai harus lebih awal dari jam selesai.'
+        description: 'Pada tanggal yang sama, jam selesai harus setelah jam mulai.'
       });
       return;
     }
@@ -117,8 +102,8 @@ export function RecapPanel() {
         <CardHeader className="pb-2">
           <h3 className="text-sm font-semibold">Rekap Kustom</h3>
           <p className="text-[10px] text-muted-foreground">
-            Pilih tanggal, rentang jam (24 jam, mis. 05:00–07:20), dan jenis kegiatan. Personel mengikuti
-            roster Satlantas.
+            Pilih tanggal, rentang jam (format 24 jam), dan jenis kegiatan. Rentang boleh melewati
+            tengah malam, mis. 29 Okt 13:36 sampai 30 Okt 08:26.
           </p>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -134,20 +119,32 @@ export function RecapPanel() {
             <div>
               <Label className="text-[9px] uppercase tracking-wider text-muted-foreground">Jam mulai</Label>
               <Input
-                type="time"
                 value={hourFrom}
                 onChange={(e) => setHourFrom(e.target.value)}
-                placeholder="07:15"
+                onBlur={(e) => {
+                  const normalized = normalizeTimeInput(e.target.value);
+                  if (normalized) setHourFrom(normalized);
+                }}
+                placeholder="mis. 13:36"
+                inputMode="numeric"
+                maxLength={5}
+                autoComplete="off"
                 className="mt-1 h-9 text-xs"
               />
             </div>
             <div>
               <Label className="text-[9px] uppercase tracking-wider text-muted-foreground">Jam selesai</Label>
               <Input
-                type="time"
                 value={hourTo}
                 onChange={(e) => setHourTo(e.target.value)}
-                placeholder="07:20"
+                onBlur={(e) => {
+                  const normalized = normalizeTimeInput(e.target.value);
+                  if (normalized) setHourTo(normalized);
+                }}
+                placeholder="mis. 08:26"
+                inputMode="numeric"
+                maxLength={5}
+                autoComplete="off"
                 className="mt-1 h-9 text-xs"
               />
             </div>

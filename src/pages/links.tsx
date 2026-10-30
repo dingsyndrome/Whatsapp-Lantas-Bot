@@ -55,7 +55,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useApi, useDebouncedValue } from '@/src/hooks/use-api';
 import { useRealtimeVersion } from '@/src/lib/realtime';
 import { api, copyText, downloadFile, errorMessage, exportUrl } from '@/lib/api';
-import { formatDateTime, formatNumber, timeAgo, truncate } from '@/lib/format';
+import { formatDateTime, formatNumber, normalizeTimeInput, timeAgo, truncate } from '@/lib/format';
 import { cn, initials } from '@/lib/utils';
 
 interface LinkSummary {
@@ -288,16 +288,25 @@ function LinkRecapDialog({
       });
       return null;
     }
-    if (hourFrom && hourTo && hourFrom > hourTo) {
+    const start = normalizeTimeInput(hourFrom);
+    const end = normalizeTimeInput(hourTo);
+    if (start === null || end === null) {
+      toast.error('Format jam tidak dikenali', {
+        description: 'Gunakan format 24 jam HH:MM, contoh 13:36.'
+      });
+      return null;
+    }
+    // Jam selesai lebih kecil hanya sah bila tanggalnya berbeda (lintas hari).
+    if (from === to && start !== '' && end !== '' && start > end) {
       toast.error('Rentang jam tidak valid', {
-        description: 'Jam mulai harus lebih awal dari jam selesai.'
+        description: 'Pada tanggal yang sama, jam selesai harus setelah jam mulai.'
       });
       return null;
     }
 
     const payload: Record<string, string> = { from, to };
-    if (hourFrom) payload.hourFrom = hourFrom;
-    if (hourTo) payload.hourTo = hourTo;
+    if (start) payload.hourFrom = start;
+    if (end) payload.hourTo = end;
     if (platform !== 'all') payload.platform = platform;
     if (status !== 'all') payload.status = status;
     if (search.trim()) payload.search = search.trim();
@@ -419,9 +428,16 @@ function LinkRecapDialog({
               Jam mulai
             </Label>
             <Input
-              type="time"
               value={hourFrom}
               onChange={(event) => setHourFrom(event.target.value)}
+              onBlur={(event) => {
+                const normalized = normalizeTimeInput(event.target.value);
+                if (normalized) setHourFrom(normalized);
+              }}
+              placeholder="mis. 13:36"
+              inputMode="numeric"
+              maxLength={5}
+              autoComplete="off"
               className="mt-1 h-9 text-xs"
             />
           </div>
@@ -430,9 +446,16 @@ function LinkRecapDialog({
               Jam selesai
             </Label>
             <Input
-              type="time"
               value={hourTo}
               onChange={(event) => setHourTo(event.target.value)}
+              onBlur={(event) => {
+                const normalized = normalizeTimeInput(event.target.value);
+                if (normalized) setHourTo(normalized);
+              }}
+              placeholder="mis. 08:26"
+              inputMode="numeric"
+              maxLength={5}
+              autoComplete="off"
               className="mt-1 h-9 text-xs"
             />
           </div>
@@ -440,8 +463,8 @@ function LinkRecapDialog({
 
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-[10px] text-muted-foreground">
-            Kosongkan jam untuk mencakup 00:00–23:59. Filter platform/status/pencarian di tabel ikut
-            diterapkan.
+            Kosongkan jam untuk mencakup 00:00–23:59. Rentang lintas hari didukung, mis. 13:36 sampai
+            besok 08:26. Filter platform/status/pencarian di tabel ikut diterapkan.
           </p>
           <Button size="sm" onClick={() => void load()} disabled={loading}>
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}

@@ -1,7 +1,7 @@
 import { endOfDay, format, startOfDay } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { prisma } from '../lib/prisma.js';
-import { formatTimeOfDay, minutesOfDay } from '../lib/time.js';
+import { formatTimeOfDay, resolveTimeRange } from '../lib/time.js';
 import { findSandiCodes } from './sandi-config.js';
 import { resolveSandiAssignments } from './personnel-service.js';
 import { PersonnelDirectory } from './personnel-directory.js';
@@ -114,11 +114,12 @@ export async function buildCustomRecap(params: CustomRecapParams): Promise<Custo
 
   const morningStart = bot?.gaturMorningStart ?? '06:00';
   const morningEnd = bot?.gaturMorningEnd ?? '08:00';
+  // Batas absolut: jam mulai di tanggal `from`, jam selesai di tanggal `to`.
+  // Ini membuat rentang lintas hari (29 Okt 13:36 → 30 Okt 08:26) tetap benar.
+  const window = resolveTimeRange(params.from, params.to, startMinutes, endMinutes);
 
   const timeMatches = (date: Date): boolean => {
-    const minutes = minutesOfDay(date);
-    if (startMinutes !== null && minutes < startMinutes) return false;
-    if (endMinutes !== null && minutes > endMinutes) return false;
+    if (date < window.start || date > window.end) return false;
     if (category === 'POS_PAGI') {
       const hhmm = format(date, 'HH:mm');
       return hhmm >= morningStart && hhmm <= morningEnd;

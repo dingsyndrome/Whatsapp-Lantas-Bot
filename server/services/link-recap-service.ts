@@ -9,7 +9,6 @@ import {
   LINK_RECAP_STATUS_LABELS,
   buildLinkFilterNote,
   buildLinkRecapText,
-  isWithinTimeWindow,
   summarizeLinks
 } from './links/recap-text.js';
 import { PersonnelDirectory } from './personnel-directory.js';
@@ -96,6 +95,9 @@ export async function buildLinkRecap(params: LinkRecapParams): Promise<LinkRecap
     })
   ]);
   const directory = new PersonnelDirectory(roster);
+  // Batas absolut (sudah termasuk tanggal), sehingga rentang lintas hari seperti
+  // 29 Okt 13:36 → 30 Okt 08:26 tidak ikut tersaring oleh perbandingan jam saja.
+  const withinRange = (at: Date): boolean => at >= queryStart && at <= queryEnd;
   const links = rows
     .map((row) => {
       const link = serializeLink(row as LinkWithSprin);
@@ -106,7 +108,7 @@ export async function buildLinkRecap(params: LinkRecapParams): Promise<LinkRecap
         senderLabel: directory.label(link.senderName, link.senderNumber)
       };
     })
-    .filter((link) => isWithinTimeWindow(new Date(link.receivedAt), startMinutes, endMinutes));
+    .filter((link) => withinRange(new Date(link.receivedAt)));
 
   const counts = summarizeLinks(links);
   const platformMap = new Map<string, number>();
@@ -122,7 +124,7 @@ export async function buildLinkRecap(params: LinkRecapParams): Promise<LinkRecap
   // dimasukkan ke daftar "belum mengirim".
   const submittedIds = new Set<string>();
   for (const row of periodRows) {
-    if (!isWithinTimeWindow(row.receivedAt, startMinutes, endMinutes)) continue;
+    if (!withinRange(row.receivedAt)) continue;
     const person = directory.resolve(row.senderName, row.senderNumber);
     if (person) submittedIds.add(person.id);
   }

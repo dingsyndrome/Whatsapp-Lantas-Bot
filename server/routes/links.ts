@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { HttpError } from '../lib/http-error.js';
-import { parseTimeOfDay } from '../lib/time.js';
+import { isTimeRangeOrderValid, parseTimeOfDay } from '../lib/time.js';
 import { deleteLink, getLinkSummary, listLinks, revalidateLink } from '../services/link-service.js';
 import {
   buildLinkRecap,
@@ -41,8 +41,11 @@ function toRecapParams(input: RecapQuery): LinkRecapParams {
   }
   const startMinutes = parseOptionalTime(input.hourFrom, 'jam mulai');
   const endMinutes = parseOptionalTime(input.hourTo, 'jam selesai');
-  if (startMinutes !== null && endMinutes !== null && startMinutes > endMinutes) {
-    throw new HttpError(400, 'Jam mulai tidak boleh lebih besar dari jam selesai.');
+  if (!isTimeRangeOrderValid(from, to, startMinutes, endMinutes)) {
+    throw new HttpError(
+      400,
+      'Jam selesai harus setelah jam mulai bila tanggal mulai dan tanggal selesai sama.'
+    );
   }
   return {
     from,

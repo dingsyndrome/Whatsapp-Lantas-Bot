@@ -6,6 +6,8 @@
  * sampai tingkat menit.
  */
 
+import { endOfDay, startOfDay } from 'date-fns';
+
 const TIME_OF_DAY_PATTERN = /^([01]?\d|2[0-3])(?:[:.]([0-5]\d))?$/;
 
 export interface TimeOfDay {
@@ -35,4 +37,55 @@ export function formatTimeOfDay(minutes: number | null | undefined): string | nu
 /** Menit sejak 00:00 untuk sebuah Date (memakai zona waktu lokal server). */
 export function minutesOfDay(date: Date): number {
   return date.getHours() * 60 + date.getMinutes();
+}
+
+export interface AbsoluteTimeRange {
+  /** Batas awal absolut: jam mulai pada tanggal `from`. */
+  start: Date;
+  /** Batas akhir absolut: jam selesai pada tanggal `to`. */
+  end: Date;
+}
+
+/**
+ * Rentang waktu absolut untuk filter rekap.
+ *
+ * Jam mulai selalu menempel pada tanggal `from`, jam selesai pada tanggal `to`.
+ * Jadi rentang lintas hari seperti 29 Okt 13:36 → 30 Okt 08:26 tetap valid
+ * walaupun jam selesainya lebih kecil dari jam mulai.
+ */
+export function resolveTimeRange(
+  from: string,
+  to: string,
+  startMinutes: number | null | undefined,
+  endMinutes: number | null | undefined
+): AbsoluteTimeRange {
+  const start = startOfDay(new Date(`${from}T00:00:00`));
+  if (typeof startMinutes === 'number') {
+    start.setHours(Math.floor(startMinutes / 60), startMinutes % 60, 0, 0);
+  }
+
+  const end = endOfDay(new Date(`${to}T00:00:00`));
+  if (typeof endMinutes === 'number') {
+    end.setHours(Math.floor(endMinutes / 60), endMinutes % 60, 59, 999);
+  }
+
+  return { start, end };
+}
+
+/**
+ * Apakah urutan jam masuk akal?
+ *
+ * Jam selesai lebih kecil dari jam mulai hanya sah bila tanggalnya berbeda
+ * (rentang melewati tengah malam). Pada tanggal yang sama, hasilnya kosong,
+ * jadi lebih baik ditolak dengan pesan jelas.
+ */
+export function isTimeRangeOrderValid(
+  from: string,
+  to: string,
+  startMinutes: number | null | undefined,
+  endMinutes: number | null | undefined
+): boolean {
+  if (typeof startMinutes !== 'number' || typeof endMinutes !== 'number') return true;
+  if (from !== to) return true;
+  return startMinutes <= endMinutes;
 }
