@@ -23,6 +23,7 @@ import {
   Shield,
   ShieldCheck,
   SlidersHorizontal,
+  Sparkles,
   TrafficCone,
   UploadCloud,
   X
@@ -313,17 +314,27 @@ function PhotoCard({ photo, onClick }: { photo: TimemarkDTO; onClick: () => void
         </p>
         <div className="flex items-center justify-between border-t border-border/50 pt-2.5">
           <span className="truncate text-[10px] text-muted-foreground">{photo.senderName}</span>
-          <span
-            className={cn(
-              'text-[10px] font-bold',
-              photo.confidence >= 80
-                ? 'text-success'
-                : photo.confidence >= 50
-                  ? 'text-warning'
-                  : 'text-destructive'
-            )}
-          >
-            {photo.confidence}%
+          <span className="flex items-center gap-1.5">
+            {photo.aiUsed ? (
+              <span
+                className="inline-flex items-center gap-0.5 rounded-full bg-primary/15 px-1.5 py-0.5 text-[8px] font-semibold text-primary"
+                title="Sebagian data diverifikasi ulang dengan AI"
+              >
+                <Sparkles className="h-2.5 w-2.5" /> AI
+              </span>
+            ) : null}
+            <span
+              className={cn(
+                'text-[10px] font-bold',
+                photo.confidence >= 80
+                  ? 'text-success'
+                  : photo.confidence >= 50
+                    ? 'text-warning'
+                    : 'text-destructive'
+              )}
+            >
+              {photo.confidence}%
+            </span>
           </span>
         </div>
       </div>
@@ -460,6 +471,15 @@ function DetailDialog({
                 <Badge variant="outline" className="font-mono text-[9px]">
                   OCR {photo.confidence}%
                 </Badge>
+                {photo.aiUsed ? (
+                  <Badge
+                    variant="outline"
+                    className="gap-1 border-primary/40 bg-primary/10 text-[9px] text-primary"
+                    title="Sebagian data diverifikasi ulang dengan AI vision"
+                  >
+                    <Sparkles className="h-2.5 w-2.5" /> AI
+                  </Badge>
+                ) : null}
               </DialogTitle>
               <DialogDescription>
                 Dikirim oleh {photo.senderName} · {formatDateTime(photo.createdAt)}
@@ -1075,17 +1095,27 @@ export function TimemarkPage() {
                     <p className="font-mono text-[9px] text-muted-foreground">{photo.senderNumber}</p>
                   </TableCell>
                   <TableCell>
-                    <span
-                      className={cn(
-                        'text-[11px] font-bold',
-                        photo.confidence >= 80
-                          ? 'text-success'
-                          : photo.confidence >= 50
-                            ? 'text-warning'
-                            : 'text-destructive'
-                      )}
-                    >
-                      {photo.confidence}%
+                    <span className="flex items-center gap-1.5">
+                      {photo.aiUsed ? (
+                        <span
+                          className="inline-flex items-center gap-0.5 rounded-full bg-primary/15 px-1.5 py-0.5 text-[8px] font-semibold text-primary"
+                          title="Sebagian data diverifikasi ulang dengan AI"
+                        >
+                          <Sparkles className="h-2.5 w-2.5" /> AI
+                        </span>
+                      ) : null}
+                      <span
+                        className={cn(
+                          'text-[11px] font-bold',
+                          photo.confidence >= 80
+                            ? 'text-success'
+                            : photo.confidence >= 50
+                              ? 'text-warning'
+                              : 'text-destructive'
+                        )}
+                      >
+                        {photo.confidence}%
+                      </span>
                     </span>
                   </TableCell>
                   <TableCell>

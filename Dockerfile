@@ -27,7 +27,19 @@ RUN apt-get update \
         libxdamage1 \
         libxrandr2 \
         libxkbcommon0 \
+        python3 \
+        python3-venv \
+        libgl1 \
+        libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
+
+# PaddleOCR (PP-OCR via ONNX/rapidocr) = mesin OCR utama; Tesseract cadangan.
+# Dipasang di venv terpisah supaya layer ini tidak ikut rebuild saat kode berubah.
+RUN python3 -m venv /opt/ocr-venv \
+    && /opt/ocr-venv/bin/pip install --no-cache-dir --upgrade pip \
+    && /opt/ocr-venv/bin/pip install --no-cache-dir "rapidocr-onnxruntime>=1.3,<2"
+
+ENV PADDLE_PYTHON=/opt/ocr-venv/bin/python
 
 RUN npm install -g pnpm@11.28.5
 
