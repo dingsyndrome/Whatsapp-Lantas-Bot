@@ -887,6 +887,24 @@ export function TimemarkPage() {
     setPage(1);
   }, [debouncedSearch, status, turjawaliType, matchStatus]);
 
+  const [approving, setApproving] = React.useState(false);
+  const approveComplete = async () => {
+    setApproving(true);
+    try {
+      const result = await api.post<{ approved: number; scanned: number }>('/timemark/approve-complete', {});
+      toast.success(`${result.approved} foto disetujui otomatis`, {
+        description: `Dari ${result.scanned} foto berstatus review yang datanya sudah lengkap.`
+      });
+      void listApi.refresh();
+      void reviewApi.refresh();
+      void statsApi.refresh();
+    } catch (error) {
+      toast.error('Gagal menyetujui massal', { description: errorMessage(error) });
+    } finally {
+      setApproving(false);
+    }
+  };
+
   const data = listApi.data;
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;
 
@@ -898,6 +916,15 @@ export function TimemarkPage() {
         description="Galeri hasil ekstraksi watermark: jam, tanggal, alamat, satuan, dan titik koordinat GPS."
         actions={
           <>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void approveComplete()}
+              disabled={approving}
+            >
+              {approving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+              Setujui yang lengkap
+            </Button>
             <Button variant="outline" size="sm" onClick={() => downloadFile(exportUrl('timemark.csv'))}>
               <Download className="h-4 w-4" /> CSV
             </Button>

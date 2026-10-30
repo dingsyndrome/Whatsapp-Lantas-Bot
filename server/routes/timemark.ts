@@ -3,6 +3,7 @@ import multer from 'multer';
 import { z } from 'zod';
 import { config } from '../config.js';
 import { HttpError } from '../lib/http-error.js';
+import { prisma } from '../lib/prisma.js';
 import {
   deleteTimemark,
   getTimemark,
@@ -79,6 +80,35 @@ timemarkRouter.post('/analyze', upload.single('file'), async (req, res) => {
     source: 'dashboard'
   });
   res.status(201).json({ item: dto, warnings: dto.status === 'review' ? ['Perlu verifikasi manual.'] : [] });
+});
+
+timemarkRouter.post('/approve-complete', async (req, res) => {
+  const body = z
+    .object({ minConfidence: z.coerce.number().min(0).max(100).optional() })
+    .parse(req.body ?? {});
+  const threshold = body.minConfidence ?? 50;
+  // Kriteria sama dengan ingest: jam, tanggal, dan satuan/alamat terisi.
+  const candidates = await prisma.timemarkPhoto.findMany({
+    where: { status: 'review' },
+    select: { id: true, timeText: true, capturedAt: true, unitName: true, address: true, confidence: true }
+  });
+  const ids = candidates
+    .filter(
+      (row) =>
+        row.timeText &&
+        row.capturedAt &&
+        (row.unitName || row.address) &&
+        (row.confidence ?? 0) >= threshold
+    )
+    .map((row) => row.id);
+
+  if (ids.length > 0) {
+    await prisma.timemarkPhoto.updateMany({
+      where: { id: { in: ids } },
+      data: { status: 'parsed' }
+    });
+  }
+  res.json({ approved: ids.length, scanned: candidates.length, threshold });
 });
 
 timemarkRouter.patch('/:id/turjawali', async (req, res) => {

@@ -104,11 +104,12 @@ export async function ingestTimemark(input: TimemarkIngestInput): Promise<Timema
   try {
     const result = await extractTimemarkFromFile(saved.absolutePath);
     const extraction = result.extraction;
+    // GPS tidak diwajibkan: banyak watermark hanya memuat alamat tanpa
+    // koordinat, dan itu tidak boleh membuat foto jatuh ke status review.
     const criticalComplete =
       Boolean(extraction.timeText) &&
       Boolean(extraction.capturedAt) &&
-      extraction.latitude !== null &&
-      extraction.longitude !== null;
+      (Boolean(extraction.unitName) || Boolean(extraction.address));
     const status =
       extraction.confidence >= bot.minOcrConfidence && criticalComplete ? 'parsed' : 'review';
     const match = await matchTurjawali({

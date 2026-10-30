@@ -789,7 +789,7 @@ export async function matchTurjawali(
 
   const rows = await prisma.sprin.findMany({
     where: {
-      status: 'active',
+      status: { in: ['active', 'completed'] },
       ...(dateWindowStart && dateWindowEnd
         ? {
             OR: [
