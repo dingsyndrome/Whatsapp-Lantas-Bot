@@ -41,6 +41,14 @@ const IGNORED_TOKENS = new Set([
   'LINTAS'
 ]);
 
+/** Strip common WhatsApp status/status message suffix from sender name. */
+function stripStatusMessage(value: string): string {
+  return value
+    .replace(/\s*(sudah|telah)\s+kirim\s+link.*/i, '')
+    .replace(/\s*(belum|tdk|tdk\s+kirim)\s+kirim\s+link.*/i, '')
+    .trim();
+}
+
 function tokens(value: string): string[] {
   return normalizePersonnelName(value)
     .split(' ')
@@ -114,7 +122,8 @@ export class PersonnelDirectory {
       if (tailMatch) return tailMatch;
     }
 
-    const sender = normalizePersonnelName(senderName);
+    const senderCleaned = senderName ? stripStatusMessage(senderName) : senderName;
+    const sender = normalizePersonnelName(senderCleaned);
     if (!sender) return null;
 
     const exact = this.byExactName.get(sender);
