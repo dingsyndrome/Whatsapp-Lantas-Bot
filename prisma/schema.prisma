@@ -24,7 +24,7 @@ model BotConfig {
   scheduleTimezone   String   @default("Asia/Jakarta")
   scheduleGroupJid   String   @default("")
   scheduleGroupName  String   @default("")
-  minOcrConfidence   Int      @default(50)
+  minOcrConfidence   Int      @default(35)
   notifyOnSprinUpload Boolean @default(true)
   sprinNotifyMode    String   @default("review")
   sprinNotifyDefaultFunctions String @default("[\"SATLANTAS\"]")

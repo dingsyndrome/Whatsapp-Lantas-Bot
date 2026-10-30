@@ -127,6 +127,9 @@ export async function getBotConfig() {
     data: {
       id: 'singleton',
       waDriver: config.waDriver === 'baileys' ? 'baileys' : config.waDriver === 'webjs' ? 'webjs' : 'mock',
+      // Default baru: foto ber-watermark sering berada di 35–50% saat memakai
+      // mesin cadangan, jadi ambang review diturunkan.
+      minOcrConfidence: 35,
       timemarkPrompt: DEFAULT_TIMEMARK_PROMPT,
       documentPrompt: DEFAULT_DOCUMENT_PROMPT,
       autoReplyTemplate: DEFAULT_AUTO_REPLY

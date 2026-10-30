@@ -30,7 +30,8 @@
     "smoke": "node scripts/api-smoke.mjs",
     "wa:check": "node scripts/test-wa-connect.mjs",
     "e2e:turjawali": "node scripts/e2e-turjawali.mjs",
-    "fixtures": "tsx scripts/generate-fixtures.ts"
+    "fixtures": "tsx scripts/generate-fixtures.ts",
+    "ocr:reocr": "tsx scripts/reocr-timemark.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

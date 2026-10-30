@@ -2,8 +2,9 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { HttpError } from '../lib/http-error.js';
 import { prisma } from '../lib/prisma.js';
-import { getSettings, updateSettings } from '../services/settings.js';
+import { getSettings, updateSettings, getBotConfig } from '../services/settings.js';
 import { rescheduleDailyRecap } from '../services/scheduler-service.js';
+import { testAiConnection } from '../services/ai/client.js';
 import { whatsappManager } from '../services/whatsapp-manager.js';
 import {
   createNotificationFunction,
@@ -63,6 +64,24 @@ const settingsSchema = z.object({
 
 settingsRouter.get('/', async (_req, res) => {
   res.json(await getSettings());
+});
+
+settingsRouter.post('/ai-test', async (req, res) => {
+  const body = z
+    .object({
+      baseUrl: z.string().url().max(500).optional(),
+      model: z.string().min(1).max(120).optional(),
+      apiKey: z.string().max(500).optional()
+    })
+    .parse(req.body ?? {});
+  const bot = await getBotConfig();
+  const result = await testAiConnection({
+    baseUrl: body.baseUrl ?? bot.aiBaseUrl,
+    model: body.model ?? bot.aiModel,
+    // Kunci kosong = pakai yang tersimpan, supaya admin tidak perlu mengetik ulang.
+    apiKey: body.apiKey?.trim() || bot.aiApiKey
+  });
+  res.json(result);
 });
 
 settingsRouter.put('/', async (req, res) => {

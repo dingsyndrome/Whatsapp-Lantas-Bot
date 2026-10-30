@@ -699,6 +699,42 @@ function AiPanel({
   setForm: React.Dispatch<React.SetStateAction<SettingsDTO | null>>;
 }) {
   const [promptTab, setPromptTab] = React.useState('timemark');
+  const [testing, setTesting] = React.useState(false);
+  const [testResult, setTestResult] = React.useState<{ ok: boolean; message: string } | null>(null);
+
+  const testConnection = async () => {
+    setTesting(true);
+    setTestResult(null);
+    try {
+      const result = await api.post<{
+        ok: boolean;
+        latencyMs: number;
+        model: string;
+        reply?: string;
+        error?: string;
+      }>('/settings/ai-test', {
+        baseUrl: form.aiBaseUrl,
+        model: form.aiModel,
+        apiKey: form.aiApiKey || undefined
+      });
+      if (result.ok) {
+        setTestResult({
+          ok: true,
+          message: `Terhubung dalam ${result.latencyMs} ms · model ${result.model}`
+        });
+        toast.success('Koneksi AI berhasil', { description: result.reply?.slice(0, 80) });
+      } else {
+        setTestResult({ ok: false, message: result.error ?? 'Gagal terhubung.' });
+        toast.error('Koneksi AI gagal', { description: result.error });
+      }
+    } catch (error) {
+      setTestResult({ ok: false, message: errorMessage(error) });
+      toast.error('Gagal menguji AI', { description: errorMessage(error) });
+    } finally {
+      setTesting(false);
+    }
+  };
+
   const visionPresets: Array<{ label: string; baseUrl: string; model: string }> = [
     { label: 'DeepSeek Vision', baseUrl: 'https://api.deepseek.com', model: 'deepseek-v4-flash-vision-exp' },
     { label: 'OpenAI', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
@@ -781,7 +817,36 @@ function AiPanel({
             />
             <p className="text-[9px] text-muted-foreground">
               Foto di bawah ambang ini ditandai “Perlu review” dan tidak otomatis dianggap terverifikasi.
+              Disarankan 35% agar foto ber-watermark tetap masuk tanpa mengabaikan kewaspadaan.
             </p>
+          </div>
+
+          <div className="md:col-span-3 flex flex-wrap items-center gap-3 border-t border-border/60 pt-3">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={testing}
+              onClick={() => void testConnection()}
+            >
+              {testing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wifi className="h-3.5 w-3.5" />}
+              Tes koneksi AI
+            </Button>
+            {testResult ? (
+              <span
+                className={
+                  testResult.ok
+                    ? 'text-[10px] font-medium text-success'
+                    : 'text-[10px] font-medium text-destructive'
+                }
+              >
+                {testResult.message}
+              </span>
+            ) : (
+              <span className="text-[10px] text-muted-foreground">
+                Kirim satu request kecil ke Base URL + model di atas memakai API key tersimpan.
+              </span>
+            )}
           </div>
         </CardContent>
       </Card>

@@ -51,7 +51,7 @@ await prisma.botConfig.upsert({
     scheduleTimezone: 'Asia/Jakarta',
     scheduleGroupJid: groups[0]!.jid,
     scheduleGroupName: groups[0]!.name,
-    minOcrConfidence: 50,
+    minOcrConfidence: 35,
     turjawaliMatchingEnabled: true,
     turjawaliKeywords: JSON.stringify(DEFAULT_TURJAWALI_KEYWORDS),
     gaturMorningStart: '06:00',
