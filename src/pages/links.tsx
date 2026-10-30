@@ -351,12 +351,15 @@ function LinkRecapDialog({
   const copy = async () => {
     if (!result) return;
     try {
-      await copyText(result.text);
+      const copied = await copyText(result.text);
+      if (!copied) throw new Error('Clipboard ditolak browser.');
       toast.success('Rekap link disalin', {
         description: `${result.counts.total} link · siap ditempel ke grup WhatsApp.`
       });
     } catch {
-      toast.error('Gagal menyalin rekap link');
+      toast.error('Gagal menyalin rekap link', {
+        description: 'Browser menolak akses clipboard. Pilih teks pada pratinjau lalu tekan Ctrl+C.'
+      });
     }
   };
 

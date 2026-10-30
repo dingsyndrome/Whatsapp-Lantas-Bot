@@ -86,38 +86,86 @@ export function downloadFile(url: string, filename?: string): void {
   anchor.remove();
 }
 
+function copyWithTextarea(text: string): boolean {
+  // Dialog Radix memasang focus trap: textarea yang ditempel ke <body> akan
+  // kehilangan fokus sebelum execCommand('copy') selesai. Karena itu tempel
+  // ke dalam elemen dialog bila ada, supaya fokus tetap di dalam trap.
+  const dialog = document.querySelector<HTMLElement>('[role="dialog"]');
+  const host = dialog ?? document.body;
+  const previousFocus = document.activeElement as HTMLElement | null;
+
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.setAttribute('readonly', '');
+  textarea.setAttribute('aria-hidden', 'true');
+  textarea.tabIndex = -1;
+  textarea.style.position = 'fixed';
+  textarea.style.top = '0';
+  textarea.style.left = '0';
+  textarea.style.width = '1px';
+  textarea.style.height = '1px';
+  textarea.style.padding = '0';
+  textarea.style.border = 'none';
+  textarea.style.outline = 'none';
+  textarea.style.boxShadow = 'none';
+  textarea.style.background = 'transparent';
+  textarea.style.opacity = '0';
+  textarea.style.fontSize = '12pt';
+  host.appendChild(textarea);
+
+  let ok = false;
+  try {
+    textarea.focus({ preventScroll: true });
+    textarea.select();
+    textarea.setSelectionRange(0, text.length);
+    ok = document.execCommand('copy');
+  } catch {
+    ok = false;
+  } finally {
+    textarea.remove();
+    previousFocus?.focus?.({ preventScroll: true });
+  }
+  return ok;
+}
+
+function copyDialogPreview(text: string): boolean {
+  // Fallback terakhir: pilih langsung elemen <pre> pratinjau di dalam dialog
+  // (fokus tidak berpindah, jadi focus trap Radix tidak mengganggu).
+  const dialog = document.querySelector<HTMLElement>('[role="dialog"]');
+  const preview = dialog?.querySelector('pre');
+  const selection = document.getSelection();
+  if (!preview || !selection) return false;
+  if ((preview.textContent ?? '').trim() !== text.trim()) return false;
+
+  const range = document.createRange();
+  range.selectNodeContents(preview);
+  selection.removeAllRanges();
+  selection.addRange(range);
+  let ok = false;
+  try {
+    ok = document.execCommand('copy');
+  } catch {
+    ok = false;
+  }
+  selection.removeAllRanges();
+  return ok;
+}
+
 export async function copyText(text: string): Promise<boolean> {
-  // navigator.clipboard hanya tersedia pada secure context (HTTPS/localhost).
-  // Di VPS yang diakses lewat http://<ip>:3000 jalur ini gagal, jadi fallback
-  // textarea harus tetap dijalankan dan hasilnya dilaporkan ke pemanggil.
+  if (!text) return false;
+
+  // Jalur utama hanya tersedia pada secure context (HTTPS/localhost).
   if (window.isSecureContext && navigator.clipboard?.writeText) {
     try {
       await navigator.clipboard.writeText(text);
       return true;
     } catch {
-      // lanjut ke fallback di bawah
+      // jatuh ke fallback di bawah
     }
   }
 
-  const textarea = document.createElement('textarea');
-  textarea.value = text;
-  textarea.setAttribute('readonly', '');
-  textarea.style.position = 'fixed';
-  textarea.style.top = '0';
-  textarea.style.left = '0';
-  textarea.style.opacity = '0';
-  document.body.appendChild(textarea);
-  textarea.focus();
-  textarea.select();
-  textarea.setSelectionRange(0, text.length);
-  let copied = false;
-  try {
-    copied = document.execCommand('copy');
-  } catch {
-    copied = false;
-  }
-  textarea.remove();
-  return copied;
+  if (copyWithTextarea(text)) return true;
+  return copyDialogPreview(text);
 }
 
 export function errorMessage(error: unknown): string {

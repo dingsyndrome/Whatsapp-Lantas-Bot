@@ -170,7 +170,18 @@ export function RecapPanel() {
               Tampilkan rekap
             </Button>
             {result ? (
-              <Button variant="outline" onClick={() => void copyText(result.text)}>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  void copyText(result.text).then((copied) => {
+                    if (copied) toast.success('Rekap disalin');
+                    else
+                      toast.error('Gagal menyalin', {
+                        description: 'Browser menolak akses clipboard. Pilih teks lalu tekan Ctrl+C.'
+                      });
+                  });
+                }}
+              >
                 <ClipboardCopy className="h-4 w-4" /> Salin teks
               </Button>
             ) : null}

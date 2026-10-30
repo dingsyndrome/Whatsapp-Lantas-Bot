@@ -268,8 +268,13 @@ function PersonnelCoverageDialog({
       '',
       '_Mohon segera mengirim foto Timemark dan link laporan._'
     ].join('\n');
-    await copyText(text);
-    setCopied(true);
+    const copied = await copyText(text);
+    setCopied(copied);
+    if (!copied) {
+      toast.error('Gagal menyalin teks', {
+        description: 'Browser menolak akses clipboard. Pilih teks lalu tekan Ctrl+C.'
+      });
+    }
     window.setTimeout(() => setCopied(false), 1800);
   };
 
