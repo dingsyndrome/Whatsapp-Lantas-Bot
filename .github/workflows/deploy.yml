@@ -79,8 +79,19 @@ jobs:
           set -euo pipefail
           cd ~/sigap
 
+          echo "→ Cek ruang disk…"
+          df -h / | tail -1 || true
+
+          # Image baru (~3,8 GB dengan PaddleOCR) butuh ruang; cache build lama
+          # dan image yang tidak terpakai dibersihkan dulu agar git fetch/build
+          # tidak gagal karena disk penuh.
+          echo "→ Membersihkan cache build & image lama…"
+          docker builder prune -f >/dev/null 2>&1 || true
+          docker image prune -af >/dev/null 2>&1 || true
+          df -h / | tail -1 || true
+
           echo "→ Menarik kode terbaru…"
-          git fetch --prune origin
+          git fetch --prune origin || git fetch --prune origin
           git reset --hard origin/main
           echo "   commit: $(git rev-parse --short HEAD)"
 
