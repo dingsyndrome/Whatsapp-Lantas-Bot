@@ -3,6 +3,7 @@ import { id as localeId } from 'date-fns/locale';
 import { prisma } from '../lib/prisma.js';
 import { logger } from '../lib/logger.js';
 import { recordActivity } from '../lib/activity.js';
+import { PersonnelDirectory } from './personnel-directory.js';
 import { samePhone } from '../lib/phone.js';
 import { whatsappManager } from './whatsapp-manager.js';
 import {
@@ -171,6 +172,7 @@ function buildPreview(context: PreviewContext, options: SprinNotifyOptions): Spr
   );
   const byName = new Map(roster.map((person) => [normalizeName(person.name), person]));
   const byShort = new Map(roster.map((person) => [firstTokens(person.name), person]));
+  const directory = new PersonnelDirectory(roster);
 
   const analysis = analyzeSprinLocation({ untuk: sprin.untuk, place: sprin.place });
   const recipients: SprinNotifyRecipientDTO[] = [];
@@ -185,6 +187,9 @@ function buildPreview(context: PreviewContext, options: SprinNotifyOptions): Spr
       (person.nrp ? byNrp.get(person.nrp) : undefined) ??
       byName.get(normalizeName(person.name)) ??
       byShort.get(firstTokens(person.name)) ??
+      // Pencocokan terakhir lewat PersonnelDirectory: tahan nama satu kata
+      // (HERIYANTO) dan beda satu huruf (ROHMAN vs ROCHMAN).
+      directory.resolve(person.name, null) ??
       null;
 
     // Kolom Jabatan pada Sprin adalah sumber utama fungsi; roster hanya

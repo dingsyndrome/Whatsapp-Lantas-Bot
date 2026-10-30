@@ -9,7 +9,11 @@ export interface DirectoryPerson {
   name: string;
   rank: string | null;
   phone: string | null;
-  category?: string | null;}
+  category?: string | null;
+  /** Dipakai fitur notifikasi untuk menebak fungsi kepolisian. */
+  jabatan?: string | null;
+  unit?: string | null;
+}
 
 const RANK_PREFIX =
   /^(AKBP|AKP|KOMPOL|IPDA|IPTU|AIPTU|AIPDA|BRIGADIR|BRIGPOL|BRIPKA|BRIPTU|BRIPDA|BHARADA|BHARA|PENATA MUDA|PENATA|PEMBINA|PRATU|PRAKA|BHAYANGKARA)\b\s*/i;
@@ -68,6 +72,8 @@ function tokenMatches(left: string, right: string): boolean {
   if (left.length < 4 || right.length < 4) return false;
   return left.startsWith(right) || right.startsWith(left);
 }
+
+
 
 export class PersonnelDirectory {
   private readonly people: DirectoryPerson[];
