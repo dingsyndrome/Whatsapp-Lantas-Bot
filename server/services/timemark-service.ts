@@ -9,6 +9,8 @@ import { prisma } from '../lib/prisma.js';
 import { logger } from '../lib/logger.js';
 import { recordActivity } from '../lib/activity.js';
 import { serializeTimemark, type TimemarkWithSprin } from '../lib/serializers.js';
+import { PersonnelDirectory } from './personnel-directory.js';
+import { formatRankName } from '../../shared/personnel-name.js';
 import { getBotConfig } from './settings.js';
 import { extractTimemarkFromFile } from './ocr/timemark-ocr.js';
 import { detectSupervision } from './ocr/supervision-detector.js';
@@ -306,12 +308,30 @@ export async function listTimemarks(options: {
     })
   ]);
 
-  return {
-    items: rows.map((row) => serializeTimemark(row as TimemarkWithSprin)),
-    total,
-    page,
-    pageSize
-  };
+  const items = rows.map((row) => serializeTimemark(row as TimemarkWithSprin));
+  const enriched = await enrichSenderLabels(items);
+  return { items: enriched, total, page, pageSize };
+}
+
+
+/** Lengkapi label pengirim dari roster personel (pangkat + nama resmi). */
+async function enrichSenderLabels<T extends { senderName: string; senderNumber: string }>(
+  rows: T[]
+): Promise<Array<T & { senderLabel?: string | null; senderRank?: string | null }>> {
+  if (rows.length === 0) return rows;
+  const roster = await prisma.personnel.findMany({
+    where: { active: true },
+    select: { id: true, name: true, rank: true, phone: true, category: true }
+  });
+  const directory = new PersonnelDirectory(roster);
+  return rows.map((row) => {
+    const person = directory.resolve(row.senderName, row.senderNumber);
+    return {
+      ...row,
+      senderLabel: person ? formatRankName(person.rank, person.name) : null,
+      senderRank: person?.rank ?? null
+    };
+  });
 }
 
 export async function getTimemark(id: string): Promise<TimemarkDTO | null> {
@@ -319,7 +339,9 @@ export async function getTimemark(id: string): Promise<TimemarkDTO | null> {
     where: { id },
     include: timemarkInclude
   });
-  return photo ? serializeTimemark(photo as TimemarkWithSprin) : null;
+  if (!photo) return null;
+  const [dto] = await enrichSenderLabels([serializeTimemark(photo as TimemarkWithSprin)]);
+  return dto ?? null;
 }
 
 export interface TimemarkManualFields {

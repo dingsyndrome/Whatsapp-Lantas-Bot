@@ -484,7 +484,7 @@ function DetailDialog({
                 ) : null}
               </DialogTitle>
               <DialogDescription>
-                Dikirim oleh {photo.senderName} · {formatDateTime(photo.createdAt)}
+                Dikirim oleh {photo.senderLabel ?? photo.senderName} · {formatDateTime(photo.createdAt)}
               </DialogDescription>
             </DialogHeader>
 
@@ -852,6 +852,9 @@ export function TimemarkPage() {
     setSearchParams(next, { replace: true });
   };
 
+  const [dateFrom, setDateFrom] = React.useState('');
+  const [dateTo, setDateTo] = React.useState('');
+
   const query = React.useMemo(() => {
     const params = new URLSearchParams({
       page: String(page),
@@ -861,8 +864,10 @@ export function TimemarkPage() {
     if (status !== 'all') params.set('status', status);
     if (turjawaliType !== 'all') params.set('turjawaliType', turjawaliType);
     if (matchStatus !== 'all') params.set('matchStatus', matchStatus);
+    if (dateFrom) params.set('from', dateFrom);
+    if (dateTo) params.set('to', dateTo);
     return params.toString();
-  }, [page, debouncedSearch, status, turjawaliType, matchStatus]);
+  }, [page, debouncedSearch, status, turjawaliType, matchStatus, dateFrom, dateTo]);
 
   const listApi = useApi<Paginated<TimemarkDTO>>(`/timemark?${query}`);
   const reviewApi = useApi<Paginated<TimemarkDTO>>('/timemark?status=review&pageSize=1');
@@ -887,7 +892,7 @@ export function TimemarkPage() {
 
   React.useEffect(() => {
     setPage(1);
-  }, [debouncedSearch, status, turjawaliType, matchStatus]);
+  }, [debouncedSearch, status, turjawaliType, matchStatus, dateFrom, dateTo]);
 
   const [approving, setApproving] = React.useState(false);
   const [archiveOpen, setArchiveOpen] = React.useState(false);
@@ -1060,7 +1065,36 @@ export function TimemarkPage() {
                   className="h-9 pl-9 text-xs"
                 />
               </div>
-              <Select value={status} onValueChange={setStatus}>
+              <div className="flex items-center gap-1.5">
+                <Input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(event) => setDateFrom(event.target.value)}
+                  aria-label="Tanggal mulai"
+                  className="h-9 w-[140px] text-xs"
+                />
+                <span className="text-[10px] text-muted-foreground">s/d</span>
+                <Input
+                  type="date"
+                  value={dateTo}
+                  onChange={(event) => setDateTo(event.target.value)}
+                  aria-label="Tanggal akhir"
+                  className="h-9 w-[140px] text-xs"
+                />
+                {dateFrom || dateTo ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-9 px-2 text-[10px]"
+                    onClick={() => {
+                      setDateFrom('');
+                      setDateTo('');
+                    }}
+                  >
+                    Reset
+                  </Button>
+                ) : null}
+              </div>              <Select value={status} onValueChange={setStatus}>
                 <SelectTrigger className="h-9 w-full text-xs sm:w-[140px]">
                   <SlidersHorizontal className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />
                   <SelectValue placeholder="Status OCR" />
