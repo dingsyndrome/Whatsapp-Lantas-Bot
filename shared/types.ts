@@ -393,6 +393,8 @@ export interface TurjawaliRecap {
 
 export interface TimemarkDTO {
   id: string;
+  /** Nama personel dari watermark ("Nama: ..."), dipakai untuk atribusi laporan. */
+  personnelName?: string | null;
   source: string;
   senderName: string;
   /** Label siap tampil: [pangkat] [nama] bila berhasil dicocokkan ke roster. */

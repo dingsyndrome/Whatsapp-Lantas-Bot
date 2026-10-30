@@ -72,6 +72,15 @@ export interface CustomRecapResult {
   text: string;
 }
 
+/** Cadangan untuk foto lama: ambil nama dari teks OCR yang sudah tersimpan. */
+function nameFromRawText(rawText: string | null | undefined): string | null {
+  if (!rawText) return null;
+  const match = rawText.match(/NAMA\s*[:;]\s*([^\n|]{3,80})/i);
+  if (!match) return null;
+  const value = match[1].replace(/\s{2,}/g, ' ').trim().replace(/[.,;:]+$/, '');
+  return value.length >= 3 ? value : null;
+}
+
 /** Ringkas alamat menjadi kecamatan saja, sesuai kebutuhan laporan. */
 function shortLocation(address: string | null, district: string | null): string {
   if (district && district.trim()) return `Kec. ${district.trim()}`;
@@ -139,7 +148,11 @@ export async function buildCustomRecap(params: CustomRecapParams): Promise<Custo
 
   const activities: CustomRecapActivity[] = filteredPhotos.map((photo) => {
     const current = photo.supervisorSandi ? sandiMap[photo.supervisorSandi] : undefined;
-    const person = directory.resolve(photo.senderName, photo.senderNumber);
+    // Nama pada watermark ("Nama: ...") adalah subjek laporan; pengirim hanya
+    // cadangan bila nama di foto tidak terbaca.
+    const person =
+      directory.resolve(photo.personnelName ?? nameFromRawText(photo.rawText), null) ??
+      directory.resolve(photo.senderName, photo.senderNumber);
     return {
       id: photo.id,
       at: (photo.capturedAt ?? photo.createdAt).toISOString(),
@@ -185,7 +198,9 @@ export async function buildCustomRecap(params: CustomRecapParams): Promise<Custo
   const rosterView = rosterOnly ? roster : roster;
   const isPerwira = (row: { category: string }) => row.category === 'PERWIRA';
   for (const photo of filteredPhotos) {
-    const person = matchRoster(photo.senderName, photo.senderNumber);
+    const person =
+      directory.resolve(photo.personnelName ?? nameFromRawText(photo.rawText), null) ??
+      matchRoster(photo.senderName, photo.senderNumber);
     if (!person) continue;
     const entry = submittedMap.get(person.id) ?? { photos: 0, links: 0 };
     entry.photos += 1;
@@ -240,17 +255,18 @@ export async function buildCustomRecap(params: CustomRecapParams): Promise<Custo
   ];
 
   if (activities.length > 0) {
+    // Ringkas per kategori: cukup jumlah kegiatan, bukan rincian tiap foto.
+    const perCategory = new Map<TurjawaliType, number>();
+    for (const activity of activities) {
+      perCategory.set(activity.category, (perCategory.get(activity.category) ?? 0) + 1);
+    }
     lines.push('*KEGIATAN*');
-    activities.slice(0, 20).forEach((activity, index) => {
-      lines.push(
-        `${index + 1}. ${activity.timeText ?? format(new Date(activity.at), 'HH:mm')} · ${TURJAWALI_LABELS[activity.category]} · ${activity.unitName ?? activity.senderLabel} · ${activity.address ?? '-'}`
-      );
-      if (activity.supervisorName || activity.supervisorSandi) {
-        lines.push(
-          `   👁️ ${activity.supervisorSandi ? `[${activity.supervisorSandi}] ` : ''}${formatRankName(activity.supervisorRank, activity.supervisorName)}`
-        );
-      }
-    });
+    lines.push(`Total ${activities.length} kegiatan`);
+    [...perCategory.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .forEach(([category, count]) => {
+        lines.push(`• ${TURJAWALI_LABELS[category] ?? category} : ${count} kegiatan`);
+      });
   } else {
     lines.push('_Tidak ada kegiatan pada rentang ini._');
   }

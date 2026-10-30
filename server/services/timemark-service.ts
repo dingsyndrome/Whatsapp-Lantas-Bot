@@ -149,6 +149,7 @@ export async function ingestTimemark(input: TimemarkIngestInput): Promise<Timema
         regency: extraction.regency,
         province: extraction.province,
         unitName: extraction.unitName,
+        personnelName: extraction.personnelName,
         latitude: extraction.latitude,
         longitude: extraction.longitude,
         coordinateText: extraction.coordinateText,

@@ -11,6 +11,8 @@ export interface TimemarkExtraction {
   regency: string | null;
   province: string | null;
   unitName: string | null;
+  /** Nama personel pada baris 'Nama: ...' watermark. */
+  personnelName: string | null;
   coordinateText: string | null;
   latitude: number | null;
   longitude: number | null;
@@ -341,6 +343,21 @@ function parseAddress(text: string): Pick<
   };
 }
 
+
+/** Ambil nama personel dari baris "Nama: ..." pada watermark. */
+function parsePersonnelName(text: string): string | null {
+  const match = text.match(/NAMA\s*[:;]\s*([^\n]{3,80})/i);
+  if (!match) return null;
+  const value = match[1]
+    .replace(/\s{2,}/g, ' ')
+    .replace(/[|•]+/g, ' ')
+    .trim()
+    .replace(/[.,;:]+$/, '');
+  if (value.length < 3) return null;
+  if (/^(KODE|FOTO|TIMEMARK)\b/i.test(value)) return null;
+  return value.toUpperCase();
+}
+
 function parseUnit(text: string): string | null {
   const lines = text.split('\n');
   const candidates = lines
@@ -367,6 +384,7 @@ export function parseTimemarkText(
   const coordinates = parseCoordinate(text);
   const address = parseAddress(text);
   const unitName = parseUnit(text);
+  const personnelName = parsePersonnelName(text);
 
   const capturedAt = dateResult ? new Date(dateResult.date) : null;
   if (capturedAt && timeText) {
@@ -406,6 +424,7 @@ export function parseTimemarkText(
     regency: address.regency,
     province: address.province,
     unitName,
+    personnelName,
     coordinateText: coordinates.coordinateText,
     latitude: coordinates.latitude,
     longitude: coordinates.longitude

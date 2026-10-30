@@ -100,6 +100,8 @@ model TimemarkPhoto {
   matchedPersonnel   SprinPersonnel? @relation("TurjawaliMatchedPersonnel", fields: [matchedPersonnelId], references: [id], onDelete: SetNull)
   matchNotes    String    @default("")
   senderCaption String?
+  /// Nama personel yang tertulis pada watermark ('Nama: ...'), dipakai untuk atribusi laporan.
+  personnelName String?
   isSupervision Boolean   @default(false)
   supervisorSandi String?
   supervisorName String?

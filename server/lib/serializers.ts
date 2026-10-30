@@ -47,6 +47,7 @@ export function serializeTimemark(photo: TimemarkWithSprin): TimemarkDTO {
     source: photo.source,
     senderName: photo.senderName,
     senderNumber: photo.senderNumber,
+    personnelName: photo.personnelName ?? null,
     groupName: photo.groupName,
     imageUrl: fallbackImage,
     imagePath: photo.imagePath,
