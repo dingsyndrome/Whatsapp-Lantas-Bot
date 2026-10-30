@@ -12,9 +12,51 @@ import { logger } from './lib/logger.js';
 import { HttpError } from './lib/http-error.js';
 import { prisma } from './lib/prisma.js';
 import { buildAuthContext } from './lib/auth-guard.js';
+import { hasPermission, type Permission } from '../shared/permissions.js';
 import { apiRouter } from './routes/index.js';
 import { SprinValidationError } from './services/sprin-service.js';
 import { PersonnelValidationError } from './services/personnel-service.js';
+
+
+type PermissionRule = Permission | 'admin';
+
+/**
+ * Aturan otorisasi terpusat: manajer hanya boleh melakukan aksi yang izinnya
+ * dicentang admin. Permintaan baca (GET) dibiarkan agar dashboard tetap bisa
+ * dipakai. '/' di akhir path dinormalisasi dulu.
+ */
+function matchRule(method: string, rawPath: string): PermissionRule | null {
+  const path = rawPath.replace(/\/+$/, '') || '/';
+  const write = method !== 'GET' && method !== 'HEAD';
+
+  // Khusus admin: pengaturan bot, kredensial WhatsApp, dan kelola manajer.
+  if (path.startsWith('/api/settings')) return 'admin';
+  if (path.startsWith('/api/managers')) return 'admin';
+  if (path.startsWith('/api/wa')) return 'admin';
+
+  if (path === '/api/auth/permissions') return null;
+
+  // Notifikasi Sprin punya izin tersendiri.
+  if (/^\/api\/sprin\/[^/]+\/notify$/.test(path) && method === 'POST') {
+    return 'sprin.notify';
+  }
+  if (path.startsWith('/api/sprin') && write) return 'sprin.manage';
+
+  if (/^\/api\/timemark\/[^/]+\/turjawali$/.test(path) && write) {
+    return 'timemark.category';
+  }
+  if (path.startsWith('/api/timemark') && write) return 'timemark.correct';
+
+  if (path.startsWith('/api/links/recap') && write) return 'links.send';
+  if (path.startsWith('/api/reports') && write) return 'reports.send';
+  if (path.startsWith('/api/personnel') && write) return 'personnel.manage';
+  if (path.startsWith('/api/exports') && write) return 'reports.send';
+
+  // Manajer tidak boleh mengubah persetujuan/akun lewat jalur lain.
+  if (path.startsWith('/api/managers')) return 'admin';
+
+  return null;
+}
 
 export function createApp(): express.Express {
   const app = express();
@@ -39,6 +81,21 @@ export function createApp(): express.Express {
       const context = await buildAuthContext(req);
       if (context.admin || context.user) {
         res.locals.auth = context;
+        // Otorisasi: manajer hanya boleh melakukan hal yang dicentang admin.
+        if (!context.admin) {
+          const rule = matchRule(req.method, req.path);
+          if (rule) {
+            if (rule === 'admin' || !hasPermission(context.user, rule)) {
+              res.status(403).json({
+                error:
+                  rule === 'admin'
+                    ? 'Tindakan ini khusus admin.'
+                    : 'Anda tidak memiliki izin untuk tindakan ini.'
+              });
+              return;
+            }
+          }
+        }
         next();
         return;
       }

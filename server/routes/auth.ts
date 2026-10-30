@@ -1,6 +1,7 @@
 import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 import { HttpError } from '../lib/http-error.js';
+import { prisma } from '../lib/prisma.js';
 import {
   createManager,
   deleteManager,
@@ -155,6 +156,41 @@ managersRouter.use((req, res, next) => {
   }
   // Hanya admin (kredensial admin atau sesi admin) yang boleh mengelola manajer.
   next(new HttpError(403, 'Hanya admin yang dapat mengelola manajer.'));
+});
+
+managersRouter.get('/sessions', async (_req, res) => {
+  const now = new Date();
+  const [sessions, logins] = await Promise.all([
+    prisma.appSession.findMany({
+      where: { revokedAt: null, expiresAt: { gt: now } },
+      include: { user: true },
+      orderBy: { createdAt: 'desc' },
+      take: 50
+    }),
+    prisma.activity.findMany({
+      where: { type: 'manager_login' },
+      orderBy: { createdAt: 'desc' },
+      take: 30
+    })
+  ]);
+
+  res.json({
+    active: sessions.map((session) => ({
+      id: session.id,
+      name: session.user.name,
+      phone: session.user.phone,
+      role: session.user.role,
+      ip: session.ip,
+      userAgent: session.userAgent,
+      createdAt: session.createdAt.toISOString(),
+      expiresAt: session.expiresAt.toISOString()
+    })),
+    logins: logins.map((row) => ({
+      id: row.id,
+      description: row.description,
+      createdAt: row.createdAt.toISOString()
+    }))
+  });
 });
 
 managersRouter.get('/', async (_req, res) => {

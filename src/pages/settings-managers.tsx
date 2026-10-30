@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Loader2, Plus, ShieldCheck, Trash2, UserPlus } from 'lucide-react';
+import { Loader2, Monitor, Plus, RefreshCw, ShieldCheck, Trash2, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -20,6 +20,116 @@ interface Manager {
   note: string | null;
   lastLoginAt: string | null;
   createdAt: string;
+}
+
+
+interface SessionRow {
+  id: string;
+  name: string;
+  phone: string;
+  role: string;
+  ip: string | null;
+  userAgent: string | null;
+  createdAt: string;
+  expiresAt: string;
+}
+
+interface LoginRow {
+  id: string;
+  description: string;
+  createdAt: string;
+}
+
+/** Monitoring: siapa yang sedang masuk dan riwayat login manajer. */
+function SessionMonitor() {
+  const [data, setData] = React.useState<{ active: SessionRow[]; logins: LoginRow[] } | null>(null);
+  const [loading, setLoading] = React.useState(true);
+
+  const load = React.useCallback(async () => {
+    setLoading(true);
+    try {
+      setData(await api.get<{ active: SessionRow[]; logins: LoginRow[] }>('/managers/sessions'));
+    } catch (error) {
+      toast.error('Gagal memuat monitoring', { description: errorMessage(error) });
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    void load();
+  }, [load]);
+
+  const when = (iso: string) => new Date(iso).toLocaleString('id-ID');
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <h3 className="flex items-center gap-2 text-sm font-semibold">
+              <Monitor className="h-4 w-4 text-primary" /> Monitoring login
+            </h3>
+            <p className="text-[10px] text-muted-foreground">
+              Sesi aktif dan riwayat masuk manajer.
+            </p>
+          </div>
+          <Button size="sm" variant="outline" onClick={() => void load()} disabled={loading}>
+            {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+            Muat ulang
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div>
+          <p className="text-[9px] uppercase tracking-wider text-muted-foreground">
+            Sesi aktif {data ? `(${data.active.length})` : ''}
+          </p>
+          {loading ? (
+            <p className="mt-1 text-[10px] text-muted-foreground">Memuat…</p>
+          ) : !data || data.active.length === 0 ? (
+            <p className="mt-1 text-[10px] text-muted-foreground">Tidak ada sesi aktif.</p>
+          ) : (
+            <div className="mt-1 space-y-1.5">
+              {data.active.map((row) => (
+                <div
+                  key={row.id}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border/60 bg-muted/10 px-2 py-1.5 text-[10px]"
+                >
+                  <div>
+                    <p className="font-semibold">
+                      {row.name} <span className="font-mono text-[9px] text-muted-foreground">{row.phone}</span>
+                    </p>
+                    <p className="text-[8px] text-muted-foreground">
+                      Masuk {when(row.createdAt)} · IP {row.ip ?? '-'} · berakhir {when(row.expiresAt)}
+                    </p>
+                  </div>
+                  <Badge variant="outline" className="text-[8px]">
+                    {row.role === 'ADMIN' ? 'Admin' : 'Manajer'}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div>
+          <p className="text-[9px] uppercase tracking-wider text-muted-foreground">Riwayat login terakhir</p>
+          {!data || data.logins.length === 0 ? (
+            <p className="mt-1 text-[10px] text-muted-foreground">Belum ada riwayat.</p>
+          ) : (
+            <div className="mt-1 max-h-40 space-y-1 overflow-auto">
+              {data.logins.map((row) => (
+                <p key={row.id} className="text-[9px] text-muted-foreground">
+                  <span className="font-mono">{when(row.createdAt)}</span> · {row.description}
+                </p>
+              ))}
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
 export function ManagersPanel() {
@@ -156,6 +266,7 @@ export function ManagersPanel() {
 
   return (
     <div className="space-y-4">
+      <SessionMonitor />
       <Card>
         <CardHeader className="pb-2">
           <h3 className="flex items-center gap-2 text-sm font-semibold">
