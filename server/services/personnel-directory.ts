@@ -41,14 +41,6 @@ const IGNORED_TOKENS = new Set([
   'LINTAS'
 ]);
 
-/** Strip common WhatsApp status/status message suffix from sender name. */
-function stripStatusMessage(value: string): string {
-  return value
-    .replace(/\s*(sudah|telah)\s+kirim\s+link.*/i, '')
-    .replace(/\s*(belum|tdk|tdk\s+kirim)\s+kirim\s+link.*/i, '')
-    .trim();
-}
-
 function tokens(value: string): string[] {
   return normalizePersonnelName(value)
     .split(' ')
@@ -79,9 +71,23 @@ function tokenMatches(left: string, right: string): boolean {
   if (left === right) return true;
   if (left.length < 4 || right.length < 4) return false;
   if (left.startsWith(right) || right.startsWith(left)) return true;
-  // Toleransi ejaan lazim pada nama Indonesia: CHOLIK ~ CHOLIQ, ROHMAN ~ ROCHMAN.
-  if (left.length >= 5 && right.length >= 5 && editDistance(left, right) <= 1) return true;
+  // Toleransi ejaan lazim pada nama Indonesia: CHOLIK ~ CHOLIQ, ROHMAN ~ ROCHMAN,
+  // HADY ~ HADI, serta SAMSOEL ~ SAMSUL (dua huruf pada nama panjang).
+  const limit = Math.min(left.length, right.length) >= 6 ? 2 : 1;
+  if (editDistance(left, right) <= limit) return true;
   return false;
+}
+
+/**
+ * Nama panggilan berupa inisial, mis. "AFV" → AYU FATHIKA VALBIE.
+ * Hanya berlaku bila jumlah huruf sama dengan jumlah kata nama roster.
+ */
+function matchesInitials(nickname: string, personTokens: string[]): boolean {
+  if (!/^[A-Z]{2,6}$/.test(nickname)) return false;
+  if (personTokens.length !== nickname.length) return false;
+  return nickname
+    .split('')
+    .every((letter, index) => (personTokens[index] ?? '').startsWith(letter));
 }
 
 
@@ -122,8 +128,7 @@ export class PersonnelDirectory {
       if (tailMatch) return tailMatch;
     }
 
-    const senderCleaned = senderName ? stripStatusMessage(senderName) : senderName;
-    const sender = normalizePersonnelName(senderCleaned);
+    const sender = normalizePersonnelName(senderName);
     if (!sender) return null;
 
     const exact = this.byExactName.get(sender);
@@ -160,14 +165,23 @@ export class PersonnelDirectory {
       }
 
       let score = 0;
+      const nickname = senderTokens.length === 1 ? senderTokens[0] ?? '' : '';
+      const nicknameIsFirstName = Boolean(nickname) && tokenMatches(nickname, personTokens[0] ?? '');
       if (senderCovered) {
-        score = senderTokens.length >= 2 ? 100 : 70;
+        // Nama panggilan satu kata yang sama dengan kata pertama roster lebih
+        // kuat daripada yang hanya kebetulan muncul di tengah nama.
+        score = senderTokens.length >= 2 ? 100 : nicknameIsFirstName ? 70 : 55;
       } else if (personCovered) {
         score = personTokens.length >= 2 ? 90 : 60;
       } else if (senderTokens.length === 1) {
         score = personTokens[0] === senderTokens[0] ? 60 : 0;
       } else if (overlap >= 2) {
         score = 60 + overlap;
+      }
+
+      // Nama panggilan berupa inisial: AFV → AYU FATHIKA VALBIE.
+      if (nickname && matchesInitials(nickname, personTokens)) {
+        score = Math.max(score, 85);
       }
 
       // Nama WhatsApp sering digabung tanpa spasi dan diberi angka/unit.

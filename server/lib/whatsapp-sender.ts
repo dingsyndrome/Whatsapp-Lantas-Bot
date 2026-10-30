@@ -9,6 +9,31 @@ function isPhoneJid(value: string | null | undefined): boolean {
   return Boolean(value && /@(s\.whatsapp\.net|c\.us)$/i.test(value));
 }
 
+/** JID identitas anonim WhatsApp (`123456789@lid` atau `@hosted.lid`). */
+export function isLidJid(value: string | null | undefined): boolean {
+  return Boolean(value && /@(hosted\.lid|lid)$/i.test(value));
+}
+
+/**
+ * Nomor tersimpan yang sebenarnya LID, bukan nomor HP.
+ * LID selalu panjang (13-16 digit); nomor HP Indonesia setelah normalisasi
+ * diawali `62` dan lebih pendek, atau masih diawali `0`/`8` bila belum dinormalisasi.
+ */
+export function isProbableLidNumber(value: string | null | undefined): boolean {
+  const digits = (value ?? '').replace(/\D/g, '');
+  if (!digits) return false;
+  if (digits.length >= 14) return true;
+  if (digits.startsWith('62') || digits.startsWith('0') || digits.startsWith('8')) return false;
+  return digits.length >= 10;
+}
+
+/** Ubah LID (dengan atau tanpa `@lid`) menjadi JID yang dikenali Baileys. */
+export function toLidJid(value: string): string {
+  const trimmed = value.trim();
+  if (isLidJid(trimmed)) return trimmed;
+  return `${trimmed.replace(/\D/g, '')}@lid`;
+}
+
 function looksLikePhone(value: string | null | undefined): boolean {
   if (!value) return false;
   const digits = value.replace(/\D/g, '');

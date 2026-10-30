@@ -4,6 +4,9 @@
  * Input pengguna bisa berupa "7", "07", "07:15", "7.15", atau "07.15";
  * semuanya dikonversi ke menit sejak 00:00 agar perbandingan konsisten
  * sampai tingkat menit.
+ *
+ * Catatan: waktu dalam server menggunakan zona waktu Asia/Jakarta (UTC+7),
+ * dan semua perbandingan dilakukan dengan timestamp yang sesuai.
  */
 
 import { endOfDay, startOfDay } from 'date-fns';

@@ -14,7 +14,8 @@ import { prisma } from '../lib/prisma.js';
 import { logger } from '../lib/logger.js';
 import { recordActivity } from '../lib/activity.js';
 import { normalizePhone } from '../lib/phone.js';
-import { resolveSenderNumber } from '../lib/whatsapp-sender.js';
+import { isLidJid, resolveSenderJid } from '../lib/whatsapp-sender.js';
+import { backfillSenderNumbers, toResolvedPhone } from './sender-backfill-service.js';
 import { realtime } from '../lib/realtime.js';
 import { ensureWhatsAppSessionRow, getBotConfig, isGroupMonitored } from './settings.js';
 import { ingestTimemark } from './timemark-service.js';
@@ -42,6 +43,7 @@ class BaileysManager {
   private groupNames = new Map<string, string>();
   private pairingCode: string | null = null;
   private pendingPairingPhone: string | null = null;
+  private senderBackfillStarted = false;
 
   private sessionDir(): string {
     return path.join(paths.waSession, 'baileys');
@@ -131,6 +133,61 @@ class BaileysManager {
     return this.getStatus();
   }
 
+  /**
+   * Simpan pemetaan LID ↔ nomor HP untuk seluruh anggota grup yang dipantau.
+   * Metadata grup memuat keduanya, sehingga pengirim yang identitasnya hanya
+   * LID tetap bisa dicocokkan ke roster berdasarkan nomor HP.
+   */
+  private async syncGroupSenderMappings(): Promise<void> {
+    const socket = this.socket;
+    if (!socket) return;
+    const groups = await prisma.monitoredGroup.findMany({
+      where: { active: true },
+      select: { jid: true }
+    });
+    for (const group of groups) {
+      try {
+        const metadata = await socket.groupMetadata(group.jid);
+        const pairs = (metadata.participants ?? [])
+          .map((participant) => {
+            const lid = participant.lid ?? (participant.id?.endsWith('@lid') ? participant.id : null);
+            const pn =
+              participant.phoneNumber ??
+              (participant.id?.endsWith('@s.whatsapp.net') ? participant.id : null);
+            return lid && pn ? { lid, pn } : null;
+          })
+          .filter((pair): pair is { lid: string; pn: string } => Boolean(pair));
+        if (pairs.length > 0) {
+          await socket.signalRepository.lidMapping.storeLIDPNMappings(pairs);
+        }
+      } catch (error) {
+        logger.warn({ err: error, jid: group.jid }, 'Gagal menyinkronkan pemetaan LID anggota grup');
+      }
+    }
+  }
+
+  private async resolveSenderIdentity(
+    primary: string | null | undefined,
+    alternate?: string | null | undefined
+  ): Promise<{ number: string; lid: string | null }> {
+    const jid = resolveSenderJid(primary, alternate);
+    const lid = isLidJid(jid) ? (jid.split('@')[0] ?? null) : null;
+
+    // Grup WhatsApp modern mengirim `participant` sebagai LID (identitas anonim),
+    // bukan nomor HP. Tanpa diterjemahkan, pengirim tidak akan cocok ke roster.
+    if (lid && this.socket) {
+      try {
+        const pn = await this.socket.signalRepository.lidMapping.getPNForLID(jid);
+        const phone = toResolvedPhone(pn);
+        if (phone) return { number: phone, lid };
+      } catch (error) {
+        logger.warn({ err: error, lid }, 'Gagal memetakan LID pengirim ke nomor HP');
+      }
+    }
+
+    return { number: normalizePhone(jid) ?? jid, lid };
+  }
+
   private async handleConnectionUpdate(update: {
     connection?: string;
     lastDisconnect?: { error?: unknown };
@@ -178,6 +235,23 @@ class BaileysManager {
         actor: 'SIGAP'
       });
       logger.info({ phone: this.phone, driver: 'baileys' }, 'WhatsApp client initialized');
+
+      // Perbaiki data lama: nomor pengirim yang tersimpan sebagai LID dipetakan
+      // ke nomor HP memakai pemetaan LID dari Baileys, supaya rekap langsung
+      // mengenali anggota yang sebenarnya sudah mengirim link/foto.
+      if (!this.senderBackfillStarted) {
+        this.senderBackfillStarted = true;
+        const socket = this.socket;
+        if (socket) {
+          void (async () => {
+            // Perkaya pemetaan dari metadata grup dulu, baru perbaiki data lama.
+            await this.syncGroupSenderMappings();
+            await backfillSenderNumbers((lidJid) =>
+              socket.signalRepository.lidMapping.getPNForLID(lidJid)
+            );
+          })().catch((error) => logger.warn({ err: error }, 'Backfill nomor pengirim gagal'));
+        }
+      }
     }
 
     if (update.connection === 'close') {
@@ -329,7 +403,8 @@ class BaileysManager {
 
     const senderId = isGroup ? key.participant ?? remoteJid : remoteJid;
     const senderAlt = isGroup ? key.participantAlt : key.remoteJidAlt;
-    const number = resolveSenderNumber(senderId, senderAlt);
+    const sender = await this.resolveSenderIdentity(senderId, senderAlt);
+    const number = sender.number;
     const senderName = message.pushName ?? number;
     const groupName = isGroup ? await this.resolveGroupName(remoteJid) : null;
 
