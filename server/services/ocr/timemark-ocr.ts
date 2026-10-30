@@ -423,6 +423,25 @@ export async function extractTimemarkFromFile(filePath: string): Promise<Timemar
     );
   }
 
+// Pastikan capturedAt memakai JAM watermark, bukan tengah hari hasil merge AI
+  // (AI sering mengembalikan tanggal saja sehingga jamnya hilang -> 12:00).
+  if (extraction.timeText && extraction.capturedAt) {
+    const [hh, mm] = extraction.timeText.split(':').map(Number);
+    if (Number.isFinite(hh) && Number.isFinite(mm)) {
+      const base = new Date(extraction.capturedAt);
+      const withTime = new Date(
+        base.getFullYear(),
+        base.getMonth(),
+        base.getDate(),
+        hh,
+        mm,
+        0,
+        0
+      );
+      extraction.capturedAt = withTime;
+    }
+  }
+
   extraction.rawText = ocrText;
   return { extraction, ocrText, engineConfidence, aiUsed };
 }
