@@ -241,7 +241,9 @@ export async function listSprins(options: {
     prisma.sprin.findMany({
       where,
       include: includeCounts,
-      orderBy: [{ activityDate: 'desc' }, { createdAt: 'desc' }],
+      // Yang terakhir diproses tampil paling atas, termasuk saat unggahan ulang
+      // hanya memperbarui Sprin yang sudah ada (nomor sama).
+      orderBy: [{ updatedAt: 'desc' }, { activityDate: 'desc' }],
       skip: (page - 1) * pageSize,
       take: pageSize
     })
