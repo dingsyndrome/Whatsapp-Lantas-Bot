@@ -32,6 +32,19 @@ export function toResolvedPhone(value: string | null | undefined): string | null
   return phone;
 }
 
+/**
+ * Kandidat LID dari nomor lama. Kode lama pernah menambahkan awalan 62 pada
+ * LID yang kebetulan dimulai dengan angka 8, sehingga LID "8744..." tersimpan
+ * sebagai "628744...". Coba bentuk asli dan bentuk tanpa awalan 62.
+ */
+export function lidResolutionCandidates(value: string): string[] {
+  const digits = (value ?? '').replace(/\D/g, '');
+  if (!digits) return [];
+  const candidates = [digits];
+  if (digits.startsWith('62') && digits.length > 12) candidates.push(digits.slice(2));
+  return [...new Set(candidates.filter(Boolean))];
+}
+
 /** Kumpulan LID unik dari nomor pengirim yang belum berupa nomor HP. */
 export function collectLidNumbers(numbers: Array<string | null | undefined>): string[] {
   const unique = new Set<string>();
@@ -73,10 +86,13 @@ export async function backfillSenderNumbers(
 
     for (const lid of lids) {
       let phone: string | null = null;
-      try {
-        phone = toResolvedPhone(await resolveLid(`${lid}@lid`));
-      } catch (error) {
-        logger.warn({ err: error, lid }, 'Gagal memetakan LID pengirim ke nomor HP');
+      for (const candidate of lidResolutionCandidates(lid)) {
+        try {
+          phone = toResolvedPhone(await resolveLid(`${candidate}@lid`));
+        } catch (error) {
+          logger.warn({ err: error, lid: candidate }, 'Gagal memetakan LID pengirim ke nomor HP');
+        }
+        if (phone) break;
       }
       if (!phone) continue;
 

@@ -4,14 +4,19 @@
  */
 export function normalizePhone(value: string | null | undefined): string | null {
   if (value === null || value === undefined) return null;
+  const raw = String(value).trim();
+  // LID adalah identitas anonim, bukan nomor HP. Jangan tambahkan awalan 62
+  // meskipun digit LID kebetulan dimulai dengan 8.
+  const isLid = /@(hosted\.lid|lid)$/i.test(raw);
   // JID WhatsApp: "628...:12@s.whatsapp.net". Bagian ":12" adalah ID perangkat,
   // bukan bagian nomor HP, jadi harus dibuang sebelum menyaring digit.
-  let text = String(value).trim();
+  let text = raw;
   const at = text.indexOf('@');
   if (at >= 0) text = text.slice(0, at);
   text = text.replace(/:\d+$/, '');
   let digits = text.replace(/\D/g, '');
   if (!digits) return null;
+  if (isLid) return digits.length >= 9 ? digits : null;
   if (digits.startsWith('620')) digits = `62${digits.slice(3)}`;
   else if (digits.startsWith('0')) digits = `62${digits.slice(1)}`;
   else if (digits.startsWith('8')) digits = `62${digits}`;

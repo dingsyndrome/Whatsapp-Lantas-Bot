@@ -29,6 +29,10 @@ describe('deteksi nomor HP pengirim WhatsApp', () => {
     expect(resolveSenderJid('123456789012345@lid')).toBe('123456789012345@lid');
     expect(resolveSenderNumber('123456789012345@lid')).toBe('123456789012345');
   });
+
+  it('tidak menambahkan awalan 62 pada LID yang dimulai angka 8', () => {
+    expect(resolveSenderNumber('87449845944571@lid')).toBe('87449845944571');
+  });
 });
 
 describe('deteksi identitas LID', () => {

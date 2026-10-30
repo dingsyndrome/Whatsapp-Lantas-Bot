@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { collectLidNumbers, toResolvedPhone } from '../server/services/sender-backfill-service.js';
+import {
+  collectLidNumbers,
+  lidResolutionCandidates,
+  toResolvedPhone
+} from '../server/services/sender-backfill-service.js';
 
 describe('toResolvedPhone', () => {
   it('menerima JID/nomor HP WhatsApp dan menormalkannya', () => {
@@ -33,5 +37,13 @@ describe('collectLidNumbers', () => {
 
   it('menerima LID yang tersimpan dengan suffix @lid', () => {
     expect(collectLidNumbers(['64441907433560@lid'])).toEqual(['64441907433560']);
+  });
+
+  it('mencoba LID asli meski kode lama menambahkan awalan 62', () => {
+    expect(lidResolutionCandidates('6287449845944571')).toEqual([
+      '6287449845944571',
+      '87449845944571'
+    ]);
+    expect(lidResolutionCandidates('64441907433560')).toEqual(['64441907433560']);
   });
 });
