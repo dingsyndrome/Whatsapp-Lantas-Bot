@@ -70,7 +70,10 @@ function editDistance(left: string, right: string): number {
 function tokenMatches(left: string, right: string): boolean {
   if (left === right) return true;
   if (left.length < 4 || right.length < 4) return false;
-  return left.startsWith(right) || right.startsWith(left);
+  if (left.startsWith(right) || right.startsWith(left)) return true;
+  // Toleransi ejaan lazim pada nama Indonesia: CHOLIK ~ CHOLIQ, ROHMAN ~ ROCHMAN.
+  if (left.length >= 5 && right.length >= 5 && editDistance(left, right) <= 1) return true;
+  return false;
 }
 
 
