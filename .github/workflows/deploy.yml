@@ -79,24 +79,29 @@ jobs:
           set -euo pipefail
           cd ~/sigap
 
-          echo "→ Cek ruang disk…"
-          df -h / | tail -1 || true
+          echo "::notice::Disk sebelum: $(df -h / | tail -1 | awk '{print $4" bebas dari "$2}')"
 
           # Image baru (~3,8 GB dengan PaddleOCR) butuh ruang; cache build lama
           # dan image yang tidak terpakai dibersihkan dulu agar git fetch/build
           # tidak gagal karena disk penuh.
-          echo "→ Membersihkan cache build & image lama…"
           docker builder prune -f >/dev/null 2>&1 || true
           docker image prune -af >/dev/null 2>&1 || true
-          df -h / | tail -1 || true
+          echo "::notice::Disk sesudah prune: $(df -h / | tail -1 | awk '{print $4" bebas dari "$2}')"
 
-          echo "→ Menarik kode terbaru…"
-          git fetch --prune origin || git fetch --prune origin
+          if ! git fetch --prune origin 2>/tmp/sigap-git.err; then
+            echo "::error::git fetch gagal: $(tr '\n' ' ' < /tmp/sigap-git.err | cut -c1-400)"
+            exit 1
+          fi
           git reset --hard origin/main
           echo "   commit: $(git rev-parse --short HEAD)"
 
           echo "→ Membangun & menjalankan container…"
-          docker compose up -d --build
+          if ! docker compose up -d --build >/tmp/sigap-build.log 2>&1; then
+            echo "::error::docker build gagal: $(tail -n 8 /tmp/sigap-build.log | tr '\n' ' ' | cut -c1-600)"
+            tail -n 20 /tmp/sigap-build.log || true
+            exit 1
+          fi
+          tail -n 5 /tmp/sigap-build.log || true
 
           echo "→ Membersihkan image lama…"
           docker image prune -f --filter "until=168h" >/dev/null 2>&1 || true
