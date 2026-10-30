@@ -5,12 +5,15 @@ import { config } from '../config.js';
 import { HttpError } from '../lib/http-error.js';
 import { prisma } from '../lib/prisma.js';
 import {
+  archiveReviewPhotos,
+  archiveTimemark,
   deleteTimemark,
   getTimemark,
   ingestTimemark,
   listTimemarks,
   overrideTimemarkTurjawali,
   rematchTimemarkQueue,
+  unarchiveTimemark,
   updateTimemarkFields
 } from '../services/timemark-service.js';
 import { getTurjawaliRecap } from '../services/turjawali-recap-service.js';
@@ -80,6 +83,24 @@ timemarkRouter.post('/analyze', upload.single('file'), async (req, res) => {
     source: 'dashboard'
   });
   res.status(201).json({ item: dto, warnings: dto.status === 'review' ? ['Perlu verifikasi manual.'] : [] });
+});
+
+timemarkRouter.post('/archive-review', async (req, res) => {
+  const body = z.object({ days: z.coerce.number().min(0).max(365).optional() }).parse(req.body ?? {});
+  const archived = await archiveReviewPhotos(body.days ?? 0);
+  res.json({ archived });
+});
+
+timemarkRouter.post('/:id/archive', async (req, res) => {
+  const ok = await archiveTimemark(String(req.params.id));
+  if (!ok) throw new HttpError(404, 'Foto Timemark tidak ditemukan.');
+  res.json({ status: 'archived' });
+});
+
+timemarkRouter.post('/:id/unarchive', async (req, res) => {
+  const ok = await unarchiveTimemark(String(req.params.id));
+  if (!ok) throw new HttpError(404, 'Foto Timemark tidak ditemukan.');
+  res.json({ status: 'review' });
 });
 
 timemarkRouter.post('/approve-complete', async (req, res) => {

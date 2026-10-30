@@ -2,6 +2,7 @@ import * as React from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   AlertTriangle,
+  Archive,
   Camera,
   Car,
   CheckCircle2,
@@ -923,7 +924,25 @@ export function TimemarkPage() {
               disabled={approving}
             >
               {approving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-              Setujui yang lengkap
+              Setujui yang lengkap</Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                if (!window.confirm('Arsipkan semua foto berstatus review yang lebih tua dari 7 hari? Data tidak dihapus dan bisa dipulihkan.')) return;
+                void (async () => {
+                  try {
+                    const result = await api.post<{ archived: number }>('/timemark/archive-review', { days: 7 });
+                    toast.success(`${result.archived} foto diarsipkan`);
+                    void listApi.refresh();
+                    void reviewApi.refresh();
+                  } catch (error) {
+                    toast.error('Gagal mengarsipkan', { description: errorMessage(error) });
+                  }
+                })();
+              }}
+            >
+              <Archive className="h-4 w-4" /> Arsipkan review lama
             </Button>
             <Button variant="outline" size="sm" onClick={() => downloadFile(exportUrl('timemark.csv'))}>
               <Download className="h-4 w-4" /> CSV
@@ -985,6 +1004,7 @@ export function TimemarkPage() {
                   <SelectItem value="all">Semua OCR</SelectItem>
                   <SelectItem value="parsed">Terverifikasi</SelectItem>
                   <SelectItem value="review">Perlu review</SelectItem>
+                  <SelectItem value="archived">Arsip</SelectItem>
                   <SelectItem value="failed">Gagal OCR</SelectItem>
                 </SelectContent>
               </Select>

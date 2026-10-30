@@ -271,6 +271,7 @@ export async function listTimemarks(options: {
   const pageSize = Math.min(100, Math.max(1, options.pageSize ?? 24));
   const where: Record<string, unknown> = {};
   if (options.status && options.status !== 'all') where.status = options.status;
+  else where.status = { not: 'archived' };
   if (options.turjawaliType && options.turjawaliType !== 'all') {
     where.turjawaliType = options.turjawaliType;
   }
@@ -449,4 +450,35 @@ export async function deleteTimemark(id: string): Promise<void> {
       ? fs.unlink(path.join(paths.storage, photo.thumbnailPath)).catch(() => undefined)
       : Promise.resolve()
   ]);
+}
+
+/** Arsipkan foto review tanpa menghapus data (bisa dipulihkan). */
+export async function archiveTimemark(id: string): Promise<boolean> {
+  const photo = await prisma.timemarkPhoto.findUnique({ where: { id } });
+  if (!photo) return false;
+  await prisma.timemarkPhoto.update({ where: { id }, data: { status: 'archived' } });
+  return true;
+}
+
+export async function unarchiveTimemark(id: string): Promise<boolean> {
+  const photo = await prisma.timemarkPhoto.findUnique({ where: { id } });
+  if (!photo) return false;
+  await prisma.timemarkPhoto.update({ where: { id }, data: { status: 'review' } });
+  return true;
+}
+
+/** Arsipkan massal foto berstatus review yang lebih tua dari N hari. */
+export async function archiveReviewPhotos(days = 0): Promise<number> {
+  const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+  const result = await prisma.timemarkPhoto.updateMany({
+    where: { status: 'review', createdAt: { lte: cutoff } },
+    data: { status: 'archived' }
+  });
+  await recordActivity({
+    type: 'timemark_archive',
+    title: 'Foto review diarsipkan',
+    description: `${result.count} foto berstatus review diarsipkan (lebih tua dari ${days} hari)`,
+    actor: 'Dashboard'
+  });
+  return result.count;
 }

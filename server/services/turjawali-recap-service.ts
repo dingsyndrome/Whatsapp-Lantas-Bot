@@ -92,7 +92,7 @@ export async function getTurjawaliRecap(options: {
 
   const [photos, activeSprins] = await Promise.all([
     prisma.timemarkPhoto.findMany({
-      where: { createdAt: { gte: start, lte: end } },
+      where: { createdAt: { gte: start, lte: end }, status: { not: 'archived' } },
       orderBy: { createdAt: 'asc' }
     }),
     prisma.sprin.findMany({
