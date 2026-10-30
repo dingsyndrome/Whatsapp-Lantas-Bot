@@ -88,6 +88,16 @@ jobs:
           docker image prune -af >/dev/null 2>&1 || true
           echo "::notice::Disk sesudah prune: $(df -h / | tail -1 | awk '{print $4" bebas dari "$2}')"
 
+          # Repo bisa tertinggal milik user lain (mis. pernah dijalankan sebagai
+          # root), sehingga git fetch gagal menulis objek baru.
+          echo "::notice::Pemilik .git/objects: $(stat -c '%U:%G %a' .git/objects 2>/dev/null || echo '?') (user: $(id -un))"
+          if [ ! -w .git/objects ]; then
+            echo "::warning::.git/objects tidak writable — memperbaiki izin…"
+            chmod -R u+rwX .git 2>/dev/null || true
+            sudo -n chown -R "$(id -u):$(id -g)" . 2>/dev/null || true
+            echo "::notice::Setelah perbaikan: $(stat -c '%U:%G %a' .git/objects 2>/dev/null || echo '?')"
+          fi
+
           if ! git fetch --prune origin 2>/tmp/sigap-git.err; then
             echo "::error::git fetch gagal: $(tr '\n' ' ' < /tmp/sigap-git.err | cut -c1-400)"
             exit 1
