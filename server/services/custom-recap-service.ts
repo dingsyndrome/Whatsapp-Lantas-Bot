@@ -73,6 +73,46 @@ export interface CustomRecapResult {
 }
 
 /** Cadangan untuk foto lama: ambil nama dari teks OCR yang sudah tersimpan. */
+
+function normalizeTokens(value: string): string[] {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9 ]/g, ' ')
+    .split(' ')
+    .filter((token) => token.length > 2);
+}
+
+/**
+ * Tentukan personel roster untuk sebuah foto. Urutan sama dengan rekap pos pagi
+ * yang terbukti mengenali pelapor: nama di watermark, lalu nama di teks OCR,
+ * lalu pengirim, lalu kecocokan token nama (toleran singkatan).
+ */
+function resolvePhotoPerson(
+  photo: { personnelName: string | null; rawText: string | null; senderName: string; senderNumber: string },
+  directory: PersonnelDirectory,
+  roster: Array<{ id: string; name: string; rank: string | null }>
+): { id: string; name: string; rank: string | null } | null {
+  const direct =
+    (photo.personnelName ? directory.resolve(photo.personnelName, null) : null) ??
+    directory.resolve(nameFromRawText(photo.rawText), null) ??
+    directory.resolve(photo.senderName, photo.senderNumber);
+  if (direct) return direct;
+
+  const senderTokens = new Set(normalizeTokens(photo.senderName));
+  if (senderTokens.size === 0) return null;
+  let best: { id: string; name: string; rank: string | null; score: number } | null = null;
+  for (const person of roster) {
+    const personTokens = normalizeTokens(person.name);
+    if (personTokens.length === 0) continue;
+    const overlap = personTokens.filter((token) => senderTokens.has(token)).length;
+    const needed = Math.min(2, personTokens.length);
+    if (overlap >= needed && overlap > (best?.score ?? 0)) {
+      best = { id: person.id, name: person.name, rank: person.rank, score: overlap };
+    }
+  }
+  return best ? { id: best.id, name: best.name, rank: best.rank } : null;
+}
+
 function nameFromRawText(rawText: string | null | undefined): string | null {
   if (!rawText) return null;
   const match = rawText.match(/NAMA\s*[:;]\s*([^\n|]{3,80})/i);
@@ -150,9 +190,7 @@ export async function buildCustomRecap(params: CustomRecapParams): Promise<Custo
     const current = photo.supervisorSandi ? sandiMap[photo.supervisorSandi] : undefined;
     // Nama pada watermark ("Nama: ...") adalah subjek laporan; pengirim hanya
     // cadangan bila nama di foto tidak terbaca.
-    const person =
-      directory.resolve(photo.personnelName ?? nameFromRawText(photo.rawText), null) ??
-      directory.resolve(photo.senderName, photo.senderNumber);
+    const person = resolvePhotoPerson(photo, directory, roster);
     return {
       id: photo.id,
       at: (photo.capturedAt ?? photo.createdAt).toISOString(),
@@ -198,9 +236,7 @@ export async function buildCustomRecap(params: CustomRecapParams): Promise<Custo
   const rosterView = rosterOnly ? roster : roster;
   const isPerwira = (row: { category: string }) => row.category === 'PERWIRA';
   for (const photo of filteredPhotos) {
-    const person =
-      directory.resolve(photo.personnelName ?? nameFromRawText(photo.rawText), null) ??
-      matchRoster(photo.senderName, photo.senderNumber);
+    const person = resolvePhotoPerson(photo, directory, roster);
     if (!person) continue;
     const entry = submittedMap.get(person.id) ?? { photos: 0, links: 0 };
     entry.photos += 1;
@@ -249,7 +285,10 @@ export async function buildCustomRecap(params: CustomRecapParams): Promise<Custo
     `${format(from, 'dd MMMM yyyy', { locale: localeId })}${params.to !== params.from ? ` – ${format(to, 'dd MMMM yyyy', { locale: localeId })}` : ''}${startTime !== null || endTime !== null ? ` · ${startTime ?? '00:00'}–${endTime ?? '23:59'}` : ''}`,
     '',
     `📸 Foto Timemark: ${filteredPhotos.length}`,
-    `🔗 Link anggota: ${filteredLinks.length} (dari ${anggotaSubmitted.filter((p) => p.links > 0).length} anggota)`,
+    // Link hanya relevan pada rekap gabungan; rekap per kategori fokus ke foto.
+    ...(category === 'ALL'
+      ? [`🔗 Link anggota: ${filteredLinks.length} (dari ${anggotaSubmitted.filter((p) => p.links > 0).length} anggota)`]
+      : []),
     `👮 Anggota sudah melapor: ${anggotaSubmitted.length}/${anggotaTotal}`,
     ''
   ];
