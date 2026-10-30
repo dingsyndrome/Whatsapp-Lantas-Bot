@@ -19,6 +19,11 @@ describe('nomor HP personel dari lampiran Sprin', () => {
     expect(findPhone('HP: +62 811 3671 001')).toBe('628113671001');
   });
 
+  it('membuang ID perangkat pada JID WhatsApp', () => {
+    expect(normalizePhone('6285235109972:0@s.whatsapp.net')).toBe('6285235109972');
+    expect(normalizePhone('6282232604077:12@c.us')).toBe('6282232604077');
+  });
+
   it('baris lampiran tetap menyimpan nomor pada kolom KET', () => {
     const row = parseLampiranRow(
       '4. HERIYANTO AIPTU 08113671001',

@@ -92,6 +92,24 @@ function matchesInitials(nickname: string, personTokens: string[]): boolean {
 
 
 
+/**
+ * Nomor lama sempat menyimpan ID perangkat WhatsApp sebagai digit tambahan
+ * (mis. 6285235109972 + device 0 → 62852351099720). Coba juga versi tanpa
+ * 1–2 digit terakhir agar data lama tetap dapat dicocokkan ke roster.
+ */
+function phoneVariants(value: string): string[] {
+  const normalized = normalizePhone(value);
+  if (!normalized) return [];
+  const variants = [normalized];
+  if (normalized.startsWith('62') && normalized.length >= 13 && normalized.length <= 15) {
+    for (let cut = 1; cut <= 2; cut += 1) {
+      const trimmed = normalized.slice(0, -cut);
+      if (trimmed.length >= 10) variants.push(trimmed);
+    }
+  }
+  return variants;
+}
+
 export class PersonnelDirectory {
   private readonly people: DirectoryPerson[];
   private readonly byId = new Map<string, DirectoryPerson>();
@@ -120,12 +138,12 @@ export class PersonnelDirectory {
   resolve(senderName: string | null | undefined, senderNumber?: string | null): DirectoryPerson | null {
     for (const candidate of [senderNumber, senderName]) {
       if (!candidate) continue;
-      const phone = normalizePhone(candidate);
-      if (!phone) continue;
-      const direct = this.byPhone.get(phone);
-      if (direct) return direct;
-      const tailMatch = this.people.find((person) => samePhone(person.phone, candidate));
-      if (tailMatch) return tailMatch;
+      for (const variant of phoneVariants(candidate)) {
+        const direct = this.byPhone.get(variant);
+        if (direct) return direct;
+        const tailMatch = this.people.find((person) => samePhone(person.phone, variant));
+        if (tailMatch) return tailMatch;
+      }
     }
 
     const sender = normalizePersonnelName(senderName);

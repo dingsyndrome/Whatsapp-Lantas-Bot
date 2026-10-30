@@ -468,10 +468,13 @@ File: [`extractor.ts`](server/services/links/extractor.ts) + [`validator.ts`](se
 
 **Deteksi pengirim & grup.** Pada driver Baileys, nomor pengirim diambil dari
 `participantAlt`/`remoteJidAlt` bila `participant` berupa LID, lalu dinormalkan
-ke format `62…`. Nama grup juga diambil dari cache atau tabel `MonitoredGroup`
-saat pesan masuk, sehingga link dari grup seperti **“Medsos dan Meme”** tetap
-memiliki `groupName` dan dapat dicari/difilter di rekap. Bila nomor HP tidak
-tersedia, pencocokan jatuh ke nama seperti sebelumnya.
+ke format `62…`. Sufiks perangkat WhatsApp seperti `:0@s.whatsapp.net` dibuang
+sebelum normalisasi, dan data lama yang masih menyimpan digit perangkat tetap
+dicocokkan dengan mencoba versi tanpa 1–2 digit terakhir. Nama grup juga diambil
+dari cache atau tabel `MonitoredGroup` saat pesan masuk, sehingga link dari grup
+seperti **“Medsos dan Meme”** tetap memiliki `groupName` dan dapat
+dicari/difilter di rekap. Bila nomor HP tidak tersedia, pencocokan jatuh ke nama
+seperti sebelumnya.
 
 **Rekap link per periode.** Tombol **Rekap ke WA** pada halaman Rekap Link Anggota membuka
 dialog tanggal + rentang jam (mis. Kamis, 29 Oktober 2026 pukul 08:20–09:20). Teks yang dihasilkan

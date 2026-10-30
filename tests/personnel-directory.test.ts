@@ -14,7 +14,10 @@ const roster = [
   { id: 'p8', name: 'SANCOKO YEKTI W', rank: 'BRIPKA', phone: '6281333333333' },
   { id: 'p9', name: 'SAMSUL HADI,S.H.', rank: 'AIPDA', phone: '6281444444444' },
   { id: 'p10', name: 'MUHAMAD BAYU FAUZAN AKMALUDIN', rank: 'BRIPTU', phone: '6281555555555' },
-  { id: 'p11', name: 'MUHAMMAD BAYU P', rank: 'BRIGADIR', phone: '6281666666666' }
+  { id: 'p11', name: 'MUHAMMAD BAYU P', rank: 'BRIGADIR', phone: '6281666666666' },
+  // Kasus nyata: nomor tersimpan dengan ID perangkat WhatsApp di belakangnya.
+  { id: 'p12', name: 'ANDI SISCA', rank: 'BRIPKA', phone: '6285235109972' },
+  { id: 'p13', name: 'IMA SAFITRI', rank: 'AIPDA', phone: '6282232604077' }
 ];
 
 const directory = new PersonnelDirectory(roster);
@@ -57,5 +60,14 @@ describe('pencocokan nama personel Sprin ke roster', () => {
 
   it('tidak menebak bila panggilan satu kata sama kuat pada dua kandidat', () => {
     expect(directory.resolve('Bayu')).toBeNull();
+  });
+
+  it('mencocokkan nomor lama yang masih membawa ID perangkat WhatsApp', () => {
+    expect(directory.label('Andi S Charisma', '62852351099720')).toBe(
+      'BRIPKA ANDI SISCA'
+    );
+    expect(directory.label('Reysangga', '62822326040770')).toBe(
+      'AIPDA IMA SAFITRI'
+    );
   });
 });
