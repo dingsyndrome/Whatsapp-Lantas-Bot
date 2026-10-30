@@ -21,6 +21,10 @@ jobs:
       DATABASE_URL: 'file:../data/app.db'
       WA_DRIVER: 'mock'
       TZ: 'Asia/Jakarta'
+      APP_USER: 'smoke-admin'
+      APP_PASS: 'smoke-password'
+      SIGAP_SMOKE_USER: 'smoke-admin'
+      SIGAP_SMOKE_PASS: 'smoke-password'
 
     steps:
       - name: Checkout

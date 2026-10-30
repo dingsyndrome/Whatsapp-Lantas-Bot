@@ -2,11 +2,36 @@ import fs from 'node:fs/promises';
 import assert from 'node:assert/strict';
 
 const base = process.env.SIGAP_API ?? 'http://127.0.0.1:3000/api';
+const smokeUser = process.env.SIGAP_SMOKE_USER ?? 'smoke-admin';
+const smokePass = process.env.SIGAP_SMOKE_PASS ?? 'smoke-password';
 let passed = 0;
 const cleanupTasks = [];
+let cookieHeader = '';
+
+async function login() {
+  const response = await fetch(`${base}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username: smokeUser, password: smokePass })
+  });
+  const body = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(`POST /auth/login -> ${response.status}: ${body?.error ?? 'unknown'}`);
+  }
+  const setCookie = response.headers.get('set-cookie') ?? '';
+  cookieHeader = setCookie.split(';')[0] ?? '';
+  if (!cookieHeader) throw new Error('login tidak mengembalikan cookie sesi');
+}
+
+function withCookie(headers = {}) {
+  return cookieHeader ? { ...headers, Cookie: cookieHeader } : headers;
+}
 
 async function json(path, options) {
-  const response = await fetch(`${base}${path}`, options);
+  const response = await fetch(`${base}${path}`, {
+    ...options,
+    headers: withCookie(options?.headers ?? {})
+  });
   const body = await response.json().catch(() => null);
   if (!response.ok) {
     throw new Error(`${options?.method ?? 'GET'} ${path} -> ${response.status}: ${body?.error ?? 'unknown'} ${JSON.stringify(body?.details ?? '')}`);
@@ -22,6 +47,9 @@ function check(name, condition, extra = '') {
 
 const health = await json('/health');
 check('health database ok', health.status === 'ok' && health.database === 'ok');
+
+await login();
+check('login admin sesi cookie', cookieHeader.startsWith('sigap_session='));
 
 const stats = await json('/stats');
 check('stats has 4 timemark total', stats.totalTimemark >= 4);
@@ -168,11 +196,11 @@ const exportsToTest = [
   ['/exports/turjawali.csv', 'text/csv']
 ];
 for (const [path, type] of exportsToTest) {
-  const response = await fetch(`${base}${path}`);
+  const response = await fetch(`${base}${path}`, { headers: withCookie() });
   const buffer = await response.arrayBuffer();
   check(`export ${path}`, response.ok && buffer.byteLength > 200 && (response.headers.get('content-type') ?? '').includes(type), `${buffer.byteLength} bytes`);
 }
-const waText = await (await fetch(`${base}/exports/daily.txt`)).text();
+const waText = await (await fetch(`${base}/exports/daily.txt`, { headers: withCookie() })).text();
 check('daily.txt has Turjawali section', waText.includes('REKAP TURJAWALI POLANTAS') && waText.includes('PENGATURAN (GATUR)'));
 
 // Settings update round-trip, including Turjawali rule customization.
