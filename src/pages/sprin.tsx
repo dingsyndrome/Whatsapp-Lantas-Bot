@@ -81,7 +81,13 @@ function SummaryCards({
   const personnel = stats?.totalPersonnel ?? data.items.reduce((sum, item) => sum + item.personnelCount, 0);
   const links = data.items.reduce((sum, item) => sum + item.reportedLinks, 0);
   const cards = [
-    { label: 'Total Sprin', value: formatNumber(data.total), icon: FileText, color: 'text-primary bg-primary/10 border-primary/20', onClick: undefined },
+    {
+      label: 'Total Sprin',
+      value: formatNumber(stats?.totalSprin ?? data.total),
+      icon: FileText,
+      color: 'text-primary bg-primary/10 border-primary/20',
+      onClick: undefined
+    },
     { label: 'Sprin aktif', value: formatNumber(activeTotal), icon: ShieldCheck, color: 'text-info bg-info/10 border-info/20', onClick: undefined },
     { label: 'Personel', value: formatNumber(personnel), icon: UsersRound, color: 'text-violet-400 bg-violet-500/10 border-violet-500/20', onClick: undefined },
     { label: 'Link terkait', value: formatNumber(links), icon: Link2, color: 'text-success bg-success/10 border-success/20', onClick: undefined },
@@ -1006,11 +1012,12 @@ function ImportPersonnelDialog({
   );
 }
 
+type SprinTab = 'active' | 'review' | 'completed' | 'archived';
+
 export function SprinPage() {
   const [page, setPage] = React.useState(1);
   const [search, setSearch] = React.useState('');
-  const [status, setStatus] = React.useState('all');
-  const [notify, setNotify] = React.useState('all');
+  const [tab, setTab] = React.useState<SprinTab>('active');
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const [uploadOpen, setUploadOpen] = React.useState(false);
   const [manualOpen, setManualOpen] = React.useState(false);
@@ -1020,14 +1027,18 @@ export function SprinPage() {
   const query = React.useMemo(() => {
     const params = new URLSearchParams({ page: String(page), pageSize: '20' });
     if (debounced) params.set('search', debounced);
-    if (status !== 'all') params.set('status', status);
-    if (notify !== 'all') params.set('notify', notify);
+    if (tab === 'active') params.set('status', 'active');
+    if (tab === 'completed') params.set('status', 'completed');
+    if (tab === 'archived') params.set('status', 'archived');
+    if (tab === 'review') params.set('notify', 'review');
     return params.toString();
-  }, [page, debounced, status, notify]);
+  }, [page, debounced, tab]);
 
   const listApi = useApi<Paginated<SprinDTO>>(`/sprin?${query}`);
   const activeApi = useApi<Paginated<SprinDTO>>('/sprin?status=active&pageSize=1');
   const reviewApi = useApi<Paginated<SprinDTO>>('/sprin?notify=review&pageSize=1');
+  const completedApi = useApi<Paginated<SprinDTO>>('/sprin?status=completed&pageSize=1');
+  const archivedApi = useApi<Paginated<SprinDTO>>('/sprin?status=archived&pageSize=1');
   const statsApi = useApi<DashboardStats>('/stats');
 
   React.useEffect(() => {
@@ -1035,13 +1046,15 @@ export function SprinPage() {
     void listApi.refresh();
     void activeApi.refresh();
     void reviewApi.refresh();
+    void completedApi.refresh();
+    void archivedApi.refresh();
     void statsApi.refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [version]);
 
   React.useEffect(() => {
     setPage(1);
-  }, [debounced, status, notify]);
+  }, [debounced, tab]);
 
   const data = listApi.data;
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;
@@ -1051,7 +1064,7 @@ export function SprinPage() {
       <PageHeader
         eyebrow="Manajemen Dokumen"
         title="Data Surat Perintah"
-        description="Daftar Sprin, metadata kegiatan, tabel personel lintas halaman, dan status pelaporan."
+        description="Sprin aktif, perlu review, selesai, dan arsip — lengkap dengan metadata kegiatan, personel, dan status pelaporan."
         actions={
           <>
             <Button variant="outline" size="sm" onClick={() => downloadFile(exportUrl('sprin.csv'))}>
@@ -1073,46 +1086,60 @@ export function SprinPage() {
           stats={statsApi.data}
           activeTotal={activeApi.data?.total ?? 0}
           reviewTotal={reviewApi.data?.total ?? 0}
-          onReviewClick={() => setNotify((current) => (current === 'review' ? 'all' : 'review'))}
+          onReviewClick={() => setTab('review')}
         />
       ) : null}
 
       <Card>
-        <CardContent className="p-3.5">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex flex-1 flex-col gap-2 sm:flex-row">
-              <div className="relative flex-1 sm:max-w-xs">
-                <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/60" />
-                <Input
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Cari nomor, perihal, tempat…"
-                  className="h-9 pl-9 text-xs"
-                />
-              </div>
-              <Select value={status} onValueChange={setStatus}>
-                <SelectTrigger className="h-9 w-full text-xs sm:w-[150px]">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Semua status</SelectItem>
-                  <SelectItem value="active">Aktif</SelectItem>
-                  <SelectItem value="completed">Selesai</SelectItem>
-                  <SelectItem value="archived">Diarsipkan</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={notify} onValueChange={setNotify}>
-                <SelectTrigger className="h-9 w-full text-xs sm:w-[175px]">
-                  <SelectValue placeholder="Notifikasi" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Semua notifikasi</SelectItem>
-                  <SelectItem value="review">Perlu review</SelectItem>
-                  <SelectItem value="sent">Sudah terkirim</SelectItem>
-                </SelectContent>
-              </Select>
+        <CardContent className="flex flex-col gap-3 p-3.5 xl:flex-row xl:items-center xl:justify-between">
+          <div className="overflow-x-auto pb-0.5">
+            <Tabs value={tab} onValueChange={(value) => setTab(value as SprinTab)}>
+              <TabsList className="h-9 w-max">
+                <TabsTrigger value="active" className="text-[11px]">
+                  Aktif
+                  <Badge variant="muted" className="ml-1 text-[8px]">
+                    {formatNumber(activeApi.data?.total ?? 0)}
+                  </Badge>
+                </TabsTrigger>
+                <TabsTrigger value="review" className="text-[11px]">
+                  Perlu Review
+                  <Badge
+                    variant={(reviewApi.data?.total ?? 0) > 0 ? 'warning' : 'muted'}
+                    className="ml-1 text-[8px]"
+                  >
+                    {formatNumber(reviewApi.data?.total ?? 0)}
+                  </Badge>
+                </TabsTrigger>
+                <TabsTrigger value="completed" className="text-[11px]">
+                  Selesai
+                  <Badge variant="muted" className="ml-1 text-[8px]">
+                    {formatNumber(completedApi.data?.total ?? 0)}
+                  </Badge>
+                </TabsTrigger>
+                <TabsTrigger value="archived" className="text-[11px]">
+                  Arsip
+                  <Badge variant="muted" className="ml-1 text-[8px]">
+                    {formatNumber(archivedApi.data?.total ?? 0)}
+                  </Badge>
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="relative flex-1 sm:w-[280px]">
+              <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/60" />
+              <Input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder={
+                  tab === 'review'
+                    ? 'Cari Sprin yang perlu review…'
+                    : 'Cari nomor, perihal, tempat…'
+                }
+                className="h-9 pl-9 text-xs"
+              />
             </div>
-            <span className="text-[10px] text-muted-foreground">
+            <span className="shrink-0 text-[10px] text-muted-foreground">
               {formatNumber(data?.total ?? 0)} dokumen ditemukan
             </span>
           </div>
@@ -1257,6 +1284,8 @@ export function SprinPage() {
           void listApi.refresh();
           void activeApi.refresh();
           void reviewApi.refresh();
+          void completedApi.refresh();
+          void archivedApi.refresh();
           void statsApi.refresh();
         }}
       />
@@ -1267,6 +1296,8 @@ export function SprinPage() {
           void listApi.refresh();
           void activeApi.refresh();
           void reviewApi.refresh();
+          void completedApi.refresh();
+          void archivedApi.refresh();
           void statsApi.refresh();
         }}
       />
@@ -1277,6 +1308,8 @@ export function SprinPage() {
           void listApi.refresh();
           void activeApi.refresh();
           void reviewApi.refresh();
+          void completedApi.refresh();
+          void archivedApi.refresh();
           void statsApi.refresh();
           setSelectedId(sprin.id);
         }}

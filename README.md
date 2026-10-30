@@ -729,7 +729,7 @@ Halaman:
 |---|---|---|
 | Dashboard | [`src/pages/dashboard.tsx`](src/pages/dashboard.tsx) | KPI, **Rekap Giat Turjawali realtime**, toggle harian/mingguan, matriks 4 kategori, **dialog cakupan personel**, area chart, donut platform, foto terbaru, aktivitas, progres Sprin |
 | Foto Timemark | [`src/pages/timemark.tsx`](src/pages/timemark.tsx) | Tab 4 kategori, filter status match, badge kategori/skor, galeri + tabel, upload, detail, override kategori |
-| Sprin | [`src/pages/sprin.tsx`](src/pages/sprin.tsx) | Daftar + badge Turjawali, upload, metadata, personel lintas halaman, filter, unduh, ubah status |
+| Sprin | [`src/pages/sprin.tsx`](src/pages/sprin.tsx) | Tab **Aktif / Perlu Review / Selesai / Arsip**, badge Turjawali, upload, metadata, personel lintas halaman, filter, unduh, ubah status |
 | Link Anggota | [`src/pages/links.tsx`](src/pages/links.tsx) | Agregat platform, filter, validasi ulang, **rekap link per tanggal/jam + kirim WA**, ekspor CSV/XLSX/Turjawali |
 | Settings | [`src/pages/settings.tsx`](src/pages/settings.tsx) | QR/connect, whitelist, auto-reply, prompt AI, **aturan Turjawali + rematch massal**, jadwal, simulator |
 
