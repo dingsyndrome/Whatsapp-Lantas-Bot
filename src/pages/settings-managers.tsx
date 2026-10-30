@@ -30,6 +30,9 @@ export function ManagersPanel() {
   const [phone, setPhone] = React.useState('');
   const [username, setUsername] = React.useState('');
   const [password, setPassword] = React.useState('');
+  const [editingId, setEditingId] = React.useState<string | null>(null);
+  const [editUsername, setEditUsername] = React.useState('');
+  const [editPassword, setEditPassword] = React.useState('');
   const [selected, setSelected] = React.useState<Permission[]>([]);
 
   const load = React.useCallback(async () => {
@@ -99,7 +102,10 @@ export function ManagersPanel() {
     }
   };
 
-  const update = async (manager: Manager, patch: Partial<Pick<Manager, 'permissions' | 'active'>>) => {
+  const update = async (
+    manager: Manager,
+    patch: Partial<Pick<Manager, 'permissions' | 'active' | 'username'>> & { password?: string | null }
+  ) => {
     try {
       await api.patch<Manager>(`/managers/${manager.id}`, patch);
       await load();
@@ -107,6 +113,26 @@ export function ManagersPanel() {
     } catch (error) {
       toast.error('Gagal menyimpan', { description: errorMessage(error) });
     }
+  };
+
+  const saveCredentials = async (manager: Manager) => {
+    const nextUsername = editUsername.trim();
+    if (nextUsername && !/^[A-Za-z0-9._-]{3,32}$/.test(nextUsername)) {
+      toast.error('Username tidak valid', {
+        description: '3–32 karakter: huruf, angka, titik, garis bawah, atau strip.'
+      });
+      return;
+    }
+    if (editPassword && editPassword.length < 8) {
+      toast.error('Password minimal 8 karakter');
+      return;
+    }
+    await update(manager, {
+      username: nextUsername || null,
+      ...(editPassword ? { password: editPassword } : {})
+    });
+    setEditingId(null);
+    setEditPassword('');
   };
 
   const revoke = async (manager: Manager) => {
@@ -303,6 +329,53 @@ export function ManagersPanel() {
                       );
                     })}
                   </div>
+
+                  {editingId === manager.id ? (
+                    <div className="mt-2 grid gap-2 rounded-md border border-border/60 bg-background/60 p-2 sm:grid-cols-2">
+                      <Input
+                        value={editUsername}
+                        onChange={(event) => setEditUsername(event.target.value)}
+                        placeholder="username"
+                        className="h-8 text-[11px]"
+                      />
+                      <Input
+                        type="password"
+                        value={editPassword}
+                        onChange={(event) => setEditPassword(event.target.value)}
+                        placeholder="password baru (opsional)"
+                        className="h-8 text-[11px]"
+                      />
+                      <div className="flex gap-2 sm:col-span-2">
+                        <Button size="sm" className="h-7 px-3 text-[10px]" onClick={() => void saveCredentials(manager)}>
+                          Simpan kredensial
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 px-3 text-[10px]"
+                          onClick={() => {
+                            setEditingId(null);
+                            setEditPassword('');
+                          }}
+                        >
+                          Batal
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      className="mt-2 text-[9px] font-medium text-primary underline-offset-2 hover:underline"
+                      onClick={() => {
+                        setEditingId(manager.id);
+                        setEditUsername(manager.username ?? '');
+                        setEditPassword('');
+                      }}
+                    >
+                      Atur kredensial login
+                    </button>
+                  )}
+
                   {manager.lastLoginAt ? (
                     <p className="mt-1.5 text-[8px] text-muted-foreground">
                       Terakhir masuk: {new Date(manager.lastLoginAt).toLocaleString('id-ID')}
