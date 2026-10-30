@@ -474,20 +474,9 @@ export async function unarchiveTimemark(id: string): Promise<boolean> {
 export async function archiveReviewPhotos(
   options: { from?: string | null; to?: string | null; days?: number } = {}
 ): Promise<{ archived: number; from: string | null; to: string | null }> {
-  const fromDate = options.from ? new Date(`${options.from}T00:00:00`) : null;
-  const toDate = options.to ? new Date(`${options.to}T23:59:59`) : null;
-  const cutoff =
-    !fromDate && !toDate
-      ? new Date(Date.now() - (options.days ?? 0) * 24 * 60 * 60 * 1000)
-      : null;
-
-  const createdAt: Record<string, Date> = {};
-  if (fromDate) createdAt.gte = fromDate;
-  if (toDate) createdAt.lte = toDate;
-  if (cutoff) createdAt.lte = cutoff;
-
+  const range = buildArchiveRange(options);
   const result = await prisma.timemarkPhoto.updateMany({
-    where: { status: 'review', ...(Object.keys(createdAt).length > 0 ? { createdAt } : {}) },
+    where: { status: 'review', ...(range ? { createdAt: range } : {}) },
     data: { status: 'archived' }
   });
 
@@ -504,4 +493,50 @@ export async function archiveReviewPhotos(
   });
 
   return { archived: result.count, from: options.from ?? null, to: options.to ?? null };
+}
+
+/** Hitung berapa foto review pada rentang tanggal (tanpa mengubah data). */
+export async function previewArchiveReview(
+  options: { from?: string | null; to?: string | null; days?: number } = {}
+): Promise<{ count: number }> {
+  const createdAt = buildArchiveRange(options);
+  const count = await prisma.timemarkPhoto.count({
+    where: { status: 'review', ...(createdAt ? { createdAt } : {}) }
+  });
+  return { count };
+}
+
+/** Pulihkan foto arsip pada rentang tanggal kembali menjadi 'review'. */
+export async function restoreArchived(
+  options: { from?: string | null; to?: string | null; days?: number } = {}
+): Promise<{ restored: number }> {
+  const createdAt = buildArchiveRange(options);
+  const result = await prisma.timemarkPhoto.updateMany({
+    where: { status: 'archived', ...(createdAt ? { createdAt } : {}) },
+    data: { status: 'review' }
+  });
+  await recordActivity({
+    type: 'timemark_restore',
+    title: 'Foto arsip dipulihkan',
+    description: `${result.count} foto dipulihkan ke status review`,
+    actor: 'Dashboard'
+  });
+  return { restored: result.count };
+}
+
+function buildArchiveRange(options: {
+  from?: string | null;
+  to?: string | null;
+  days?: number;
+}): Record<string, Date> | null {
+  const fromDate = options.from ? new Date(`${options.from}T00:00:00`) : null;
+  const toDate = options.to ? new Date(`${options.to}T23:59:59`) : null;
+  if (!fromDate && !toDate) {
+    const cutoff = new Date(Date.now() - (options.days ?? 0) * 24 * 60 * 60 * 1000);
+    return { lte: cutoff };
+  }
+  const range: Record<string, Date> = {};
+  if (fromDate) range.gte = fromDate;
+  if (toDate) range.lte = toDate;
+  return range;
 }

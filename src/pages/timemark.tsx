@@ -18,6 +18,7 @@ import {
   Gavel,
   Radar,
   RefreshCw,
+  RotateCcw,
   Route,
   ScanText,
   Search,
@@ -893,6 +894,8 @@ export function TimemarkPage() {
   const [archiveFrom, setArchiveFrom] = React.useState('');
   const [archiveTo, setArchiveTo] = React.useState('');
   const [archiving, setArchiving] = React.useState(false);
+  const [previewCount, setPreviewCount] = React.useState<number | null>(null);
+  const [previewing, setPreviewing] = React.useState(false);
   const approveComplete = async () => {
     setApproving(true);
     try {
@@ -910,6 +913,50 @@ export function TimemarkPage() {
     }
   };
 
+
+
+  const previewArchive = async () => {
+    if (!archiveFrom && !archiveTo) {
+      toast.error('Pilih minimal satu tanggal');
+      return;
+    }
+    setPreviewing(true);
+    try {
+      const result = await api.post<{ count: number }>('/timemark/archive-review/preview', {
+        from: archiveFrom || undefined,
+        to: archiveTo || undefined
+      });
+      setPreviewCount(result.count);
+      toast.info(`${result.count} foto review pada rentang ini`);
+    } catch (error) {
+      toast.error('Gagal menghitung', { description: errorMessage(error) });
+    } finally {
+      setPreviewing(false);
+    }
+  };
+
+  const restoreRange = async () => {
+    if (!archiveFrom && !archiveTo) {
+      toast.error('Pilih minimal satu tanggal');
+      return;
+    }
+    setArchiving(true);
+    try {
+      const result = await api.post<{ restored: number }>('/timemark/restore-archived', {
+        from: archiveFrom || undefined,
+        to: archiveTo || undefined
+      });
+      toast.success(`${result.restored} foto dipulihkan ke status review`);
+      setArchiveOpen(false);
+      void listApi.refresh();
+      void reviewApi.refresh();
+      void statsApi.refresh();
+    } catch (error) {
+      toast.error('Gagal memulihkan', { description: errorMessage(error) });
+    } finally {
+      setArchiving(false);
+    }
+  };
 
   const archiveByRange = async () => {
     if (!archiveFrom && !archiveTo) {
@@ -1256,15 +1303,34 @@ export function TimemarkPage() {
           </div>
           <p className="text-[10px] text-muted-foreground">
             Kosongkan salah satu bila ingin mengarsipkan dari/sampai tanggal tertentu saja.
+            {previewCount !== null ? (
+              <span className="ml-1 font-semibold text-foreground">
+                Terdeteksi {previewCount} foto review pada rentang ini.
+              </span>
+            ) : null}
           </p>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setArchiveOpen(false)} disabled={archiving}>
-              Batal
+          <DialogFooter className="flex-wrap gap-2 sm:justify-between">
+            <Button
+              variant="outline"
+              onClick={() => void restoreRange()}
+              disabled={archiving}
+              className="text-[10px]"
+            >
+              <RotateCcw className="h-3.5 w-3.5" /> Pulihkan arsip
             </Button>
-            <Button onClick={() => void archiveByRange()} disabled={archiving}>
-              {archiving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Archive className="h-4 w-4" />}
-              Arsipkan
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="ghost" onClick={() => setArchiveOpen(false)} disabled={archiving}>
+                Batal
+              </Button>
+              <Button variant="secondary" onClick={() => void previewArchive()} disabled={previewing || archiving}>
+                {previewing ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                Hitung
+              </Button>
+              <Button onClick={() => void archiveByRange()} disabled={archiving}>
+                {archiving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Archive className="h-4 w-4" />}
+                Arsipkan
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>

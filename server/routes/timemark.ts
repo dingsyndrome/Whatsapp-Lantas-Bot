@@ -12,7 +12,9 @@ import {
   ingestTimemark,
   listTimemarks,
   overrideTimemarkTurjawali,
+  previewArchiveReview,
   rematchTimemarkQueue,
+  restoreArchived,
   unarchiveTimemark,
   updateTimemarkFields
 } from '../services/timemark-service.js';
@@ -83,6 +85,28 @@ timemarkRouter.post('/analyze', upload.single('file'), async (req, res) => {
     source: 'dashboard'
   });
   res.status(201).json({ item: dto, warnings: dto.status === 'review' ? ['Perlu verifikasi manual.'] : [] });
+});
+
+timemarkRouter.post('/archive-review/preview', async (req, res) => {
+  const body = z
+    .object({
+      days: z.coerce.number().min(0).max(365).optional(),
+      from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+      to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional()
+    })
+    .parse(req.body ?? {});
+  res.json(await previewArchiveReview(body));
+});
+
+timemarkRouter.post('/restore-archived', async (req, res) => {
+  const body = z
+    .object({
+      days: z.coerce.number().min(0).max(365).optional(),
+      from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+      to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional()
+    })
+    .parse(req.body ?? {});
+  res.json(await restoreArchived(body));
 });
 
 timemarkRouter.post('/archive-review', async (req, res) => {
