@@ -56,9 +56,24 @@ check('stats has 4 timemark total', stats.totalTimemark >= 4);
 check('stats has active sprin', stats.activeSprin >= 2);
 check('stats has links', stats.totalLinks >= 8);
 check('weekly has 7 points', stats.weekly.length === 7);
-// 5 kategori aktif (PENGATURAN, PENJAGAAN, PENGAWALAN, PATROLI, PENEGAKKAN);
-// LAINNYA tidak dihitung sebagai kategori rekap.
-check('turjawali categories', stats.turjawali.categories.length === 5);
+// Kategori rekap aktif = TURJAWALI_TYPES tanpa LAINNYA. Daftar ini sengaja
+// eksplisit supaya smoke gagal kalau kategori inti hilang/berubah tanpa sengaja.
+const expectedTurjawali = [
+  'PENGATURAN',
+  'PENJAGAAN',
+  'PENGAWALAN',
+  'PATROLI',
+  'PENEGAKKAN',
+  'REGIDENT'
+];
+
+function hasAllTurjawaliCategories(categories) {
+  const found = categories.map((category) => category.type).sort();
+  const expected = [...expectedTurjawali].sort();
+  return found.length === expected.length && expected.every((type, index) => found[index] === type);
+}
+
+check('turjawali categories', hasAllTurjawaliCategories(stats.turjawali.categories));
 check(
   'turjawali demo distribution',
   stats.turjawali.matchedPhotos >= 2 && stats.turjawali.unmatchedPhotos >= 1
@@ -80,13 +95,19 @@ check(
 const patroli = await json('/timemark?turjawaliType=PATROLI&matchStatus=UNMATCHED&pageSize=10');
 check('timemark turjawali filter', patroli.total >= 1 && patroli.items[0].turjawaliType === 'PATROLI');
 const recap = await json('/timemark/turjawali-recap?period=daily');
-check('turjawali recap endpoint', recap.categories.length === 5 && recap.totalPhotos >= 4);
+check(
+  'turjawali recap endpoint',
+  hasAllTurjawaliCategories(recap.categories) && recap.totalPhotos >= 4
+);
 check(
   'turjawali personnel report state',
   recap.personnel.active >= 1 && recap.personnel.reported >= 1
 );
 const weeklyRecap = await json('/timemark/turjawali-recap?period=weekly');
-check('turjawali weekly recap', weeklyRecap.period === 'weekly' && weeklyRecap.categories.length === 5);
+check(
+  'turjawali weekly recap',
+  weeklyRecap.period === 'weekly' && hasAllTurjawaliCategories(weeklyRecap.categories)
+);
 const rematch = await json('/timemark/rematch', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
