@@ -90,13 +90,23 @@ jobs:
 
           # Repo bisa tertinggal milik user lain (mis. pernah dijalankan sebagai
           # root), sehingga git fetch gagal menulis objek baru.
-          echo "::notice::Pemilik .git/objects: $(stat -c '%U:%G %a' .git/objects 2>/dev/null || echo '?') (user: $(id -un))"
-          if [ ! -w .git/objects ]; then
-            echo "::warning::.git/objects tidak writable — memperbaiki izin…"
-            chmod -R u+rwX .git 2>/dev/null || true
-            sudo -n chown -R "$(id -u):$(id -g)" . 2>/dev/null || true
-            echo "::notice::Setelah perbaikan: $(stat -c '%U:%G %a' .git/objects 2>/dev/null || echo '?')"
+          echo "::notice::id=$(id -un) sudo=$(sudo -n true 2>/dev/null && echo yes || echo no) objects=$(stat -c '%U:%G %a' .git/objects 2>/dev/null || echo '?')"
+          if ( : > .git/objects/.dsh-probe ) 2>/dev/null; then
+            rm -f .git/objects/.dsh-probe
+            echo "::notice::.git/objects bisa ditulis"
+          else
+            echo "::warning::.git/objects TIDAK bisa ditulis"
           fi
+          if ( : > .git/objects/pack/.dsh-probe ) 2>/dev/null; then
+            rm -f .git/objects/pack/.dsh-probe
+            echo "::notice::.git/objects/pack bisa ditulis"
+          else
+            echo "::warning::.git/objects/pack TIDAK bisa ditulis"
+          fi
+          echo "::notice::path tak writable: $(find .git -maxdepth 3 ! -writable 2>/dev/null | head -5 | tr '\n' ' ')"
+          chmod -R u+rwX .git 2>/dev/null || true
+          sudo -n chown -R "$(id -u):$(id -g)" .git 2>/dev/null || true
+          echo "::notice::Setelah perbaikan: $(stat -c '%U:%G %a' .git/objects 2>/dev/null || echo '?')"
 
           if ! git fetch --prune origin 2>/tmp/sigap-git.err; then
             echo "::error::git fetch gagal: $(tr '\n' ' ' < /tmp/sigap-git.err | cut -c1-400)"
