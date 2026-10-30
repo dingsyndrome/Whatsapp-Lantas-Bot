@@ -1,5 +1,6 @@
-import { createHash, randomBytes, randomInt, timingSafeEqual } from 'node:crypto';
+import { createHash, randomBytes, randomInt, scryptSync, timingSafeEqual } from 'node:crypto';
 import { prisma } from '../lib/prisma.js';
+import { config } from '../config.js';
 import { logger } from '../lib/logger.js';
 import { normalizePhone } from '../lib/phone.js';
 import { recordActivity } from '../lib/activity.js';
@@ -17,6 +18,11 @@ const OTP_MAX_ATTEMPTS = 3;
 const OTP_WINDOW_MS = 15 * 60 * 1000;
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
+/** Id baris AppUser khusus admin. Kredensialnya tetap berasal dari APP_USER/APP_PASS. */
+const ADMIN_ID = 'admin';
+const USERNAME_RE = /^[A-Za-z0-9._-]{3,32}$/;
+const PASSWORD_MIN_LENGTH = 8;
+
 function sha256(value: string): string {
   return createHash('sha256').update(value).digest('hex');
 }
@@ -27,10 +33,70 @@ function safeEqual(left: string, right: string): boolean {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
+/** Hash password memakai scrypt: `scrypt$<salt>$<hash>`. */
+export function hashPassword(password: string): string {
+  const salt = randomBytes(16).toString('hex');
+  const derived = scryptSync(password, salt, 64).toString('hex');
+  return `scrypt$${salt}$${derived}`;
+}
+
+function verifyPassword(password: string, stored: string | null): boolean {
+  if (!stored) return false;
+  const [scheme, salt, hash] = stored.split('$');
+  if (scheme !== 'scrypt' || !salt || !hash) return false;
+  const expected = Buffer.from(hash, 'hex');
+  const actual = scryptSync(password, salt, 64);
+  return expected.length === actual.length && timingSafeEqual(expected, actual);
+}
+
+function validateCredentials(username: string | null, password: string | null): void {
+  if (username && !USERNAME_RE.test(username)) {
+    throw new Error('Username 3–32 karakter: huruf, angka, titik, garis bawah, atau strip.');
+  }
+  if (password && password.length < PASSWORD_MIN_LENGTH) {
+    throw new Error(`Password minimal ${PASSWORD_MIN_LENGTH} karakter.`);
+  }
+}
+
+/** Pastikan baris admin ada agar sesi admin bisa disimpan di AppSession. */
+async function ensureAdminUser() {
+  return prisma.appUser.upsert({
+    where: { id: ADMIN_ID },
+    update: { role: 'ADMIN', active: true },
+    create: {
+      id: ADMIN_ID,
+      name: 'Admin',
+      phone: '',
+      role: 'ADMIN',
+      permissions: '',
+      active: true
+    }
+  });
+}
+
+async function issueSession(
+  userId: string,
+  meta: { ip?: string | null; userAgent?: string | null } = {}
+): Promise<string> {
+  const token = randomBytes(32).toString('base64url');
+  await prisma.appSession.create({
+    data: {
+      userId,
+      tokenHash: sha256(token),
+      expiresAt: new Date(Date.now() + SESSION_TTL_MS),
+      ip: meta.ip ?? null,
+      userAgent: meta.userAgent?.slice(0, 250) ?? null
+    }
+  });
+  await prisma.appUser.update({ where: { id: userId }, data: { lastLoginAt: new Date() } });
+  return token;
+}
+
 export interface AppUserDTO {
   id: string;
   name: string;
   phone: string;
+  username: string | null;
   role: AppRole;
   permissions: Permission[];
   active: boolean;
@@ -43,6 +109,7 @@ function serializeUser(user: {
   id: string;
   name: string;
   phone: string;
+  username: string | null;
   role: string;
   permissions: string;
   active: boolean;
@@ -54,6 +121,7 @@ function serializeUser(user: {
     id: user.id,
     name: user.name,
     phone: user.phone,
+    username: user.username,
     role: user.role as AppRole,
     permissions: parsePermissions(user.permissions),
     active: user.active,
@@ -64,7 +132,10 @@ function serializeUser(user: {
 }
 
 export async function listManagers(): Promise<AppUserDTO[]> {
-  const users = await prisma.appUser.findMany({ orderBy: { createdAt: 'asc' } });
+  const users = await prisma.appUser.findMany({
+    where: { role: { not: 'ADMIN' } },
+    orderBy: { createdAt: 'asc' }
+  });
   return users.map(serializeUser);
 }
 
@@ -73,16 +144,28 @@ export async function createManager(input: {
   phone: string;
   permissions: string[];
   note?: string | null;
+  username?: string | null;
+  password?: string | null;
 }): Promise<AppUserDTO> {
   const phone = normalizePhone(input.phone);
   if (!phone) throw new Error('Nomor HP tidak valid.');
   const existing = await prisma.appUser.findUnique({ where: { phone } });
   if (existing) throw new Error('Nomor ini sudah terdaftar.');
 
+  const username = input.username?.trim() || null;
+  const password = input.password || null;
+  validateCredentials(username, password);
+  if (username) {
+    const taken = await prisma.appUser.findUnique({ where: { username } });
+    if (taken) throw new Error('Username sudah dipakai.');
+  }
+
   const user = await prisma.appUser.create({
     data: {
       name: input.name.trim(),
       phone,
+      username,
+      passwordHash: password ? hashPassword(password) : null,
       role: 'MANAGER',
       permissions: serializePermissions(input.permissions),
       note: input.note?.trim() || null
@@ -101,16 +184,34 @@ export async function createManager(input: {
 
 export async function updateManager(
   id: string,
-  input: { name?: string; permissions?: string[]; active?: boolean; note?: string | null }
+  input: {
+    name?: string;
+    permissions?: string[];
+    active?: boolean;
+    note?: string | null;
+    username?: string | null;
+    password?: string | null;
+  }
 ): Promise<AppUserDTO | null> {
   const existing = await prisma.appUser.findUnique({ where: { id } });
   if (!existing) return null;
   if (existing.role === 'ADMIN') throw new Error('Akun admin tidak dapat diubah dari sini.');
 
+  const username =
+    input.username !== undefined ? input.username?.trim() || null : existing.username;
+  const password = input.password || null;
+  validateCredentials(username, password);
+  if (username && username !== existing.username) {
+    const taken = await prisma.appUser.findUnique({ where: { username } });
+    if (taken && taken.id !== id) throw new Error('Username sudah dipakai.');
+  }
+
   const user = await prisma.appUser.update({
     where: { id },
     data: {
       name: input.name?.trim() ?? existing.name,
+      username,
+      passwordHash: password ? hashPassword(password) : existing.passwordHash,
       permissions:
         input.permissions !== undefined
           ? serializePermissions(input.permissions)
@@ -257,6 +358,55 @@ export async function verifyOtp(
     type: 'manager_login',
     title: 'Manajer masuk aplikasi',
     description: `${user.name} · ${phone}`,
+    actor: 'Manajer',
+    entityType: 'app_user',
+    entityId: user.id
+  });
+
+  return { token, user: serializeUser(user) };
+}
+
+/**
+ * Login memakai username + password.
+ * - `APP_USER`/`APP_PASS` di environment berlaku sebagai akun admin.
+ * - Manajer memakai kolom `username`/`passwordHash` di AppUser.
+ */
+export async function loginWithPassword(
+  rawUsername: string,
+  password: string,
+  meta: { ip?: string | null; userAgent?: string | null } = {}
+): Promise<LoginResult | null> {
+  const username = rawUsername.trim();
+  if (!username || !password) return null;
+
+  if (
+    config.appUser &&
+    config.appPass &&
+    username.toLowerCase() === config.appUser.toLowerCase() &&
+    safeEqual(password, config.appPass)
+  ) {
+    const admin = await ensureAdminUser();
+    const token = await issueSession(admin.id, meta);
+    await recordActivity({
+      type: 'admin_login',
+      title: 'Admin masuk aplikasi',
+      description: 'Login username/password (kredensial admin)',
+      actor: 'Admin',
+      entityType: 'app_user',
+      entityId: admin.id
+    });
+    return { token, user: serializeUser(admin) };
+  }
+
+  const user = await prisma.appUser.findUnique({ where: { username } });
+  if (!user || !user.active || !user.passwordHash) return null;
+  if (!verifyPassword(password, user.passwordHash)) return null;
+
+  const token = await issueSession(user.id, meta);
+  await recordActivity({
+    type: 'manager_login',
+    title: 'Manajer masuk aplikasi',
+    description: `${user.name} · ${user.phone}`,
     actor: 'Manajer',
     entityType: 'app_user',
     entityId: user.id

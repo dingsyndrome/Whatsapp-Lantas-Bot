@@ -13,6 +13,7 @@ interface Manager {
   id: string;
   name: string;
   phone: string;
+  username: string | null;
   role: string;
   permissions: Permission[];
   active: boolean;
@@ -27,6 +28,8 @@ export function ManagersPanel() {
   const [saving, setSaving] = React.useState(false);
   const [name, setName] = React.useState('');
   const [phone, setPhone] = React.useState('');
+  const [username, setUsername] = React.useState('');
+  const [password, setPassword] = React.useState('');
   const [selected, setSelected] = React.useState<Permission[]>([]);
 
   const load = React.useCallback(async () => {
@@ -61,14 +64,32 @@ export function ManagersPanel() {
       toast.error('Nomor HP tidak valid', { description: 'Contoh: 082181281252' });
       return;
     }
+    if (username.trim() && !/^[A-Za-z0-9._-]{3,32}$/.test(username.trim())) {
+      toast.error('Username tidak valid', {
+        description: '3–32 karakter: huruf, angka, titik, garis bawah, atau strip.'
+      });
+      return;
+    }
+    if (password && password.length < 8) {
+      toast.error('Password minimal 8 karakter');
+      return;
+    }
     setSaving(true);
     try {
-      await api.post<Manager>('/managers', { name, phone, permissions: selected });
+      await api.post<Manager>('/managers', {
+        name,
+        phone,
+        permissions: selected,
+        username: username.trim() || null,
+        password: password || null
+      });
       toast.success('Manajer ditambahkan', {
-        description: 'Minta orang tersebut membuka /login dengan nomor ini.'
+        description: 'Manajer bisa masuk dengan username/password atau nomor HP + OTP.'
       });
       setName('');
       setPhone('');
+      setUsername('');
+      setPassword('');
       setSelected([]);
       await load();
     } catch (error) {
@@ -140,6 +161,31 @@ export function ManagersPanel() {
                 className="mt-1 h-9 text-xs"
               />
             </div>
+            <div>
+              <Label className="text-[9px] uppercase tracking-wider text-muted-foreground">
+                Username (opsional)
+              </Label>
+              <Input
+                value={username}
+                onChange={(event) => setUsername(event.target.value)}
+                placeholder="mis. budi.santoso"
+                autoComplete="off"
+                className="mt-1 h-9 text-xs"
+              />
+            </div>
+            <div>
+              <Label className="text-[9px] uppercase tracking-wider text-muted-foreground">
+                Password (opsional)
+              </Label>
+              <Input
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="minimal 8 karakter"
+                autoComplete="new-password"
+                className="mt-1 h-9 text-xs"
+              />
+            </div>
           </div>
 
           <div>
@@ -197,6 +243,9 @@ export function ManagersPanel() {
                     <div>
                       <p className="text-xs font-semibold">{manager.name}</p>
                       <p className="font-mono text-[9px] text-muted-foreground">{manager.phone}</p>
+                      <p className="text-[9px] text-muted-foreground">
+                        {manager.username ? `username: ${manager.username}` : 'username: — (login via OTP)'}
+                      </p>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <Badge variant={manager.active ? 'outline' : 'secondary'} className="text-[8px]">

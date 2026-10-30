@@ -279,6 +279,10 @@ model AppUser {
   id           String    @id @default(cuid())
   name         String
   phone        String    @unique
+  /// Username untuk login username/password (opsional; admin memakai APP_USER).
+  username     String?   @unique
+  /// Hash scrypt password login (format: scrypt$salt$hash).
+  passwordHash String?
   role         String    @default("MANAGER")
   /// Daftar izin dipisah koma, mis. "timemark.correct,links.send".
   permissions  String    @default("")

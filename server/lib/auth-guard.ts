@@ -35,6 +35,7 @@ const ADMIN_USER: AppUserDTO = {
   id: 'admin',
   name: 'Admin',
   phone: '',
+  username: null,
   role: 'ADMIN',
   permissions: [],
   active: true,

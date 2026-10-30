@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { DashboardWithCollapsibleSidebar } from '@/components/ui/dashboard-with-collapsible-sidebar';
+import { RequireAuth } from '@/src/components/require-auth';
 import { DashboardPage } from '@/src/pages/dashboard';
 import { TimemarkPage } from '@/src/pages/timemark';
 import { SprinPage } from '@/src/pages/sprin';
@@ -23,16 +24,18 @@ export default function App() {
         <Route
           path="*"
           element={
-            <DashboardWithCollapsibleSidebar isDark={isDark} onToggleTheme={toggleTheme}>
-              <Routes>
-                <Route path="/" element={<DashboardPage />} />
-                <Route path="/timemark" element={<TimemarkPage />} />
-                <Route path="/sprin" element={<SprinPage />} />
-                <Route path="/links" element={<LinksPage />} />
-                <Route path="/settings" element={<SettingsPage />} />
-                <Route path="*" element={<NotFoundPage />} />
-              </Routes>
-            </DashboardWithCollapsibleSidebar>
+            <RequireAuth>
+              <DashboardWithCollapsibleSidebar isDark={isDark} onToggleTheme={toggleTheme}>
+                <Routes>
+                  <Route path="/" element={<DashboardPage />} />
+                  <Route path="/timemark" element={<TimemarkPage />} />
+                  <Route path="/sprin" element={<SprinPage />} />
+                  <Route path="/links" element={<LinksPage />} />
+                  <Route path="/settings" element={<SettingsPage />} />
+                  <Route path="*" element={<NotFoundPage />} />
+                </Routes>
+              </DashboardWithCollapsibleSidebar>
+            </RequireAuth>
           }
         />
       </Routes>

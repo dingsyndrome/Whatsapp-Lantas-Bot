@@ -1,11 +1,12 @@
 import * as React from 'react';
-import { Link, NavLink, useLocation } from 'react-router-dom';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   Camera,
   ChevronRight,
   FileText,
   LayoutDashboard,
   Link2,
+  LogOut,
   Menu,
   MessageSquareText,
   Moon,
@@ -20,6 +21,7 @@ import {
   X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -207,6 +209,21 @@ function SidebarBody({
   onToggleCollapse?: () => void;
   onNavigate?: () => void;
 }) {
+  const navigate = useNavigate();
+  const [loggingOut, setLoggingOut] = React.useState(false);
+
+  const logout = async () => {
+    setLoggingOut(true);
+    try {
+      await api.post('/auth/logout', {});
+    } catch {
+      // Tetap arahkan ke halaman login meski permintaan logout gagal.
+    } finally {
+      setLoggingOut(false);
+      navigate('/login', { replace: true });
+    }
+  };
+
   return (
     <div className="relative flex h-full min-h-0 flex-col">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-56 bg-[radial-gradient(circle_at_20%_0%,hsl(var(--primary)/0.12),transparent_65%)]" />
@@ -234,6 +251,19 @@ function SidebarBody({
       </ScrollArea>
       <div className="shrink-0 border-t border-sidebar-border p-3">
         <BotStatus collapsed={collapsed} />
+        <button
+          type="button"
+          onClick={() => void logout()}
+          disabled={loggingOut}
+          className={cn(
+            'mt-2 flex w-full items-center rounded-lg text-[11px] font-medium text-sidebar-foreground/50 transition-colors hover:bg-sidebar-accent hover:text-destructive disabled:opacity-50',
+            collapsed ? 'h-9 justify-center' : 'gap-2 px-3 py-2'
+          )}
+          aria-label="Keluar"
+        >
+          <LogOut className="h-3.5 w-3.5" />
+          {!collapsed ? <span>{loggingOut ? 'Keluar…' : 'Keluar'}</span> : null}
+        </button>
         {onToggleCollapse ? (
           <button
             type="button"

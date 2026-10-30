@@ -22,29 +22,28 @@ export function createApp(): express.Express {
   app.set('trust proxy', 1);
 
 
-  // Autentikasi: kredensial admin (Basic Auth) ATAU sesi cookie milik manajer.
-  // /api/health dan /api/auth/* dibiarkan terbuka agar healthcheck dan login
-  // manajer bisa diakses tanpa kredensial.
-  if (config.appUser && config.appPass) {
-    const openPaths = ['/api/health', '/api/auth/'];
-
-    app.use((req, res, next) => {
-      if (openPaths.some((prefix) => req.path.startsWith(prefix))) {
+  // Autentikasi API: sesi cookie (admin/manajer) atau kredensial admin (Basic).
+  // Halaman SPA, aset statis, dan /api/auth/* dibiarkan terbuka agar halaman
+  // /login bisa dimuat; endpoint /api lain wajib sudah masuk.
+  app.use((req, res, next) => {
+    if (!req.path.startsWith('/api')) {
+      next();
+      return;
+    }
+    if (req.path === '/api/health' || req.path.startsWith('/api/auth/')) {
+      next();
+      return;
+    }
+    void (async () => {
+      const context = await buildAuthContext(req);
+      if (context.admin || context.user) {
+        res.locals.auth = context;
         next();
         return;
       }
-      void (async () => {
-        const context = await buildAuthContext(req);
-        if (context.admin || context.user) {
-          res.locals.auth = context;
-          next();
-          return;
-        }
-        res.setHeader('WWW-Authenticate', 'Basic realm="SIGAP"');
-        res.status(401).send('Autentikasi diperlukan.');
-      })().catch(next);
-    });
-  }
+      res.status(401).json({ error: 'Belum masuk. Silakan login.' });
+    })().catch(next);
+  });
 
   app.use(
     helmet({
@@ -110,6 +109,8 @@ export function createApp(): express.Express {
   if (fs.existsSync(indexFile)) {
     app.use(express.static(paths.webDist, { maxAge: config.isProduction ? '1h' : 0 }));
     app.get(/^(?!\/api|\/media).*/, (_req, res) => {
+      // index.html tidak boleh di-cache lama: setelah deploy, aset lama bisa hilang.
+      res.setHeader('Cache-Control', 'no-store');
       res.sendFile(indexFile);
     });
   }

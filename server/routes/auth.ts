@@ -1,10 +1,11 @@
-import { Router } from 'express';
+import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 import { HttpError } from '../lib/http-error.js';
 import {
   createManager,
   deleteManager,
   listManagers,
+  loginWithPassword,
   logoutByToken,
   requestOtp,
   resolveSession,
@@ -13,7 +14,7 @@ import {
   verifyOtp,
   type AppUserDTO
 } from '../services/auth-service.js';
-import { getSessionToken, isBasicAdmin } from '../lib/auth-guard.js';
+import { getSessionToken, isBasicAdmin, type AuthContext } from '../lib/auth-guard.js';
 import { PERMISSION_KEYS } from '../../shared/permissions.js';
 
 export const authRouter = Router();
@@ -23,9 +24,70 @@ const otpSchema = z.object({
   phone: phoneSchema,
   code: z.string().regex(/^\d{6}$/, 'Kode OTP harus 6 digit.')
 });
+const credentialSchema = z.object({
+  username: z.string().max(32).nullable().optional(),
+  password: z.string().max(200).nullable().optional()
+});
+
+/** Pembatas percobaan login per IP+username (in-memory). */
+const LOGIN_MAX_ATTEMPTS = 10;
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+const loginAttempts = new Map<string, { count: number; resetAt: number }>();
+
+function loginAttemptKey(req: Request, username: string): string {
+  return `${req.ip ?? 'unknown'}|${username.toLowerCase()}`;
+}
+
+function assertLoginAllowed(key: string): void {
+  const now = Date.now();
+  const entry = loginAttempts.get(key);
+  if (!entry || entry.resetAt <= now) {
+    loginAttempts.set(key, { count: 0, resetAt: now + LOGIN_WINDOW_MS });
+    return;
+  }
+  if (entry.count >= LOGIN_MAX_ATTEMPTS) {
+    throw new HttpError(429, 'Terlalu banyak percobaan masuk. Coba lagi dalam 15 menit.');
+  }
+}
+
+function noteFailedLogin(key: string): void {
+  const entry = loginAttempts.get(key);
+  if (entry && entry.resetAt > Date.now()) entry.count += 1;
+}
+
+function setSessionCookie(req: Request, res: Response, token: string): void {
+  res.cookie('sigap_session', token, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: req.secure,
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+    path: '/'
+  });
+}
 
 authRouter.get('/permissions', (_req, res) => {
   res.json({ permissions: PERMISSION_KEYS });
+});
+
+authRouter.post('/login', async (req, res) => {
+  const body = z
+    .object({ username: z.string().min(1).max(32), password: z.string().min(1).max(200) })
+    .parse(req.body ?? {});
+  const key = loginAttemptKey(req, body.username);
+  assertLoginAllowed(key);
+
+  const result = await loginWithPassword(body.username, body.password, {
+    ip: req.ip ?? null,
+    userAgent: req.get('user-agent') ?? null
+  });
+  if (!result) {
+    noteFailedLogin(key);
+    throw new HttpError(401, 'Username atau password salah.');
+  }
+
+  loginAttempts.delete(key);
+  setSessionCookie(req, res, result.token);
+  res.json({ user: result.user, token: result.token });
 });
 
 authRouter.post('/request-otp', async (req, res) => {
@@ -73,6 +135,7 @@ function adminUser(): AppUserDTO {
     id: 'admin',
     name: 'Admin',
     phone: '',
+    username: null,
     role: 'ADMIN',
     permissions: [...PERMISSION_KEYS],
     active: true,
@@ -85,13 +148,13 @@ function adminUser(): AppUserDTO {
 export const managersRouter = Router();
 
 managersRouter.use((req, res, next) => {
-  if (!isBasicAdmin(req)) {
-    // Hanya admin (kredensial admin) yang boleh mengelola manajer.
-    next(new HttpError(403, 'Hanya admin yang dapat mengelola manajer.'));
+  const auth = res.locals.auth as AuthContext | undefined;
+  if (isBasicAdmin(req) || auth?.admin) {
+    next();
     return;
   }
-  void res;
-  next();
+  // Hanya admin (kredensial admin atau sesi admin) yang boleh mengelola manajer.
+  next(new HttpError(403, 'Hanya admin yang dapat mengelola manajer.'));
 });
 
 managersRouter.get('/', async (_req, res) => {
@@ -104,10 +167,16 @@ managersRouter.post('/', async (req, res) => {
       name: z.string().min(2).max(120),
       phone: phoneSchema,
       permissions: z.array(z.string()).default([]),
-      note: z.string().max(250).nullable().optional()
+      note: z.string().max(250).nullable().optional(),
+      username: credentialSchema.shape.username,
+      password: credentialSchema.shape.password
     })
     .parse(req.body ?? {});
-  res.status(201).json(await createManager(body));
+  try {
+    res.status(201).json(await createManager(body));
+  } catch (error) {
+    throw new HttpError(400, error instanceof Error ? error.message : 'Gagal menambah manajer.');
+  }
 });
 
 managersRouter.patch('/:id', async (req, res) => {
@@ -116,10 +185,17 @@ managersRouter.patch('/:id', async (req, res) => {
       name: z.string().min(2).max(120).optional(),
       permissions: z.array(z.string()).optional(),
       active: z.boolean().optional(),
-      note: z.string().max(250).nullable().optional()
+      note: z.string().max(250).nullable().optional(),
+      username: credentialSchema.shape.username,
+      password: credentialSchema.shape.password
     })
     .parse(req.body ?? {});
-  const user = await updateManager(String(req.params.id), body);
+  let user;
+  try {
+    user = await updateManager(String(req.params.id), body);
+  } catch (error) {
+    throw new HttpError(400, error instanceof Error ? error.message : 'Gagal menyimpan manajer.');
+  }
   if (!user) throw new HttpError(404, 'Manajer tidak ditemukan.');
   res.json(user);
 });
