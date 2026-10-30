@@ -14,6 +14,7 @@ import { prisma } from '../lib/prisma.js';
 import { logger } from '../lib/logger.js';
 import { recordActivity } from '../lib/activity.js';
 import { normalizePhone } from '../lib/phone.js';
+import { resolveSenderNumber } from '../lib/whatsapp-sender.js';
 import { realtime } from '../lib/realtime.js';
 import { ensureWhatsAppSessionRow, getBotConfig, isGroupMonitored } from './settings.js';
 import { ingestTimemark } from './timemark-service.js';
@@ -289,6 +290,18 @@ class BaileysManager {
     }
   }
 
+  private async resolveGroupName(jid: string): Promise<string | null> {
+    const cached = this.groupNames.get(jid);
+    if (cached) return cached;
+    const group = await prisma.monitoredGroup.findUnique({
+      where: { jid },
+      select: { name: true }
+    });
+    if (!group?.name) return null;
+    this.groupNames.set(jid, group.name);
+    return group.name;
+  }
+
   async sendMessage(jid: string, text: string): Promise<boolean> {
     if (!this.socket || this.statusValue !== 'connected') return false;
     try {
@@ -301,7 +314,12 @@ class BaileysManager {
   }
 
   private async handleIncoming(message: proto.IWebMessageInfo): Promise<void> {
-    const key = message.key;
+    const key = message.key as
+      | (proto.IMessageKey & {
+          participantAlt?: string | null;
+          remoteJidAlt?: string | null;
+        })
+      | null;
     if (!key || key.fromMe) return;
     const remoteJid = key.remoteJid ?? '';
     if (!remoteJid || remoteJid === 'status@broadcast') return;
@@ -310,9 +328,10 @@ class BaileysManager {
     if (isGroup && !(await isGroupMonitored(remoteJid))) return;
 
     const senderId = isGroup ? key.participant ?? remoteJid : remoteJid;
-    const number = normalizePhone(senderId) ?? senderId;
+    const senderAlt = isGroup ? key.participantAlt : key.remoteJidAlt;
+    const number = resolveSenderNumber(senderId, senderAlt);
     const senderName = message.pushName ?? number;
-    const groupName = isGroup ? this.groupNames.get(remoteJid) ?? null : null;
+    const groupName = isGroup ? await this.resolveGroupName(remoteJid) : null;
 
     const content = message.message;
     if (!content) return;

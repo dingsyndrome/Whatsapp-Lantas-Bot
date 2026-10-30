@@ -466,6 +466,13 @@ File: [`extractor.ts`](server/services/links/extractor.ts) + [`validator.ts`](se
 - Link dikaitkan ke Sprin bila pesan menyebut nomor Sprin, atau berdasarkan tanggal kegiatan ±3 hari.
 - Validasi berjalan di background, tidak memperlambat pesan masuk.
 
+**Deteksi pengirim & grup.** Pada driver Baileys, nomor pengirim diambil dari
+`participantAlt`/`remoteJidAlt` bila `participant` berupa LID, lalu dinormalkan
+ke format `62…`. Nama grup juga diambil dari cache atau tabel `MonitoredGroup`
+saat pesan masuk, sehingga link dari grup seperti **“Medsos dan Meme”** tetap
+memiliki `groupName` dan dapat dicari/difilter di rekap. Bila nomor HP tidak
+tersedia, pencocokan jatuh ke nama seperti sebelumnya.
+
 **Rekap link per periode.** Tombol **Rekap ke WA** pada halaman Rekap Link Anggota membuka
 dialog tanggal + rentang jam (mis. Kamis, 29 Oktober 2026 pukul 08:20–09:20). Teks yang dihasilkan
 hanya berisi link anggota — tanpa foto Timemark, Sprin, maupun rekap Gatur/Turjawali — dan bisa
