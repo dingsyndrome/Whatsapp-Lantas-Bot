@@ -26,7 +26,8 @@ export function createApp(): express.Express {
   // Halaman SPA, aset statis, dan /api/auth/* dibiarkan terbuka agar halaman
   // /login bisa dimuat; endpoint /api lain wajib sudah masuk.
   app.use((req, res, next) => {
-    if (!req.path.startsWith('/api')) {
+    const isProtected = req.path.startsWith('/api') || req.path.startsWith('/media');
+    if (!isProtected) {
       next();
       return;
     }
