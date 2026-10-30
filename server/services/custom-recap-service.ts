@@ -16,6 +16,7 @@ export type RecapCategory =
   | 'PENGAWALAN'
   | 'PATROLI'
   | 'PENEGAKKAN'
+  | 'REGIDENT'
   | 'LAINNYA';
 
 export interface CustomRecapParams {

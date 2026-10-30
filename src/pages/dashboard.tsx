@@ -19,7 +19,9 @@ import {
   Radio,
   Radar,
   RefreshCw,
+  CreditCard,
   Gavel,
+  IdCard,
   ScanLine,
   Search,
   Send,
@@ -209,6 +211,12 @@ const TURJAWALI_META: Record<
     className: 'border-warning/25 bg-warning/10 text-warning',
     bar: 'bg-warning',
     soft: 'from-warning/[0.08]'
+  },
+  REGIDENT: {
+    icon: CreditCard,
+    className: 'border-sky-500/25 bg-sky-500/10 text-sky-400',
+    bar: 'bg-sky-400',
+    soft: 'from-sky-500/[0.08]'
   },
   PATROLI: {
     icon: Radar,

@@ -23,6 +23,7 @@ type Category =
   | 'PENGAWALAN'
   | 'PATROLI'
   | 'PENEGAKKAN'
+  | 'REGIDENT'
   | 'LAINNYA';
 
 const CATEGORY_LABELS: Array<[Category, string]> = [
@@ -33,6 +34,7 @@ const CATEGORY_LABELS: Array<[Category, string]> = [
   ['PENGAWALAN', 'Pengawalan (Wal)'],
   ['PATROLI', 'Patroli'],
   ['PENEGAKKAN', 'Penegakan Hukum (Gakkum)'],
+  ['REGIDENT', 'Registrasi Identitas (Regident)'],
   ['LAINNYA', 'Kegiatan lainnya']
 ];
 

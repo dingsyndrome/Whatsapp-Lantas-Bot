@@ -185,6 +185,7 @@ export const TURJAWALI_TYPES = [
   'PENGAWALAN',
   'PATROLI',
   'PENEGAKKAN',
+  'REGIDENT',
   'LAINNYA'
 ] as const;
 
@@ -204,6 +205,7 @@ export const TURJAWALI_LABELS: Record<TurjawaliType, string> = {
   PENGAWALAN: 'Pengawalan (Wal)',
   PATROLI: 'Patroli',
   PENEGAKKAN: 'Penegakan Hukum (Gakkum)',
+  REGIDENT: 'Registrasi Identitas (Regident)',
   LAINNYA: 'Lainnya'
 };
 
@@ -213,6 +215,7 @@ export const TURJAWALI_SHORT_LABELS: Record<TurjawaliType, string> = {
   PENGAWALAN: 'Wal',
   PATROLI: 'Patroli',
   PENEGAKKAN: 'Gakkum',
+  REGIDENT: 'Regident',
   LAINNYA: 'Lainnya'
 };
 
@@ -304,6 +307,20 @@ export const DEFAULT_TURJAWALI_KEYWORDS: TurjawaliKeywordMap = {
     'etle',
     'penyidikan',
     'laka lantas'
+  ],
+  REGIDENT: [
+    'regident',
+    'registrasi identitas',
+    'registrasi kendaraan',
+    'sim',
+    'stnk',
+    'bpkb',
+    'samsat',
+    'pengesahan',
+    'perpanjangan sim',
+    'mutasi kendaraan',
+    'ranmor',
+    'srat'
   ]
 };
 

@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { config } from '../config.js';
 import { prisma } from '../lib/prisma.js';
 import { HttpError } from '../lib/http-error.js';
+import { TURJAWALI_TYPES } from '../../shared/types.js';
 import { findPhone, normalizePhone } from '../lib/phone.js';
 import {
   createManualSprin,
@@ -87,7 +88,7 @@ const manualSprinSchema = z.object({
   signatory: z.string().max(200).optional().nullable(),
   signatoryRank: z.string().max(60).optional().nullable(),
   turjawaliType: z
-    .enum(['PENGATURAN', 'PENJAGAAN', 'PENGAWALAN', 'PATROLI', 'LAINNYA'])
+    .enum(TURJAWALI_TYPES)
     .optional()
     .nullable(),
   status: z.enum(['active', 'completed', 'archived']).optional()

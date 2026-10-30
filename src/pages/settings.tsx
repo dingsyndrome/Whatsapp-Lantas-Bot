@@ -890,7 +890,8 @@ function TurjawaliSettingsPanel({
               PENJAGAAN: [...DEFAULT_TURJAWALI_KEYWORDS.PENJAGAAN],
               PENGAWALAN: [...DEFAULT_TURJAWALI_KEYWORDS.PENGAWALAN],
               PATROLI: [...DEFAULT_TURJAWALI_KEYWORDS.PATROLI],
-              PENEGAKKAN: [...DEFAULT_TURJAWALI_KEYWORDS.PENEGAKKAN]
+              PENEGAKKAN: [...DEFAULT_TURJAWALI_KEYWORDS.PENEGAKKAN],
+              REGIDENT: [...DEFAULT_TURJAWALI_KEYWORDS.REGIDENT]
             },
             gaturMorningStart: DEFAULT_TURJAWALI_RULES.gaturMorningStart,
             gaturMorningEnd: DEFAULT_TURJAWALI_RULES.gaturMorningEnd,
@@ -1098,7 +1099,7 @@ function TurjawaliSettingsPanel({
             }}
           >
             <TabsList className="h-9 w-full justify-start overflow-x-auto">
-              {(['PENGATURAN', 'PENJAGAAN', 'PENGAWALAN', 'PATROLI', 'PENEGAKKAN'] as TurjawaliActivityType[]).map(
+              {(['PENGATURAN', 'PENJAGAAN', 'PENGAWALAN', 'PATROLI', 'PENEGAKKAN', 'REGIDENT'] as TurjawaliActivityType[]).map(
                 (type) => (
                   <TabsTrigger key={type} value={type} className="text-[10px]">
                     {TURJAWALI_LABELS[type]}

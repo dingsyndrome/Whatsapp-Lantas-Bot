@@ -242,4 +242,15 @@ describe('Turjawali smart matching score', () => {
     );
     expect(scored.breakdown.time).toBe(22);
   });
+
+  it('mengenali kegiatan Regident (SIM/STNK) sebagai kategori tersendiri', () => {
+    const result = classifyTurjawaliActivity({
+      caption: 'Pelayanan perpanjangan SIM dan pengesahan STNK di Samsat Tulungagung',
+      ocr: {
+        address: 'Samsat Tulungagung',
+        unitName: 'Satlantas Polres Tulungagung'
+      }
+    });
+    expect(result.type).toBe('REGIDENT');
+  });
 });

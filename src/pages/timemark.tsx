@@ -13,6 +13,7 @@ import {
   LayoutGrid,
   List,
   MapPin,
+  CreditCard,
   Gavel,
   Radar,
   RefreshCw,
@@ -90,7 +91,8 @@ const ACTIVE_TURJAWALI: Exclude<TurjawaliType, 'LAINNYA'>[] = [
   'PENJAGAAN',
   'PENGAWALAN',
   'PATROLI',
-  'PENEGAKKAN'
+  'PENEGAKKAN',
+  'REGIDENT'
 ];
 
 const TURJAWALI_TAB_LABELS: Record<TurjawaliType, string> = {
@@ -99,6 +101,7 @@ const TURJAWALI_TAB_LABELS: Record<TurjawaliType, string> = {
   PENGAWALAN: 'Pengawalan',
   PATROLI: 'Patroli',
   PENEGAKKAN: 'Gakkum',
+  REGIDENT: 'Regident',
   LAINNYA: 'Lainnya'
 };
 
@@ -108,6 +111,7 @@ const TURJAWALI_ICONS: Record<TurjawaliType, React.ElementType> = {
   PENGAWALAN: Car,
   PATROLI: Radar,
   PENEGAKKAN: Gavel,
+  REGIDENT: CreditCard,
   LAINNYA: Crosshair
 };
 
@@ -127,6 +131,10 @@ const TURJAWALI_STYLES: Record<TurjawaliType, { badge: string; icon: string }> =
   PENEGAKKAN: {
     badge: 'border-warning/25 bg-warning/10 text-warning',
     icon: 'bg-warning/10 text-warning border-warning/20'
+  },
+  REGIDENT: {
+    badge: 'border-sky-500/25 bg-sky-500/10 text-sky-400',
+    icon: 'bg-sky-500/10 text-sky-400 border-sky-500/20'
   },
   PATROLI: {
     badge: 'border-success/25 bg-success/10 text-success',
