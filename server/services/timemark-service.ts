@@ -467,18 +467,41 @@ export async function unarchiveTimemark(id: string): Promise<boolean> {
   return true;
 }
 
-/** Arsipkan massal foto berstatus review yang lebih tua dari N hari. */
-export async function archiveReviewPhotos(days = 0): Promise<number> {
-  const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+/**
+ * Arsipkan massal foto berstatus review.
+ * Bisa memakai rentang tanggal (from/to, YYYY-MM-DD) atau `days` terakhir.
+ */
+export async function archiveReviewPhotos(
+  options: { from?: string | null; to?: string | null; days?: number } = {}
+): Promise<{ archived: number; from: string | null; to: string | null }> {
+  const fromDate = options.from ? new Date(`${options.from}T00:00:00`) : null;
+  const toDate = options.to ? new Date(`${options.to}T23:59:59`) : null;
+  const cutoff =
+    !fromDate && !toDate
+      ? new Date(Date.now() - (options.days ?? 0) * 24 * 60 * 60 * 1000)
+      : null;
+
+  const createdAt: Record<string, Date> = {};
+  if (fromDate) createdAt.gte = fromDate;
+  if (toDate) createdAt.lte = toDate;
+  if (cutoff) createdAt.lte = cutoff;
+
   const result = await prisma.timemarkPhoto.updateMany({
-    where: { status: 'review', createdAt: { lte: cutoff } },
+    where: { status: 'review', ...(Object.keys(createdAt).length > 0 ? { createdAt } : {}) },
     data: { status: 'archived' }
   });
+
+  const label =
+    options.from || options.to
+      ? `${options.from ?? 'awal'} s/d ${options.to ?? 'akhir'}`
+      : `lebih tua dari ${options.days ?? 0} hari`;
+
   await recordActivity({
     type: 'timemark_archive',
     title: 'Foto review diarsipkan',
-    description: `${result.count} foto berstatus review diarsipkan (lebih tua dari ${days} hari)`,
+    description: `${result.count} foto berstatus review diarsipkan (${label})`,
     actor: 'Dashboard'
   });
-  return result.count;
+
+  return { archived: result.count, from: options.from ?? null, to: options.to ?? null };
 }

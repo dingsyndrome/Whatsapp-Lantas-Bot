@@ -889,6 +889,10 @@ export function TimemarkPage() {
   }, [debouncedSearch, status, turjawaliType, matchStatus]);
 
   const [approving, setApproving] = React.useState(false);
+  const [archiveOpen, setArchiveOpen] = React.useState(false);
+  const [archiveFrom, setArchiveFrom] = React.useState('');
+  const [archiveTo, setArchiveTo] = React.useState('');
+  const [archiving, setArchiving] = React.useState(false);
   const approveComplete = async () => {
     setApproving(true);
     try {
@@ -903,6 +907,36 @@ export function TimemarkPage() {
       toast.error('Gagal menyetujui massal', { description: errorMessage(error) });
     } finally {
       setApproving(false);
+    }
+  };
+
+
+  const archiveByRange = async () => {
+    if (!archiveFrom && !archiveTo) {
+      toast.error('Pilih minimal satu tanggal');
+      return;
+    }
+    if (archiveFrom && archiveTo && archiveFrom > archiveTo) {
+      toast.error('Tanggal awal harus sebelum tanggal akhir');
+      return;
+    }
+    setArchiving(true);
+    try {
+      const result = await api.post<{ archived: number; from: string | null; to: string | null }>(
+        '/timemark/archive-review',
+        { from: archiveFrom || undefined, to: archiveTo || undefined }
+      );
+      toast.success(`${result.archived} foto diarsipkan`, {
+        description: `Rentang ${result.from ?? 'awal'} s/d ${result.to ?? 'akhir'} · bisa dipulihkan dari filter Arsip.`
+      });
+      setArchiveOpen(false);
+      void listApi.refresh();
+      void reviewApi.refresh();
+      void statsApi.refresh();
+    } catch (error) {
+      toast.error('Gagal mengarsipkan', { description: errorMessage(error) });
+    } finally {
+      setArchiving(false);
     }
   };
 
@@ -925,24 +959,8 @@ export function TimemarkPage() {
             >
               {approving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
               Setujui yang lengkap</Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                if (!window.confirm('Arsipkan semua foto berstatus review yang lebih tua dari 7 hari? Data tidak dihapus dan bisa dipulihkan.')) return;
-                void (async () => {
-                  try {
-                    const result = await api.post<{ archived: number }>('/timemark/archive-review', { days: 7 });
-                    toast.success(`${result.archived} foto diarsipkan`);
-                    void listApi.refresh();
-                    void reviewApi.refresh();
-                  } catch (error) {
-                    toast.error('Gagal mengarsipkan', { description: errorMessage(error) });
-                  }
-                })();
-              }}
-            >
-              <Archive className="h-4 w-4" /> Arsipkan review lama
+            <Button variant="outline" size="sm" onClick={() => setArchiveOpen(true)}>
+              <Archive className="h-4 w-4" /> Arsipkan review
             </Button>
             <Button variant="outline" size="sm" onClick={() => downloadFile(exportUrl('timemark.csv'))}>
               <Download className="h-4 w-4" /> CSV
@@ -1207,6 +1225,49 @@ export function TimemarkPage() {
           void statsApi.refresh();
         }}
       />
+      <Dialog open={archiveOpen} onOpenChange={setArchiveOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Arsipkan foto review</DialogTitle>
+            <DialogDescription>
+              Pilih rentang tanggal. Hanya foto berstatus Perlu review yang diproses; data dan
+              foto tetap tersimpan serta dapat dipulihkan lewat filter Arsip.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <Label className="text-[9px] uppercase tracking-wider text-muted-foreground">Dari tanggal</Label>
+              <Input
+                type="date"
+                value={archiveFrom}
+                onChange={(event) => setArchiveFrom(event.target.value)}
+                className="mt-1 h-9 text-xs"
+              />
+            </div>
+            <div>
+              <Label className="text-[9px] uppercase tracking-wider text-muted-foreground">Sampai tanggal</Label>
+              <Input
+                type="date"
+                value={archiveTo}
+                onChange={(event) => setArchiveTo(event.target.value)}
+                className="mt-1 h-9 text-xs"
+              />
+            </div>
+          </div>
+          <p className="text-[10px] text-muted-foreground">
+            Kosongkan salah satu bila ingin mengarsipkan dari/sampai tanggal tertentu saja.
+          </p>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setArchiveOpen(false)} disabled={archiving}>
+              Batal
+            </Button>
+            <Button onClick={() => void archiveByRange()} disabled={archiving}>
+              {archiving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Archive className="h-4 w-4" />}
+              Arsipkan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <UploadDialog
         open={uploadOpen}
         onOpenChange={setUploadOpen}

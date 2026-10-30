@@ -86,9 +86,14 @@ timemarkRouter.post('/analyze', upload.single('file'), async (req, res) => {
 });
 
 timemarkRouter.post('/archive-review', async (req, res) => {
-  const body = z.object({ days: z.coerce.number().min(0).max(365).optional() }).parse(req.body ?? {});
-  const archived = await archiveReviewPhotos(body.days ?? 0);
-  res.json({ archived });
+  const body = z
+    .object({
+      days: z.coerce.number().min(0).max(365).optional(),
+      from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+      to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional()
+    })
+    .parse(req.body ?? {});
+  res.json(await archiveReviewPhotos(body));
 });
 
 timemarkRouter.post('/:id/archive', async (req, res) => {
