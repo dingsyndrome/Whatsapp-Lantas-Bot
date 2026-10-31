@@ -872,6 +872,7 @@ export function TimemarkPage() {
   const listApi = useApi<Paginated<TimemarkDTO>>(`/timemark?${query}`);
   const reviewApi = useApi<Paginated<TimemarkDTO>>('/timemark?status=review&pageSize=1');
   const statsApi = useApi<DashboardStats>('/stats');
+  const lainnyaApi = useApi<Paginated<TimemarkDTO>>('/timemark?turjawaliType=LAINNYA&pageSize=1');
 
   React.useEffect(() => {
     if (version === 0) return;
@@ -1052,6 +1053,19 @@ export function TimemarkPage() {
                   </TabsTrigger>
                 );
               })}
+              {(() => {
+                const type = 'LAINNYA' as TurjawaliType;
+                const Icon = TURJAWALI_ICONS[type];
+                return (
+                  <TabsTrigger value={type} className="text-[10px]">
+                    <Icon className="h-3.5 w-3.5" />
+                    {TURJAWALI_TAB_LABELS[type]}
+                    <span className="ml-1 font-mono text-[8px] opacity-60">
+                      {lainnyaApi.data?.total ?? 0}
+                    </span>
+                  </TabsTrigger>
+                );
+              })()}
             </TabsList>
           </Tabs>
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
