@@ -341,7 +341,10 @@ export async function buildCustomRecap(params: CustomRecapParams): Promise<Custo
     }));
 
   // Perwira tidak dibebani kewajiban pelaporan — dinilai pada pengawasan saja.
-  const anggotaSubmitted = submitted.filter((person) => person.category !== 'PERWIRA');
+  const anggotaSubmitted = submitted
+    .filter((person) => person.category !== 'PERWIRA')
+    // Urutkan dari jam Timemark paling awal; bila jam sama, urut nama.
+    .sort((a, b) => a.firstAt.localeCompare(b.firstAt) || a.displayName.localeCompare(b.displayName));
   const anggotaNotSubmitted = notSubmitted.filter((person) => person.category !== 'PERWIRA');
   const anggotaTotal = rosterView.filter((person) => person.category !== 'PERWIRA').length;
 
