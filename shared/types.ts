@@ -131,8 +131,8 @@ export interface SprinNotifyRecipientDTO {
   previouslyNotified: boolean;
   /** Pesan ini diedit admin, bukan hasil template otomatis. */
   isOverride: boolean;
-  /** Dasar pencocokan identitas ke roster: NRP atau nama lengkap persis. */
-  matchMethod: 'nrp' | 'name';
+  /** Dasar pencocokan identitas ke roster. */
+  matchMethod: 'nrp' | 'name' | 'name-abbrev';
 }
 
 export interface SprinNotifySkippedDTO {

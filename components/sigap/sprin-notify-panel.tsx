@@ -596,8 +596,15 @@ export function SprinNotifyPanel({ sprin, onChanged }: { sprin: SprinDTO; onChan
                     <div className="flex items-center gap-2">
                       <p className="text-[10px] font-semibold">{selectedRecipient.name}</p>
                       <Badge variant="outline" className="text-[8px]">{selectedRecipient.functionName}</Badge>
-                      <Badge variant="success" className="text-[8px]">
-                        Cocok {selectedRecipient.matchMethod === 'nrp' ? 'NRP' : 'nama persis'}
+                      <Badge
+                        variant={selectedRecipient.matchMethod === 'name-abbrev' ? 'warning' : 'success'}
+                        className="text-[8px]"
+                      >
+                        {selectedRecipient.matchMethod === 'nrp'
+                          ? 'Cocok NRP'
+                          : selectedRecipient.matchMethod === 'name'
+                            ? 'Cocok nama persis'
+                            : 'Cocok nama singkat'}
                       </Badge>
                       {selectedRecipient.previouslyNotified ? <Badge variant="info" className="text-[8px]">Sudah pernah dikirim</Badge> : null}
                       {messageOverrides[selectedRecipient.personnelId] ? (

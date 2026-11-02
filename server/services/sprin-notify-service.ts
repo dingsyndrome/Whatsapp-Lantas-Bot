@@ -300,6 +300,11 @@ function buildPreview(context: PreviewContext, options: SprinNotifyOptions): Spr
       issues.push('Lokasi tugas perlu diverifikasi');
     }
     if (apel.issue) issues.push(apel.issue);
+    if (identity?.method === 'name-abbrev') {
+      issues.push(
+        `Nama di Sprin disingkat; dicocokkan ke "${rosterMatch.name}" — periksa sebelum kirim`
+      );
+    }
 
     const notes = [
       task.value ? `Sumber lokasi tugas: ${task.source}.` : null,
