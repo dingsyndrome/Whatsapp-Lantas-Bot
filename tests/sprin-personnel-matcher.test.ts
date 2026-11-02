@@ -19,7 +19,9 @@ const roster = [
   { id: 'kikis', name: 'KIKIS AGUNG D.H', nrp: '87050180', phone: '6281331194224' },
   { id: 'rochman', name: 'ROCHMAN YUWONO, S.H.', nrp: '75010101', phone: '6281334128153' },
   { id: 'miftah', name: 'MOH MIFTAHURROHMAN', nrp: '83051315', phone: '6282140809080' },
-  { id: 'reza', name: 'M. REZA MAHENDRA ARFIANSYAH, S.H.', nrp: '01010101', phone: '6285748505708' }
+  { id: 'reza', name: 'M. REZA MAHENDRA ARFIANSYAH, S.H.', nrp: '01010101', phone: '6285748505708' },
+  { id: 'yuli', name: 'YULI SUDIBYO, S.H.', nrp: '79010101', phone: '628128139484' },
+  { id: 'yulig', name: 'YULIGIANTORO, S.H.', nrp: '79020202', phone: '6281234567890' }
 ];
 
 describe('strict Sprin personnel matching', () => {
@@ -30,7 +32,8 @@ describe('strict Sprin personnel matching', () => {
       'DANANG RYAN SUSANTO',
       'SUTIKNO, S.H.',
       'ALI SODIK',
-      'ILHAM NURCAHYA ARIEF MUJI'
+      'ILHAM NURCAHYA ARIEF MUJI',
+      'NURSAID, S.H.'
     ];
 
     for (const name of wrongNames) {
@@ -49,7 +52,8 @@ describe('strict Sprin personnel matching', () => {
       ['KIKIS AGUNG DWI HS.,S.H.', 'kikis'],
       ['ROHMAN YUWONO', 'rochman'],
       ['MIFTAHUROHMAN', 'miftah'],
-      ['NUR CHOLIK', 'nurcholiq']
+      ['NUR CHOLIK', 'nurcholiq'],
+      ['YULI', 'yuli']
     ];
     for (const [name, id] of cases) {
       expect(matchSprinRosterPerson({ name, nrp: null }, index), name).toMatchObject({
@@ -62,6 +66,15 @@ describe('strict Sprin personnel matching', () => {
   it('does not match a long single token to a different initial', () => {
     const index = buildSprinRosterIndex(roster.filter((person) => person.id !== 'miftah'));
     expect(matchSprinRosterPerson({ name: 'MIFTAHUROHMAN', nrp: null }, index)).toBeNull();
+  });
+
+  it('does not let a short first-name prefix steal another person', () => {
+    const index = buildSprinRosterIndex(roster);
+    expect(matchSprinRosterPerson({ name: 'YULI SUDIBYO', nrp: null }, index)).toMatchObject({
+      method: 'name',
+      person: { id: 'yuli' }
+    });
+    expect(matchSprinRosterPerson({ name: 'NURSAID', nrp: null }, index)).toBeNull();
   });
 
   it('matches an exact normalized full name only', () => {

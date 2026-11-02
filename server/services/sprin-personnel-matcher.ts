@@ -69,9 +69,27 @@ function tokenMatches(source: string, target: string, allowFuzzy = true): boolea
   // (MIFTAHUROHMAN → M).
   if (target.length === 1) return source.length <= 3 && source[0] === target[0];
 
-  if (source.startsWith(target) || target.startsWith(source)) return true;
+  // Singkatan hanya boleh arah source → target (ARI → ARIF), bukan target
+  // pendek yang kebetulan menjadi awalan source (NURSAID → NUR).
+  if (target.startsWith(source)) return true;
+  if (source.startsWith(target)) return target.length <= 2;
   if (!allowFuzzy) return false;
   if (Math.min(source.length, target.length) < 4) return false;
+  return editDistance(source, target) <= 1;
+}
+
+/**
+ * Versi lebih ketat untuk nama Sprin yang hanya satu kata. Awalan pendek
+ * seperti YULI tidak boleh menyerap YULIGIANTORO; hanya exact, inisial, atau
+ * nama panjang yang beda satu huruf (MIFTAHUROHMAN/MIFTAHURROHMAN).
+ */
+function singleTokenMatches(source: string, target: string): boolean {
+  if (!source || !target) return false;
+  if (source === target) return true;
+  if (source.length === 1) return source[0] === target[0];
+  if (target.length === 1) return source.length <= 3 && source[0] === target[0];
+  if (source.length < 6) return false;
+  if (target.startsWith(source)) return true;
   return editDistance(source, target) <= 1;
 }
 
@@ -95,10 +113,14 @@ function matchesAbbreviatedName(sprinName: string, rosterName: string): boolean 
     0,
     target.findIndex((token) => token.length > 3)
   );
-  const firstAllowsFuzzy = source.length > 1 || (source[0]?.length ?? 0) >= 6;
+  const singleWord = source.length === 1;
   let firstIndex = -1;
   for (let index = 0; index <= meaningfulStart; index += 1) {
-    if (tokenMatches(source[0]!, target[index]!, firstAllowsFuzzy)) {
+    if (
+      singleWord
+        ? singleTokenMatches(source[0]!, target[index]!)
+        : tokenMatches(source[0]!, target[index]!, true)
+    ) {
       firstIndex = index;
       break;
     }
