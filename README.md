@@ -627,6 +627,10 @@ mengirim ke semua personel Sprin, tetapi hanya ke fungsi yang dipilih admin.
   tidak ditemukan, bot tidak jatuh ke nama. Nama yang tidak cocok, nomor yang
   berbeda antara Sprin dan roster, atau personel tanpa nomor HP akan dilewati
   dan alasannya ditampilkan — lebih baik tidak mengirim daripada salah nomor.
+- Jika panel menampilkan **“X nama tidak cocok”** sementara fungsi Satlantas
+  terdeteksi, artinya nama/NRP tersebut belum ada atau berbeda di roster.
+  Import/perbarui roster lewat **Settings → Personel**; bot tidak akan meminjam
+  nomor milik nama yang mirip.
 
 **Lokasi per anggota (tanpa menyimpulkan)**
 

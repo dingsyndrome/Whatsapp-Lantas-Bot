@@ -360,9 +360,13 @@ function buildPreview(context: PreviewContext, options: SprinNotifyOptions): Spr
       ? [`${recipients.filter((recipient) => recipient.issues.length > 0).length} personel memiliki lokasi yang belum pasti.`]
       : []),
     ...(noMatch > 0
-      ? [`${noMatch} personel tidak cocok persis dengan database personel dan tidak akan dikirimi notifikasi.`]
+      ? [
+          `Fungsi ${effectiveCodes.join(', ')} terdeteksi, tetapi ${noMatch} nama/NRP personel tidak cocok persis dengan database personel. Bot tidak memakai nama yang mirip; perbarui roster di Settings → Personel.`
+        ]
       : []),
-    ...(recipients.length === 0 ? ['Tidak ada personel yang memenuhi kriteria kirim.'] : []),
+    ...(recipients.length === 0 && noMatch === 0
+      ? ['Tidak ada personel yang memenuhi kriteria kirim.']
+      : []),
     ...(selectedFunctions.length === 0
       ? [`Fungsi ${effectiveCodes.join(', ')} tidak aktif/tidak ditemukan di daftar fungsi.`]
       : []),

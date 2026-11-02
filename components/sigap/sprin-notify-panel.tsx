@@ -474,6 +474,23 @@ export function SprinNotifyPanel({ sprin, onChanged }: { sprin: SprinDTO; onChan
             </Card>
           </div>
 
+          {preview.totals.noMatch > 0 ? (
+            <div className="rounded-xl border border-warning/30 bg-warning/5 p-4">
+              <p className="flex items-center gap-2 text-[11px] font-semibold text-warning">
+                <AlertTriangle className="h-4 w-4" /> {preview.totals.noMatch} nama tidak cocok dengan database personel
+              </p>
+              <p className="mt-1.5 text-[10px] leading-relaxed text-muted-foreground">
+                Fungsi <b>{preview.functionCodes.join(', ')}</b> terdeteksi dari jabatan Sprin, tetapi nama/NRP
+                personel tersebut belum ada atau berbeda dengan roster. Ini <b>bukan</b> berarti tidak ada personel
+                Satlantas. Bot sengaja tidak memakai nomor milik nama yang mirip.
+              </p>
+              <p className="mt-1.5 text-[10px] leading-relaxed text-muted-foreground">
+                Perbarui/import roster di <b>Settings → Personel</b> agar nama dan NRP sama persis, lalu klik{' '}
+                <b>Muat pratinjau</b>. Daftar nama yang dilewati ada di tombol <b>Lihat yang dilewati</b> di bawah.
+              </p>
+            </div>
+          ) : null}
+
           {preview.requiresReview ? (
             <div className="rounded-xl border border-warning/30 bg-warning/5 p-4">
               <p className="flex items-center gap-2 text-[11px] font-semibold text-warning">
