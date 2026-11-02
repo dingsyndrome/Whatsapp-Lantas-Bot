@@ -235,6 +235,19 @@ function extractSignatory(text: string): { name: string | null; rank: string | n
   return { name: leader ? cleanField(leader) : null, rank: null };
 }
 
+/**
+ * Sebagian lampiran memakai dua kolom nomor ("1. 1. NAMA"). Angka kedua ikut
+ * terbaca sebagai bagian nama sehingga tidak cocok dengan roster. Buang maksimal
+ * dua prefiks nomor di awal nama.
+ */
+function cleanPersonnelNameValue(value: string | null | undefined): string {
+  let name = (value ?? '').replace(/\s+/g, ' ').trim();
+  for (let index = 0; index < 2; index += 1) {
+    name = name.replace(/^\d{1,3}\s*[.)]?\s+/, '').trim();
+  }
+  return name;
+}
+
 function normalizeRank(raw: string | null): { rank: string | null; nrp: string | null; rankNrp: string | null } {
   if (!raw) return { rank: null, nrp: null, rankNrp: null };
   const match = raw.match(RANK_RE);
@@ -296,7 +309,7 @@ export function parsePersonnelCells(
   const rankInfo = normalizeRank(rankNrpRaw);
   return {
     no,
-    name: name.toUpperCase(),
+    name: cleanPersonnelNameValue(name).toUpperCase(),
     rankNrp: rankInfo.rankNrp,
     rank: rankInfo.rank,
     nrp: rankInfo.nrp,
@@ -367,7 +380,7 @@ export function parsePersonnelLine(line: string, page: number): ParsedPersonnel 
   const rankInfo = normalizeRank(rankNrpRaw);
   return {
     no,
-    name: name.toUpperCase(),
+    name: cleanPersonnelNameValue(name).toUpperCase(),
     rankNrp: rankInfo.rankNrp,
     rank: rankInfo.rank,
     nrp: rankInfo.nrp,
@@ -467,7 +480,9 @@ export function parseLampiranRow(line: string, page: number): ParsedPersonnel | 
   const rankMatch = LAMPIRAN_RANK_RE.exec(body);
   if (!rankMatch) return null;
 
-  const name = body.slice(0, rankMatch.index).trim().replace(/[,\s]+$/, '');
+  const name = cleanPersonnelNameValue(
+    body.slice(0, rankMatch.index).trim().replace(/[,\s]+$/, '')
+  );
   if (name.length < 3) return null;
 
   const rank = rankMatch[1].toUpperCase().replace(/\s+/g, ' ');
@@ -481,7 +496,7 @@ export function parseLampiranRow(line: string, page: number): ParsedPersonnel | 
 
   return {
     no,
-    name: name.toUpperCase(),
+    name: cleanPersonnelNameValue(name).toUpperCase(),
     rankNrp: null,
     rank,
     nrp: null,

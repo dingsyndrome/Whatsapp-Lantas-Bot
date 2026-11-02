@@ -621,16 +621,23 @@ mengirim ke semua personel Sprin, tetapi hanya ke fungsi yang dipilih admin.
 - Fungsi disimpan di tabel `NotificationFunction` (kode, nama, kata kunci,
   kecualikan perwira, aktif). Admin dapat menambah fungsi baru dari
   **Settings → Notifikasi → Tambah fungsi**.
-- Nomor HP dicocokkan **ketat**: NRP exact lebih dulu; tanpa NRP hanya nama
-  lengkap yang sama persis setelah normalisasi dan kandidatnya tunggal.
-  **Tidak ada fuzzy match** untuk nama yang hanya mirip. Bila NRP ada tetapi
-  tidak ditemukan, bot tidak jatuh ke nama. Nama yang tidak cocok, nomor yang
-  berbeda antara Sprin dan roster, atau personel tanpa nomor HP akan dilewati
-  dan alasannya ditampilkan — lebih baik tidak mengirim daripada salah nomor.
+- Nomor HP dicocokkan **ketat**: NRP exact lebih dulu; tanpa NRP, nama lengkap
+  exact dan kandidat tunggal. Bila NRP ada tetapi tidak ditemukan, bot tidak
+  jatuh ke nama.
+- Singkatan hanya diterima bila **semua token** nama Sprin muncul berurutan di
+  satu kandidat roster dan kandidatnya tunggal (mis. `ARI EKO` → ARI EKO
+  ISWOYO, `M. ARVIN FIRDAUS` → MUHAMMAD ARVIN FIRDAUS). Nama yang hanya
+  berbagi satu kata (KARIYANTO vs HERIYANTO, ALI SODIK vs WARAS ALI HARTONO)
+  tetap ditolak.
+- Parser membuang prefiks nomor ganda (`1. 1. NAMA`) agar nama dari lampiran
+  bermodel dua kolom nomor tetap cocok dengan roster. Data lama dibersihkan
+  oleh migrasi.
+- Nama yang tidak cocok, nomor yang berbeda antara Sprin dan roster, atau
+  personel tanpa nomor HP akan dilewati dan alasannya ditampilkan — lebih baik
+  tidak mengirim daripada salah nomor.
 - Jika panel menampilkan **“X nama tidak cocok”** sementara fungsi Satlantas
   terdeteksi, artinya nama/NRP tersebut belum ada atau berbeda di roster.
-  Import/perbarui roster lewat **Settings → Personel**; bot tidak akan meminjam
-  nomor milik nama yang mirip.
+  Import/perbarui roster lewat **Settings → Personel**.
 
 **Lokasi per anggota (tanpa menyimpulkan)**
 

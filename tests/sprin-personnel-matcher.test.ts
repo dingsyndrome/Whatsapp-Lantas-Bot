@@ -10,7 +10,16 @@ const roster = [
   { id: 'budi', name: 'BUDI SETIONO', nrp: '87010679', phone: '6285235867499' },
   { id: 'ilham', name: 'ILHAM YUZRIL ARFANI, S.H.', nrp: '98100195', phone: '6281334302758' },
   { id: 'nurcholiq', name: 'NUR CHOLIQ CHOIRUDIN', nrp: '76070671', phone: '6282336422497' },
-  { id: 'waras', name: 'WARAS ALI HARTONO', nrp: '83021043', phone: '6281335169348' }
+  { id: 'waras', name: 'WARAS ALI HARTONO', nrp: '83021043', phone: '6281335169348' },
+  { id: 'ari', name: 'ARI EKO ISWOYO', nrp: '82030205', phone: '628125157884' },
+  { id: 'vendhi', name: 'VENDHI KRISTANTO', nrp: '90010101', phone: '6281335001732' },
+  { id: 'adi', name: 'D.V. ADI NUGROHO', nrp: '78090227', phone: '6282141429110' },
+  { id: 'arvin', name: 'MUHAMMAD ARVIN FIRDAUS', nrp: '03040258', phone: '6285745345866' },
+  { id: 'denna', name: 'DENNA ARIEF MUTAQIEN', nrp: '85010101', phone: '6281330950186' },
+  { id: 'kikis', name: 'KIKIS AGUNG D.H', nrp: '87050180', phone: '6281331194224' },
+  { id: 'rochman', name: 'ROCHMAN YUWONO, S.H.', nrp: '75010101', phone: '6281334128153' },
+  { id: 'miftah', name: 'MOH MIFTAHURROHMAN', nrp: '83051315', phone: '6282140809080' },
+  { id: 'reza', name: 'M. REZA MAHENDRA ARFIANSYAH, S.H.', nrp: '01010101', phone: '6285748505708' }
 ];
 
 describe('strict Sprin personnel matching', () => {
@@ -21,13 +30,38 @@ describe('strict Sprin personnel matching', () => {
       'DANANG RYAN SUSANTO',
       'SUTIKNO, S.H.',
       'ALI SODIK',
-      'ILHAM NURCAHYA ARIEF MUJI',
-      'NUR CHOLIK'
+      'ILHAM NURCAHYA ARIEF MUJI'
     ];
 
     for (const name of wrongNames) {
       expect(matchSprinRosterPerson({ name, nrp: null }, index), name).toBeNull();
     }
+  });
+
+  it('matches clear abbreviation patterns with all tokens covered', () => {
+    const index = buildSprinRosterIndex(roster);
+    const cases: Array<[string, string]> = [
+      ['ARI EKO', 'ari'],
+      ['VENDHI K', 'vendhi'],
+      ['ADI NUGROHO', 'adi'],
+      ['M. ARVIN FIRDAUS', 'arvin'],
+      ['DENNA ARIF', 'denna'],
+      ['KIKIS AGUNG DWI HS.,S.H.', 'kikis'],
+      ['ROHMAN YUWONO', 'rochman'],
+      ['MIFTAHUROHMAN', 'miftah'],
+      ['NUR CHOLIK', 'nurcholiq']
+    ];
+    for (const [name, id] of cases) {
+      expect(matchSprinRosterPerson({ name, nrp: null }, index), name).toMatchObject({
+        method: 'name-abbrev',
+        person: { id }
+      });
+    }
+  });
+
+  it('does not match a long single token to a different initial', () => {
+    const index = buildSprinRosterIndex(roster.filter((person) => person.id !== 'miftah'));
+    expect(matchSprinRosterPerson({ name: 'MIFTAHUROHMAN', nrp: null }, index)).toBeNull();
   });
 
   it('matches an exact normalized full name only', () => {

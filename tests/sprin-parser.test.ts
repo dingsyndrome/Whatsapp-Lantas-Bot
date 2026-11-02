@@ -3,6 +3,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { ensureFixtures, type FixtureSet } from '../scripts/fixture-generator.js';
 import { parseSprinDocument } from '../server/services/documents/sprin-reader.js';
 import {
+  parsePersonnelCells,
   parsePersonnelLine,
   parseSprinText,
   personnelFromTextPages
@@ -88,6 +89,21 @@ NO NAMA PANGKAT/NRP JABATAN PENUGASAN KET
     expect(result.personnel).toHaveLength(3);
     expect(result.personnel[2]?.page).toBe(3);
     expect(result.personnel[2]?.name).toBe('BRIPDA CITRA');
+  });
+
+  it('removes double row-number prefixes from names', () => {
+    const row = parsePersonnelCells(
+      ['1', '1. WIWIN JUNIANTO SUPRIYADI, S.I.K.', 'AKBP', 'KAPOLRES TULUNGAGUNG', '', 'P. JAWAB'],
+      2,
+      1
+    );
+    expect(row).toMatchObject({
+      no: 1,
+      name: 'WIWIN JUNIANTO SUPRIYADI, S.I.K',
+      rankNrp: 'AKBP',
+      jabatan: 'KAPOLRES TULUNGAGUNG',
+      ket: 'P. JAWAB'
+    });
   });
 
   it('recognizes multi-word ranks and assignments', () => {
