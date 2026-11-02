@@ -131,6 +131,8 @@ export interface SprinNotifyRecipientDTO {
   previouslyNotified: boolean;
   /** Pesan ini diedit admin, bukan hasil template otomatis. */
   isOverride: boolean;
+  /** Dasar pencocokan identitas ke roster: NRP atau nama lengkap persis. */
+  matchMethod: 'nrp' | 'name';
 }
 
 export interface SprinNotifySkippedDTO {
@@ -139,6 +141,7 @@ export interface SprinNotifySkippedDTO {
   name: string;
   status:
     | 'skipped_no_phone'
+    | 'skipped_no_match'
     | 'skipped_excluded'
     | 'skipped_other_function'
     | 'skipped_already'
@@ -162,6 +165,7 @@ export interface SprinNotifyPreviewDTO {
     withPhone: number;
     perwiraExcluded: number;
     noPhone: number;
+    noMatch: number;
     otherFunction: number;
     already: number;
   };

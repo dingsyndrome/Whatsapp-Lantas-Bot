@@ -316,6 +316,14 @@ export function SprinNotifyPanel({ sprin, onChanged }: { sprin: SprinDTO; onChan
             <span>{preview?.totals.perwiraExcluded ?? 0} perwira dikecualikan</span>
             <span>·</span>
             <span>{preview?.totals.noPhone ?? 0} tanpa nomor HP</span>
+            {(preview?.totals.noMatch ?? 0) > 0 ? (
+              <>
+                <span>·</span>
+                <span className="font-semibold text-warning">
+                  {preview?.totals.noMatch} nama tidak cocok
+                </span>
+              </>
+            ) : null}
             <span>·</span>
             <span>{preview?.totals.otherFunction ?? 0} fungsi lain</span>
           </div>
@@ -571,6 +579,9 @@ export function SprinNotifyPanel({ sprin, onChanged }: { sprin: SprinDTO; onChan
                     <div className="flex items-center gap-2">
                       <p className="text-[10px] font-semibold">{selectedRecipient.name}</p>
                       <Badge variant="outline" className="text-[8px]">{selectedRecipient.functionName}</Badge>
+                      <Badge variant="success" className="text-[8px]">
+                        Cocok {selectedRecipient.matchMethod === 'nrp' ? 'NRP' : 'nama persis'}
+                      </Badge>
                       {selectedRecipient.previouslyNotified ? <Badge variant="info" className="text-[8px]">Sudah pernah dikirim</Badge> : null}
                       {messageOverrides[selectedRecipient.personnelId] ? (
                         <Badge variant="violet" className="text-[8px]">Diedit admin</Badge>
@@ -660,7 +671,7 @@ export function SprinNotifyPanel({ sprin, onChanged }: { sprin: SprinDTO; onChan
               <CardHeader className="pb-2">
                 <CardTitle className="text-xs">Personel yang tidak dikirimi</CardTitle>
                 <CardDescription className="text-[10px]">
-                  Termasuk perwira, fungsi lain, tanpa nomor HP, dan yang sudah pernah dinotifikasi.
+                  Termasuk perwira, fungsi lain, nama yang tidak cocok persis, tanpa nomor HP, dan yang sudah pernah dinotifikasi.
                 </CardDescription>
               </CardHeader>
               <CardContent>

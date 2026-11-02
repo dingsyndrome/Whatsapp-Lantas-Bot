@@ -621,8 +621,12 @@ mengirim ke semua personel Sprin, tetapi hanya ke fungsi yang dipilih admin.
 - Fungsi disimpan di tabel `NotificationFunction` (kode, nama, kata kunci,
   kecualikan perwira, aktif). Admin dapat menambah fungsi baru dari
   **Settings → Notifikasi → Tambah fungsi**.
-- Nomor HP dicocokkan lewat NRP lebih dulu, lalu nama. Personel tanpa nomor HP
-  atau bukan fungsi terpilih dilewati dan alasannya ditampilkan.
+- Nomor HP dicocokkan **ketat**: NRP exact lebih dulu; tanpa NRP hanya nama
+  lengkap yang sama persis setelah normalisasi dan kandidatnya tunggal.
+  **Tidak ada fuzzy match** untuk nama yang hanya mirip. Bila NRP ada tetapi
+  tidak ditemukan, bot tidak jatuh ke nama. Nama yang tidak cocok, nomor yang
+  berbeda antara Sprin dan roster, atau personel tanpa nomor HP akan dilewati
+  dan alasannya ditampilkan — lebih baik tidak mengirim daripada salah nomor.
 
 **Lokasi per anggota (tanpa menyimpulkan)**
 

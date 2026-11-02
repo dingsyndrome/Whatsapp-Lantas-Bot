@@ -3,9 +3,12 @@ import { id as localeId } from 'date-fns/locale';
 import { prisma } from '../lib/prisma.js';
 import { logger } from '../lib/logger.js';
 import { recordActivity } from '../lib/activity.js';
-import { PersonnelDirectory } from './personnel-directory.js';
 import { samePhone } from '../lib/phone.js';
 import { whatsappManager } from './whatsapp-manager.js';
+import {
+  buildSprinRosterIndex,
+  matchSprinRosterPerson
+} from './sprin-personnel-matcher.js';
 import {
   DEFAULT_SPRIN_NOTIFY_TEMPLATE,
   TURJAWALI_LABELS,
@@ -42,19 +45,6 @@ export interface SprinNotifyOptions {
   actor?: string;
   /** false dipakai untuk pratinjau tanpa menyentuh draf tersimpan. */
   persist?: boolean;
-}
-
-function normalizeName(value: string): string {
-  return value
-    .toUpperCase()
-    .replace(/\b(S\.?H\.?|S\.?I\.?K\.?|S\.?TR\.?K\.?|M\.?H\.?|M\.?M\.?|CPHR|S\.?E\.?|S\.?P\.?D\.?|S\.?S\.?O\.?S\.?)\b/g, ' ')
-    .replace(/[^A-Z\s]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function firstTokens(name: string, count = 2): string {
-  return normalizeName(name).split(' ').slice(0, count).join(' ');
 }
 
 function parseCodes(raw: string | null | undefined): string[] {
@@ -167,30 +157,25 @@ function buildPreview(context: PreviewContext, options: SprinNotifyOptions): Spr
   ).trim() || defaultTemplate(bot.sprinNotifyTemplate);
   const overrides = options.overrides ?? parseOverrides(draft?.overrides);
 
-  const byNrp = new Map(
-    roster.filter((person) => person.nrp).map((person) => [person.nrp as string, person])
-  );
-  const byName = new Map(roster.map((person) => [normalizeName(person.name), person]));
-  const byShort = new Map(roster.map((person) => [firstTokens(person.name), person]));
-  const directory = new PersonnelDirectory(roster);
+  const rosterIndex = buildSprinRosterIndex(roster);
 
   const analysis = analyzeSprinLocation({ untuk: sprin.untuk, place: sprin.place });
   const recipients: SprinNotifyRecipientDTO[] = [];
   const skipped: SprinNotifySkippedDTO[] = [];
   let perwiraExcluded = 0;
   let noPhone = 0;
+  let noMatch = 0;
   let otherFunction = 0;
   let already = 0;
 
   for (const person of sprin.personnel) {
-    const rosterMatch =
-      (person.nrp ? byNrp.get(person.nrp) : undefined) ??
-      byName.get(normalizeName(person.name)) ??
-      byShort.get(firstTokens(person.name)) ??
-      // Pencocokan terakhir lewat PersonnelDirectory: tahan nama satu kata
-      // (HERIYANTO) dan beda satu huruf (ROHMAN vs ROCHMAN).
-      directory.resolve(person.name, null) ??
-      null;
+    // Pencocokan ketat: NRP exact, atau nama lengkap exact dan tunggal.
+    // Tidak ada fuzzy match agar nomor HP tidak tertukar antar personel.
+    const identity = matchSprinRosterPerson(
+      { name: person.name, nrp: person.nrp },
+      rosterIndex
+    );
+    const rosterMatch = identity?.person ?? null;
 
     // Kolom Jabatan pada Sprin adalah sumber utama fungsi; roster hanya
     // dipakai bila jabatan Sprin tidak menyebut fungsi apa pun.
@@ -237,8 +222,33 @@ function buildPreview(context: PreviewContext, options: SprinNotifyOptions): Spr
       continue;
     }
 
-    const phone = person.phone ?? rosterMatch?.phone ?? null;
-    if (!phone) {
+    if (!rosterMatch) {
+      noMatch += 1;
+      skipped.push({
+        personnelId: person.id,
+        no: person.no,
+        name: person.name,
+        status: 'skipped_no_match',
+        reason: person.nrp
+          ? 'NRP tidak ditemukan di database personel; notifikasi tidak dikirim agar tidak salah nomor'
+          : 'Nama tidak cocok persis dengan database personel; notifikasi tidak dikirim agar tidak salah nomor'
+      });
+      continue;
+    }
+
+    const rosterPhone = rosterMatch.phone ?? null;
+    if (person.phone && rosterPhone && !samePhone(person.phone, rosterPhone)) {
+      noPhone += 1;
+      skipped.push({
+        personnelId: person.id,
+        no: person.no,
+        name: person.name,
+        status: 'skipped_no_phone',
+        reason: 'Nomor HP pada Sprin berbeda dengan database personel; perlu verifikasi admin'
+      });
+      continue;
+    }
+    if (!rosterPhone) {
       noPhone += 1;
       skipped.push({
         personnelId: person.id,
@@ -249,6 +259,7 @@ function buildPreview(context: PreviewContext, options: SprinNotifyOptions): Spr
       });
       continue;
     }
+    const phone = rosterPhone;
 
     const previouslyNotified = Boolean(person.notifiedAt);
     if (previouslyNotified) already += 1;
@@ -331,7 +342,8 @@ function buildPreview(context: PreviewContext, options: SprinNotifyOptions): Spr
       locationNotes: notes,
       issues: [...new Set(issues)],
       previouslyNotified,
-      isOverride: Boolean(override)
+      isOverride: Boolean(override),
+      matchMethod: identity?.method ?? 'name'
     });
   }
 
@@ -346,6 +358,9 @@ function buildPreview(context: PreviewContext, options: SprinNotifyOptions): Spr
     ...(analysis.ambiguous ? analysis.reasons : []),
     ...(recipients.some((recipient) => recipient.issues.length > 0)
       ? [`${recipients.filter((recipient) => recipient.issues.length > 0).length} personel memiliki lokasi yang belum pasti.`]
+      : []),
+    ...(noMatch > 0
+      ? [`${noMatch} personel tidak cocok persis dengan database personel dan tidak akan dikirimi notifikasi.`]
       : []),
     ...(recipients.length === 0 ? ['Tidak ada personel yang memenuhi kriteria kirim.'] : []),
     ...(selectedFunctions.length === 0
@@ -371,6 +386,7 @@ function buildPreview(context: PreviewContext, options: SprinNotifyOptions): Spr
       withPhone: recipients.length,
       perwiraExcluded,
       noPhone,
+      noMatch,
       otherFunction,
       already
     },
@@ -604,4 +620,4 @@ export async function autoNotifySprin(sprinId: string): Promise<void> {
   }
 }
 
-export { samePhone, parseFunctionKeywords };
+export { parseFunctionKeywords };
