@@ -218,10 +218,12 @@ export function buildWaText(bundle: DailyBundle): string {
     lines.push(
       `👁️ ${bundle.turjawali.supervisions.total} laporan supervisi dari ${bundle.turjawali.supervisions.uniqueOfficers} perwira`
     );
-    bundle.turjawali.supervisions.items.slice(0, 10).forEach((item, index) => {
+    bundle.turjawali.supervisions.items.forEach((item, index) => {
       const who = formatRankName(item.rank, item.name ?? item.senderName);
+      const at = new Date(item.capturedAt ?? item.createdAt);
+      const time = Number.isNaN(at.getTime()) ? '--:--' : format(at, 'HH:mm');
       lines.push(
-        `${index + 1}. ${item.sandi ? `[${item.sandi}] ` : ''}*${who}* · ${TURJAWALI_LABELS[item.turjawaliType as keyof typeof TURJAWALI_LABELS] ?? item.turjawaliType}`
+        `${index + 1}. ${time} — ${item.sandi ? `[${item.sandi}] ` : ''}*${who}* · ${TURJAWALI_LABELS[item.turjawaliType as keyof typeof TURJAWALI_LABELS] ?? item.turjawaliType}`
       );
       if (item.address) lines.push(`   📍 ${item.address}`);
     });

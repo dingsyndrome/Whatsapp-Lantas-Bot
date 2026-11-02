@@ -50,7 +50,26 @@ export interface CustomRecapResult {
   category: RecapCategory;
   counts: { photos: number; links: number; activities: number; supervisors: number };
   activities: CustomRecapActivity[];
-  supervisors: Array<{ sandi: string | null; name: string; rank: string | null; count: number }>;
+  supervisors: Array<{
+    sandi: string | null;
+    name: string;
+    rank: string | null;
+    count: number;
+    firstAt: string;
+    lastAt: string;
+    times: string[];
+    locations: string[];
+  }>;
+  supervisionEvents: Array<{
+    id: string;
+    at: string;
+    time: string;
+    sandi: string | null;
+    name: string;
+    rank: string | null;
+    location: string;
+    turjawaliType: string;
+  }>;
   personnel: {
     rosterTotal: number;
     submitted: Array<{
@@ -60,6 +79,9 @@ export interface CustomRecapResult {
       rankNrp: string | null;
       photos: number;
       links: number;
+      firstAt: string;
+      lastAt: string;
+      times: string[];
     }>;
     notSubmitted: Array<{
       name: string;
@@ -210,26 +232,62 @@ export async function buildCustomRecap(params: CustomRecapParams): Promise<Custo
   });
 
   // Perwira pengawas: dari sandi yang disebut di caption/OCR + hasil deteksi.
-  const supervisorMap = new Map<string, { sandi: string | null; name: string; rank: string | null; count: number }>();
-  for (const activity of activities) {
-    const caption = filteredPhotos.find((photo) => photo.id === activity.id)?.caption ?? '';
-    const codes = findSandiCodes(caption);
-    const sandi = activity.supervisorSandi ?? codes[0] ?? null;
-    if (!sandi && !activity.supervisorName) continue;
-    const mapped = sandi ? sandiMap[sandi] : undefined;
-    const name = mapped?.name ?? activity.supervisorName ?? '(belum dipetakan)';
-    const key = `${sandi ?? ''}|${name}`;
+  // Dicatat per kejadian supaya laporan bisa menyebut jam dan lokasinya.
+  const supervisionEvents = filteredPhotos
+    .filter((photo) => photo.isSupervision || photo.supervisorSandi || photo.supervisorName)
+    .map((photo) => {
+      const current = photo.supervisorSandi ? sandiMap[photo.supervisorSandi] : undefined;
+      const codes = findSandiCodes(photo.caption ?? '');
+      const sandi = photo.supervisorSandi ?? codes[0] ?? null;
+      const mapped = sandi ? sandiMap[sandi] : undefined;
+      const at = photo.capturedAt ?? photo.createdAt;
+      return {
+        id: photo.id,
+        at: at.toISOString(),
+        time: format(at, 'HH:mm'),
+        sandi,
+        name: mapped?.name ?? current?.name ?? photo.supervisorName ?? '(belum dipetakan)',
+        rank: mapped?.rank ?? current?.rank ?? photo.supervisorRank,
+        location: shortLocation(photo.address, photo.district),
+        turjawaliType: photo.turjawaliType
+      };
+    })
+    .sort((a, b) => a.at.localeCompare(b.at));
+
+  const supervisorMap = new Map<
+    string,
+    {
+      sandi: string | null;
+      name: string;
+      rank: string | null;
+      count: number;
+      firstAt: string;
+      lastAt: string;
+      times: string[];
+      locations: string[];
+    }
+  >();
+  for (const event of supervisionEvents) {
+    const key = `${event.sandi ?? ''}|${event.name}`;
     const current = supervisorMap.get(key) ?? {
-      sandi,
-      name,
-      rank: mapped?.rank ?? activity.supervisorRank,
-      count: 0
+      sandi: event.sandi,
+      name: event.name,
+      rank: event.rank,
+      count: 0,
+      firstAt: event.at,
+      lastAt: event.at,
+      times: [],
+      locations: []
     };
     current.count += 1;
+    current.times.push(event.time);
+    if (!current.locations.includes(event.location)) current.locations.push(event.location);
+    if (event.at < current.firstAt) current.firstAt = event.at;
+    if (event.at > current.lastAt) current.lastAt = event.at;
     supervisorMap.set(key, current);
   }
 
-  const submittedMap = new Map<string, { photos: number; links: number }>();
+  const submittedMap = new Map<string, { photos: number; links: number; times: Date[] }>();
   const matchRoster = (senderName: string, senderNumber: string) =>
     directory.resolve(senderName, senderNumber);
 
@@ -238,29 +296,39 @@ export async function buildCustomRecap(params: CustomRecapParams): Promise<Custo
   for (const photo of filteredPhotos) {
     const person = resolvePhotoPerson(photo, directory, roster);
     if (!person) continue;
-    const entry = submittedMap.get(person.id) ?? { photos: 0, links: 0 };
+    const entry = submittedMap.get(person.id) ?? { photos: 0, links: 0, times: [] };
     entry.photos += 1;
+    entry.times.push(photo.capturedAt ?? photo.createdAt);
     submittedMap.set(person.id, entry);
   }
   for (const link of filteredLinks) {
     const person = matchRoster(link.senderName, link.senderNumber);
     if (!person) continue;
-    const entry = submittedMap.get(person.id) ?? { photos: 0, links: 0 };
+    const entry = submittedMap.get(person.id) ?? { photos: 0, links: 0, times: [] };
     entry.links += 1;
+    entry.times.push(link.receivedAt);
     submittedMap.set(person.id, entry);
   }
 
   const submitted = rosterView
     .filter((person) => submittedMap.has(person.id))
-    .map((person) => ({
-      name: person.name,
-      displayName: formatRankName(person.rank, person.name),
-      rank: person.rank,
-      rankNrp: [person.rank, person.nrp].filter(Boolean).join('/') || null,
-      category: person.category,
-      photos: submittedMap.get(person.id)?.photos ?? 0,
-      links: submittedMap.get(person.id)?.links ?? 0
-    }));
+    .map((person) => {
+      const entry = submittedMap.get(person.id)!;
+      const sorted = [...entry.times].sort((a, b) => a.getTime() - b.getTime());
+      const times = [...new Set(sorted.map((value) => format(value, 'HH:mm')))];
+      return {
+        name: person.name,
+        displayName: formatRankName(person.rank, person.name),
+        rank: person.rank,
+        rankNrp: [person.rank, person.nrp].filter(Boolean).join('/') || null,
+        category: person.category,
+        photos: entry.photos,
+        links: entry.links,
+        firstAt: sorted[0]?.toISOString() ?? '',
+        lastAt: sorted[sorted.length - 1]?.toISOString() ?? '',
+        times
+      };
+    });
   const notSubmitted = rosterView
     .filter((person) => !submittedMap.has(person.id))
     .map((person) => ({
@@ -310,35 +378,41 @@ export async function buildCustomRecap(params: CustomRecapParams): Promise<Custo
     lines.push('_Tidak ada kegiatan pada rentang ini._');
   }
 
-  if (supervisors.length > 0) {
-    lines.push('', '*PERWIRA PENGAWAS*');
-    supervisors.forEach((item, index) => {
-      lines.push(`${index + 1}. ${item.sandi ? `[${item.sandi}] ` : ''}${formatRankName(item.rank, item.name)} · ${item.count} laporan`);
+  lines.push('', '*SUPERVISI PERWIRA*');
+  if (supervisionEvents.length === 0) {
+    lines.push('_Belum ada laporan supervisi/pengecekan perwira terdeteksi pada rentang ini._');
+  } else {
+    supervisionEvents.forEach((event, index) => {
+      const who = formatRankName(event.rank, event.name);
+      const sandi = event.sandi ? ` [${event.sandi}]` : '';
+      lines.push(`${index + 1}. ${event.time} — ${who}${sandi} · ${event.location}`);
     });
-    lines.push('_Perwira tidak dihitung dalam kewajiban pelaporan._');
+    lines.push(
+      `_Total ${supervisionEvents.length} laporan supervisi dari ${supervisors.length} perwira._`
+    );
   }
 
   lines.push('', '*SUDAH MELAPOR*');
   if (anggotaSubmitted.length === 0) {
     lines.push('_Belum ada anggota yang melapor._');
   } else {
-    anggotaSubmitted.slice(0, 30).forEach((person, index) => {
+    anggotaSubmitted.forEach((person, index) => {
       const detail = `${person.photos} foto${person.links > 0 ? ` · ${person.links} link` : ''}`;
-      lines.push(`${index + 1}. ${person.displayName} — ${detail}`);
+      const time =
+        person.times.length > 1
+          ? `${person.times[0]}–${person.times[person.times.length - 1]}`
+          : (person.times[0] ?? '-');
+      lines.push(`${index + 1}. ${person.displayName} — ${detail} · ${time}`);
     });
-    if (anggotaSubmitted.length > 30) lines.push(`… dan ${anggotaSubmitted.length - 30} anggota lain.`);
   }
 
   lines.push('', '*BELUM MELAPOR*');
   if (anggotaNotSubmitted.length === 0) {
     lines.push('_Semua anggota roster sudah melapor._');
   } else {
-    anggotaNotSubmitted.slice(0, 30).forEach((person, index) => {
+    anggotaNotSubmitted.forEach((person, index) => {
       lines.push(`${index + 1}. ${person.displayName}`);
     });
-    if (anggotaNotSubmitted.length > 30) {
-      lines.push(`… dan ${anggotaNotSubmitted.length - 30} anggota lain.`);
-    }
   }
 
   return {
@@ -352,6 +426,7 @@ export async function buildCustomRecap(params: CustomRecapParams): Promise<Custo
     },
     activities,
     supervisors,
+    supervisionEvents,
     personnel: { rosterTotal: rosterView.length, submitted, notSubmitted },
     text: lines.join('\n')
   };

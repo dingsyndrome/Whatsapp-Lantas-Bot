@@ -240,7 +240,7 @@ export async function getTurjawaliRecap(options: {
   // saat foto masuk, agar perubahan pemegang sandi langsung terlihat di rekap.
   const sandiAssignments = await resolveSandiAssignments();
   const supervisionItems: SupervisionSignal[] = supervisionPhotos
-    .slice(-20)
+    .slice(-100)
     .reverse()
     .map((photo) => {
       const current = photo.supervisorSandi ? sandiAssignments[photo.supervisorSandi] : undefined;
