@@ -225,7 +225,7 @@ export async function buildCustomRecap(params: CustomRecapParams): Promise<Custo
       senderName: photo.senderName,
       senderLabel: person
         ? formatRankName(person.rank, person.name)
-        : formatRankName(null, photo.senderName),
+        : (photo.senderName ?? '').trim(),
       unitName: photo.unitName,
       matchStatus: photo.matchStatus,
       supervisorSandi: photo.supervisorSandi,

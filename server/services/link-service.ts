@@ -2,11 +2,13 @@ import type { Prisma } from '@prisma/client';
 import { addDays, subDays } from 'date-fns';
 import { prisma } from '../lib/prisma.js';
 import { recordActivity } from '../lib/activity.js';
+import { normalizePhone } from '../lib/phone.js';
 import { realtime } from '../lib/realtime.js';
 import { serializeLink, type LinkWithSprin } from '../lib/serializers.js';
 import type { LinkDTO } from '../../shared/types.js';
 import { extractLinks, extractSprinNumber, stripLinks } from './links/extractor.js';
 import { validateLink } from './links/validator.js';
+import { PersonnelDirectory } from './personnel-directory.js';
 
 export interface LinkIngestInput {
   text: string;
@@ -145,16 +147,29 @@ export async function listLinks(options: {
 }): Promise<{ items: LinkDTO[]; total: number; page: number; pageSize: number }> {
   const page = Math.max(1, options.page ?? 1);
   const pageSize = Math.min(200, Math.max(1, options.pageSize ?? 30));
+  const roster = await prisma.personnel.findMany({
+    where: { active: true },
+    select: { id: true, name: true, rank: true, phone: true },
+    orderBy: [{ no: 'asc' }]
+  });
+  const directory = new PersonnelDirectory(roster);
+
   const where: Prisma.LinkSubmissionWhereInput = {};
   if (options.platform && options.platform !== 'all') where.platform = options.platform;
   if (options.status && options.status !== 'all') where.status = options.status;
   if (options.search) {
+    const search = options.search.trim();
+    const rosterPhones = roster
+      .filter((person) => person.name.toLowerCase().includes(search.toLowerCase()))
+      .map((person) => normalizePhone(person.phone))
+      .filter((phone): phone is string => Boolean(phone));
     where.OR = [
-      { senderName: { contains: options.search } },
-      { senderNumber: { contains: options.search } },
-      { title: { contains: options.search } },
-      { normalizedUrl: { contains: options.search } },
-      { groupName: { contains: options.search } }
+      { senderName: { contains: search } },
+      { senderNumber: { contains: search } },
+      { title: { contains: search } },
+      { normalizedUrl: { contains: search } },
+      { groupName: { contains: search } },
+      ...(rosterPhones.length > 0 ? [{ senderNumber: { in: rosterPhones } }] : [])
     ];
   }
   if (options.from || options.to) {
@@ -174,7 +189,15 @@ export async function listLinks(options: {
     })
   ]);
   return {
-    items: rows.map((row) => serializeLink(row as LinkWithSprin)),
+    items: rows.map((row) => {
+      const item = serializeLink(row as LinkWithSprin);
+      const person = directory.resolve(item.senderName, item.senderNumber);
+      return {
+        ...item,
+        senderRank: person?.rank ?? null,
+        senderLabel: directory.label(item.senderName, item.senderNumber)
+      };
+    }),
     total,
     page,
     pageSize

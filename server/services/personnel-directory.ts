@@ -242,7 +242,8 @@ export class PersonnelDirectory {
   label(senderName: string | null | undefined, senderNumber?: string | null): string {
     const person = this.resolve(senderName, senderNumber);
     if (person) return formatRankName(person.rank, person.name);
-    return formatRankName(null, senderName);
+    // Pengirim di luar roster (mis. PHL) tetap memakai nama apa adanya dari WA.
+    return (senderName ?? '').trim();
   }
 
   labelById(id: string | null | undefined): string | null {

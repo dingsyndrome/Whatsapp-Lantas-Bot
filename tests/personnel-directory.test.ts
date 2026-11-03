@@ -70,4 +70,10 @@ describe('pencocokan nama personel Sprin ke roster', () => {
       'AIPDA IMA SAFITRI'
     );
   });
+
+  it('mempertahankan nama WhatsApp apa adanya untuk pengirim di luar roster', () => {
+    expect(directory.label('Na')).toBe('Na');
+    expect(directory.label('VOC')).toBe('VOC');
+    expect(directory.label('Orang PHL, S.H.')).toBe('Orang PHL, S.H.');
+  });
 });

@@ -476,6 +476,12 @@ seperti **“Medsos dan Meme”** tetap memiliki `groupName` dan dapat
 dicari/difilter di rekap. Bila nomor HP tidak tersedia, pencocokan jatuh ke nama
 seperti sebelumnya.
 
+Kolom **Pengirim** pada tabel Rekap Link Anggota memakai label roster
+`[PANGKAT] [NAMA]` bila nomor/nama pengirim cocok. Pengirim di luar roster —
+misalnya anggota PHL Satlantas — ditampilkan dengan nama apa adanya dari
+WhatsApp, tanpa ditebak. Pencarian nama roster juga ikut mencocokkan nomor HP
+personel.
+
 **Rekap link per periode.** Tombol **Rekap ke WA** pada halaman Rekap Link Anggota membuka
 dialog tanggal + rentang jam (mis. Kamis, 29 Oktober 2026 pukul 08:20–09:20). Teks yang dihasilkan
 hanya berisi link anggota — tanpa foto Timemark, Sprin, maupun rekap Gatur/Turjawali — dan bisa

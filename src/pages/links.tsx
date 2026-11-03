@@ -156,7 +156,9 @@ function LinksTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {data.items.map((link) => (
+          {data.items.map((link) => {
+            const senderName = link.senderLabel?.trim() || link.senderName;
+            return (
             <TableRow key={link.id} className="group">
               <TableCell>
                 <PlatformIcon platform={link.platform} />
@@ -183,10 +185,15 @@ function LinksTable({
               <TableCell className="hidden lg:table-cell">
                 <div className="flex items-center gap-2">
                   <span className="flex h-7 w-7 items-center justify-center rounded-full border border-border bg-muted/40 text-[9px] font-bold">
-                    {initials(link.senderName)}
+                    {initials(senderName)}
                   </span>
                   <div className="min-w-0">
-                    <p className="max-w-[140px] truncate text-[10px] font-medium">{link.senderName}</p>
+                    <p
+                      className="max-w-[190px] truncate text-[10px] font-medium"
+                      title={senderName !== link.senderName ? `Nama WhatsApp: ${link.senderName}` : undefined}
+                    >
+                      {senderName}
+                    </p>
                     <p className="font-mono text-[9px] text-muted-foreground">{link.senderNumber}</p>
                   </div>
                 </div>
@@ -232,7 +239,8 @@ function LinksTable({
                 </div>
               </TableCell>
             </TableRow>
-          ))}
+            );
+          })}
         </TableBody>
       </Table>
     </Card>
