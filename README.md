@@ -599,6 +599,23 @@ Contoh bagian Turjawali pada `daily.txt`:
 ──────────────────────
 ```
 
+### 5.6b Export Rekap Kustom
+
+Panel **Settings → Rekap Kustom** menyediakan tombol **Ekspor** setelah rekap
+ditampilkan. Format yang tersedia:
+
+- **Excel (`.xlsx`)** — sheet Ringkasan, Kegiatan, Sudah Melapor, Belum
+  Melapor, Perwira Pengawas, dan Supervisi.
+- **Word (`.docx`)** — dokumen A4 landscape dengan tabel ringkasan dan rincian
+  kegiatan/personel.
+- **PDF (`.pdf`)** — layout A4 landscape, tabel berulang di halaman baru, dan
+  nomor halaman.
+
+Isi ekspor mengikuti tanggal, rentang jam, dan kategori yang sedang tampil.
+Perwira dikecualikan dari daftar personel sudah/belum melapor, sama seperti teks
+rekap. Endpoint: `GET /api/reports/custom/export?format=xlsx|docx|pdf` dengan
+parameter yang sama seperti `/api/reports/custom`.
+
 ### 5.7 Notifikasi Sprin per fungsi kepolisian
 
 Fitur ini menjawab kebutuhan “notifikasi fokus ke satu kesatuan”: bot tidak lagi
