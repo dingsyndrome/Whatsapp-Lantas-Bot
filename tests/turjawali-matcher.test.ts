@@ -253,4 +253,18 @@ describe('Turjawali smart matching score', () => {
     });
     expect(result.type).toBe('REGIDENT');
   });
+
+  it('mengenali kegiatan Penyuluhan Lalu Lintas', () => {
+    const result = classifyTurjawaliActivity({
+      caption: 'Sosialisasi dan penyuluhan tertib lalu lintas kepada pengendara'
+    });
+    expect(result.type).toBe('PENYULUHAN');
+  });
+
+  it('mengenali kegiatan Dikmas Lantas', () => {
+    const result = classifyTurjawaliActivity({
+      caption: 'Dikmas lantas: police goes to school di SMPN 1 Tulungagung'
+    });
+    expect(result.type).toBe('DIKMAS_LANTAS');
+  });
 });

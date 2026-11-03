@@ -190,6 +190,8 @@ export const TURJAWALI_TYPES = [
   'PATROLI',
   'PENEGAKKAN',
   'REGIDENT',
+  'PENYULUHAN',
+  'DIKMAS_LANTAS',
   'LAINNYA'
 ] as const;
 
@@ -210,6 +212,8 @@ export const TURJAWALI_LABELS: Record<TurjawaliType, string> = {
   PATROLI: 'Patroli',
   PENEGAKKAN: 'Penegakan Hukum (Gakkum)',
   REGIDENT: 'Registrasi Identitas (Regident)',
+  PENYULUHAN: 'Penyuluhan Lalu Lintas',
+  DIKMAS_LANTAS: 'Dikmas Lantas (Pendidikan Masyarakat)',
   LAINNYA: 'Lainnya'
 };
 
@@ -220,6 +224,8 @@ export const TURJAWALI_SHORT_LABELS: Record<TurjawaliType, string> = {
   PATROLI: 'Patroli',
   PENEGAKKAN: 'Gakkum',
   REGIDENT: 'Regident',
+  PENYULUHAN: 'Penyuluhan',
+  DIKMAS_LANTAS: 'Dikmas',
   LAINNYA: 'Lainnya'
 };
 
@@ -325,6 +331,27 @@ export const DEFAULT_TURJAWALI_KEYWORDS: TurjawaliKeywordMap = {
     'mutasi kendaraan',
     'ranmor',
     'srat'
+  ],
+  PENYULUHAN: [
+    'penyuluhan',
+    'sosialisasi',
+    'binluh',
+    'himbauan',
+    'imbauan',
+    'edukasi',
+    'kampanye keselamatan',
+    'safety riding',
+    'penyuluhan lalu lintas'
+  ],
+  DIKMAS_LANTAS: [
+    'dikmas lantas',
+    'dikmas',
+    'pendidikan masyarakat',
+    'polsanak',
+    'police goes to school',
+    'pengenalan rambu',
+    'edukasi pelajar',
+    'sekolah'
   ]
 };
 

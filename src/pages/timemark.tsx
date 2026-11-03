@@ -15,6 +15,8 @@ import {
   List,
   MapPin,
   CreditCard,
+  GraduationCap,
+  Megaphone,
   Gavel,
   Radar,
   RefreshCw,
@@ -95,7 +97,9 @@ const ACTIVE_TURJAWALI: Exclude<TurjawaliType, 'LAINNYA'>[] = [
   'PENGAWALAN',
   'PATROLI',
   'PENEGAKKAN',
-  'REGIDENT'
+  'REGIDENT',
+  'PENYULUHAN',
+  'DIKMAS_LANTAS'
 ];
 
 const TURJAWALI_TAB_LABELS: Record<TurjawaliType, string> = {
@@ -105,6 +109,8 @@ const TURJAWALI_TAB_LABELS: Record<TurjawaliType, string> = {
   PATROLI: 'Patroli',
   PENEGAKKAN: 'Gakkum',
   REGIDENT: 'Regident',
+  PENYULUHAN: 'Penyuluhan',
+  DIKMAS_LANTAS: 'Dikmas',
   LAINNYA: 'Lainnya'
 };
 
@@ -115,6 +121,8 @@ const TURJAWALI_ICONS: Record<TurjawaliType, React.ElementType> = {
   PATROLI: Radar,
   PENEGAKKAN: Gavel,
   REGIDENT: CreditCard,
+  PENYULUHAN: Megaphone,
+  DIKMAS_LANTAS: GraduationCap,
   LAINNYA: Crosshair
 };
 
@@ -138,6 +146,14 @@ const TURJAWALI_STYLES: Record<TurjawaliType, { badge: string; icon: string }> =
   REGIDENT: {
     badge: 'border-sky-500/25 bg-sky-500/10 text-sky-400',
     icon: 'bg-sky-500/10 text-sky-400 border-sky-500/20'
+  },
+  PENYULUHAN: {
+    badge: 'border-rose-500/25 bg-rose-500/10 text-rose-400',
+    icon: 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+  },
+  DIKMAS_LANTAS: {
+    badge: 'border-teal-500/25 bg-teal-500/10 text-teal-400',
+    icon: 'bg-teal-500/10 text-teal-400 border-teal-500/20'
   },
   PATROLI: {
     badge: 'border-success/25 bg-success/10 text-success',

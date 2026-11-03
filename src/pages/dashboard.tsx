@@ -20,6 +20,8 @@ import {
   Radar,
   RefreshCw,
   CreditCard,
+  GraduationCap,
+  Megaphone,
   Gavel,
   IdCard,
   ScanLine,
@@ -217,6 +219,18 @@ const TURJAWALI_META: Record<
     className: 'border-sky-500/25 bg-sky-500/10 text-sky-400',
     bar: 'bg-sky-400',
     soft: 'from-sky-500/[0.08]'
+  },
+  PENYULUHAN: {
+    icon: Megaphone,
+    className: 'border-rose-500/25 bg-rose-500/10 text-rose-400',
+    bar: 'bg-rose-400',
+    soft: 'from-rose-500/[0.08]'
+  },
+  DIKMAS_LANTAS: {
+    icon: GraduationCap,
+    className: 'border-teal-500/25 bg-teal-500/10 text-teal-400',
+    bar: 'bg-teal-400',
+    soft: 'from-teal-500/[0.08]'
   },
   PATROLI: {
     icon: Radar,

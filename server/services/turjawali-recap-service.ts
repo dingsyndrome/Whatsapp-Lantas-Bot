@@ -29,7 +29,9 @@ const ACTIVE_TYPES: TurjawaliActivityType[] = [
   'PENGAWALAN',
   'PATROLI',
   'PENEGAKKAN',
-  'REGIDENT'
+  'REGIDENT',
+  'PENYULUHAN',
+  'DIKMAS_LANTAS'
 ];
 
 function parseDate(value?: string | null): Date {

@@ -52,7 +52,7 @@ reportsRouter.get('/custom', async (req, res) => {
       hourFrom: z.string().trim().max(10).optional(),
       hourTo: z.string().trim().max(10).optional(),
       category: z
-        .enum(['ALL', 'POS_PAGI', 'PENGATURAN', 'PENJAGAAN', 'PENGAWALAN', 'PATROLI', 'PENEGAKKAN', 'REGIDENT', 'LAINNYA'])
+        .enum(['ALL', 'POS_PAGI', 'PENGATURAN', 'PENJAGAAN', 'PENGAWALAN', 'PATROLI', 'PENEGAKKAN', 'REGIDENT', 'PENYULUHAN', 'DIKMAS_LANTAS', 'LAINNYA'])
         .optional(),
       rosterOnly: z.coerce.boolean().optional()
     })

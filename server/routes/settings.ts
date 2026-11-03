@@ -23,7 +23,9 @@ const keywordSchema = z
     PENGAWALAN: z.array(z.string().min(1).max(80)).max(80),
     PATROLI: z.array(z.string().min(1).max(80)).max(80),
     PENEGAKKAN: z.array(z.string().min(1).max(80)).max(80),
-    REGIDENT: z.array(z.string().min(1).max(80)).max(80)
+    REGIDENT: z.array(z.string().min(1).max(80)).max(80),
+    PENYULUHAN: z.array(z.string().min(1).max(80)).max(80),
+    DIKMAS_LANTAS: z.array(z.string().min(1).max(80)).max(80)
   })
   .strict();
 

@@ -104,7 +104,9 @@ const ACTIVE_TYPES: TurjawaliActivityType[] = [
   'PENGAWALAN',
   'PATROLI',
   'PENEGAKKAN',
-  'REGIDENT'
+  'REGIDENT',
+  'PENYULUHAN',
+  'DIKMAS_LANTAS'
 ];
 
 const STOPWORDS = new Set([
@@ -171,6 +173,8 @@ function emptyScores(): Record<TurjawaliType, number> {
     PATROLI: 0,
     PENEGAKKAN: 0,
     REGIDENT: 0,
+    PENYULUHAN: 0,
+    DIKMAS_LANTAS: 0,
     LAINNYA: 0
   };
 }
