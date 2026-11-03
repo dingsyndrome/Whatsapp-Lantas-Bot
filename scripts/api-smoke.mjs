@@ -64,7 +64,9 @@ const expectedTurjawali = [
   'PENGAWALAN',
   'PATROLI',
   'PENEGAKKAN',
-  'REGIDENT'
+  'REGIDENT',
+  'PENYULUHAN',
+  'DIKMAS_LANTAS'
 ];
 
 function hasAllTurjawaliCategories(categories) {
