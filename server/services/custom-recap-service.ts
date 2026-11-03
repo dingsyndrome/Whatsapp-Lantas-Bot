@@ -206,7 +206,10 @@ export async function buildCustomRecap(params: CustomRecapParams): Promise<Custo
     return photo.turjawaliType === category;
   });
 
-  const filteredLinks = links.filter((link) => timeMatches(link.receivedAt));
+  // Link hanya relevan untuk rekap gabungan ("Semua kegiatan"). Pada rekap per
+  // kategori (mis. Gatur), laporan link tidak boleh ikut dihitung — kalau tidak,
+  // anggota yang hanya mengirim link akan muncul sebagai "sudah melapor".
+  const filteredLinks = category === 'ALL' ? links.filter((link) => timeMatches(link.receivedAt)) : [];
 
   const activities: CustomRecapActivity[] = filteredPhotos.map((photo) => {
     const current = photo.supervisorSandi ? sandiMap[photo.supervisorSandi] : undefined;
@@ -365,7 +368,6 @@ export async function buildCustomRecap(params: CustomRecapParams): Promise<Custo
   ];
 
   if (activities.length > 0) {
-    // Ringkas per kategori: cukup jumlah kegiatan, bukan rincian tiap foto.
     const perCategory = new Map<TurjawaliType, number>();
     for (const activity of activities) {
       perCategory.set(activity.category, (perCategory.get(activity.category) ?? 0) + 1);
@@ -377,6 +379,17 @@ export async function buildCustomRecap(params: CustomRecapParams): Promise<Custo
       .forEach(([category, count]) => {
         lines.push(`• ${TURJAWALI_LABELS[category] ?? category} : ${count} kegiatan`);
       });
+
+    // Rincian tiap kegiatan dengan jam pengecekan (waktu Timemark), urut kronologis.
+    const sortedActivities = [...activities].sort((a, b) => a.at.localeCompare(b.at));
+    lines.push('', '*RINCIAN KEGIATAN*');
+    sortedActivities.forEach((activity, index) => {
+      const time = format(new Date(activity.at), 'HH:mm');
+      const categoryLabel =
+        category === 'ALL' ? ` · ${TURJAWALI_LABELS[activity.category] ?? activity.category}` : '';
+      const unit = activity.unitName ? ` · ${activity.unitName}` : '';
+      lines.push(`${index + 1}. ${time} — ${activity.senderLabel} · ${activity.address}${unit}${categoryLabel}`);
+    });
   } else {
     lines.push('_Tidak ada kegiatan pada rentang ini._');
   }
