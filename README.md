@@ -724,6 +724,8 @@ Selama belum ada nomor HP, fungsi tetap muncul tetapi diberi tanda
 | GET | `/api/wa/groups` | Daftar grup dari sesi |
 | POST | `/api/wa/simulate` | Simulasi foto/dokumen/link |
 | GET | `/api/reports/preview` | Teks rekap |
+| GET | `/api/reports/custom` | Rekap kustom per tanggal/jam/kegiatan |
+| GET | `/api/reports/custom/export` | Unduh rekap kustom `format=xlsx\|docx\|pdf` |
 | POST | `/api/reports/send` | Kirim rekap sekarang |
 | GET | `/api/events` | SSE realtime |
 

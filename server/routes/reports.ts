@@ -6,6 +6,7 @@ import { buildWaText, getDailyBundle } from '../services/export-service.js';
 import { sendDailyRecap } from '../services/scheduler-service.js';
 import { sendPersonnelReminder } from '../services/reminder-service.js';
 import { buildCustomRecap } from '../services/custom-recap-service.js';
+import { buildCustomRecapExport } from '../services/custom-recap-export-service.js';
 
 export const reportsRouter = Router();
 
@@ -43,21 +44,31 @@ reportsRouter.post('/personnel-reminder', async (req, res) => {
   res.json(await sendPersonnelReminder(body));
 });
 
-reportsRouter.get('/custom', async (req, res) => {
-  const q = z
-    .object({
-      from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-      to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-      // Menerima "13", "07:15", "7.15" — lihat server/lib/time.ts.
-      hourFrom: z.string().trim().max(10).optional(),
-      hourTo: z.string().trim().max(10).optional(),
-      category: z
-        .enum(['ALL', 'POS_PAGI', 'PENGATURAN', 'PENJAGAAN', 'PENGAWALAN', 'PATROLI', 'PENEGAKKAN', 'REGIDENT', 'PENYULUHAN', 'DIKMAS_LANTAS', 'LAINNYA'])
-        .optional(),
-      rosterOnly: z.coerce.boolean().optional()
-    })
-    .parse(req.query);
+const customRecapQuerySchema = z.object({
+  from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  // Menerima "13", "07:15", "7.15" — lihat server/lib/time.ts.
+  hourFrom: z.string().trim().max(10).optional(),
+  hourTo: z.string().trim().max(10).optional(),
+  category: z
+    .enum([
+      'ALL',
+      'POS_PAGI',
+      'PENGATURAN',
+      'PENJAGAAN',
+      'PENGAWALAN',
+      'PATROLI',
+      'PENEGAKKAN',
+      'REGIDENT',
+      'PENYULUHAN',
+      'DIKMAS_LANTAS',
+      'LAINNYA'
+    ])
+    .optional(),
+  rosterOnly: z.coerce.boolean().optional()
+});
 
+function customRecapParams(q: z.infer<typeof customRecapQuerySchema>) {
   const startMinutes = parseOptionalTime(q.hourFrom, 'jam mulai');
   const endMinutes = parseOptionalTime(q.hourTo, 'jam selesai');
   const to = q.to ?? q.from;
@@ -67,15 +78,29 @@ reportsRouter.get('/custom', async (req, res) => {
       'Jam selesai harus setelah jam mulai bila tanggal mulai dan tanggal selesai sama.'
     );
   }
+  return {
+    from: q.from,
+    to,
+    startMinutes,
+    endMinutes,
+    category: q.category,
+    rosterOnly: q.rosterOnly
+  };
+}
 
-  res.json(
-    await buildCustomRecap({
-      from: q.from,
-      to,
-      startMinutes,
-      endMinutes,
-      category: q.category,
-      rosterOnly: q.rosterOnly
-    })
-  );
+reportsRouter.get('/custom/export', async (req, res) => {
+  const q = customRecapQuerySchema
+    .extend({ format: z.enum(['xlsx', 'docx', 'pdf']) })
+    .parse(req.query);
+  const recap = await buildCustomRecap(customRecapParams(q));
+  const file = await buildCustomRecapExport(recap, q.format);
+  res.setHeader('Content-Type', file.contentType);
+  res.setHeader('Content-Disposition', `attachment; filename="${file.filename}"`);
+  res.setHeader('Cache-Control', 'no-store');
+  res.send(file.buffer);
+});
+
+reportsRouter.get('/custom', async (req, res) => {
+  const q = customRecapQuerySchema.parse(req.query);
+  res.json(await buildCustomRecap(customRecapParams(q)));
 });

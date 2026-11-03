@@ -79,6 +79,7 @@ export interface CustomRecapResult {
       displayName: string;
       rank: string | null;
       rankNrp: string | null;
+      category: string;
       photos: number;
       links: number;
       firstAt: string;
@@ -90,6 +91,7 @@ export interface CustomRecapResult {
       displayName: string;
       rank: string | null;
       rankNrp: string | null;
+      category: string;
       phone: string | null;
     }>;
   };

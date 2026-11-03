@@ -1,5 +1,14 @@
 import * as React from 'react';
-import { ClipboardCopy, Loader2, RefreshCw, Search } from 'lucide-react';
+import {
+  ClipboardCopy,
+  Download,
+  FileSpreadsheet,
+  FileText,
+  FileType2,
+  Loader2,
+  RefreshCw,
+  Search
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,7 +21,15 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select';
-import { api, copyText, errorMessage } from '@/lib/api';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu';
+import { api, copyText, downloadFile, errorMessage } from '@/lib/api';
 import { formatNumber, normalizeTimeInput } from '@/lib/format';
 
 type Category =
@@ -64,6 +81,7 @@ export function RecapPanel() {
   const [category, setCategory] = React.useState<Category>('ALL');
   const [loading, setLoading] = React.useState(false);
   const [result, setResult] = React.useState<CustomRecapResponse | null>(null);
+  const [exportQuery, setExportQuery] = React.useState<string | null>(null);
 
   const run = async () => {
     const start = normalizeTimeInput(hourFrom);
@@ -89,6 +107,7 @@ export function RecapPanel() {
       if (end !== '') params.set('hourTo', end);
       const data = await api.get<CustomRecapResponse>(`/reports/custom?${params.toString()}`);
       setResult(data);
+      setExportQuery(params.toString());
       setHourFrom(start);
       setHourTo(end);
       toast.success('Rekap dibuat', {
@@ -99,6 +118,12 @@ export function RecapPanel() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const exportRecap = (format: 'xlsx' | 'docx' | 'pdf') => {
+    if (!exportQuery) return;
+    downloadFile(`/api/reports/custom/export?format=${format}&${exportQuery}`);
+    toast.success(`Menyiapkan laporan ${format.toUpperCase()}`);
   };
 
   return (
@@ -206,9 +231,34 @@ export function RecapPanel() {
                   {result.personnel.rosterTotal} personel melapor
                 </p>
               </div>
-              <Button size="sm" variant="ghost" onClick={() => void run()} disabled={loading}>
-                <RefreshCw className={loading ? 'h-3.5 w-3.5 animate-spin' : 'h-3.5 w-3.5'} /> Muat ulang
-              </Button>
+              <div className="flex items-center gap-2">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button size="sm" variant="outline" disabled={!exportQuery}>
+                      <Download className="h-3.5 w-3.5" /> Ekspor
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuLabel>Format laporan</DropdownMenuLabel>
+                    <DropdownMenuItem onClick={() => exportRecap('xlsx')}>
+                      <FileSpreadsheet className="h-4 w-4 text-success" /> Excel (.xlsx)
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => exportRecap('docx')}>
+                      <FileText className="h-4 w-4 text-info" /> Word (.docx)
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => exportRecap('pdf')}>
+                      <FileType2 className="h-4 w-4 text-destructive" /> PDF (.pdf)
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel className="text-[9px] font-normal text-muted-foreground">
+                      Isi mengikuti hasil rekap yang sedang tampil.
+                    </DropdownMenuLabel>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <Button size="sm" variant="ghost" onClick={() => void run()} disabled={loading}>
+                  <RefreshCw className={loading ? 'h-3.5 w-3.5 animate-spin' : 'h-3.5 w-3.5'} /> Muat ulang
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
