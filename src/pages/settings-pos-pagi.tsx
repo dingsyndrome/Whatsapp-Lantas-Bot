@@ -24,19 +24,11 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@/components/ui/select';
+import { PersonnelCombobox } from '@/components/sigap/personnel-combobox';
 import { useApi } from '@/src/hooks/use-api';
 import { api, errorMessage } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { formatNumber } from '@/lib/format';
-
-const EMPTY = '__kosong__';
 
 function assignmentLabel(assignment: PosPagiAssignmentDTO): string {
   return `${assignment.rank ? `${assignment.rank} ` : ''}${assignment.name}`;
@@ -88,7 +80,14 @@ export function PosPagiPanel() {
 
   const personnelOptions = (personnelApi.data?.items ?? [])
     .slice()
-    .sort((a, b) => a.name.localeCompare(b.name));
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((person) => ({
+      id: person.id,
+      name: person.name,
+      rank: person.rank,
+      nrp: person.nrp,
+      jabatan: person.jabatan
+    }));
 
   const upload = async () => {
     if (!file) return;
@@ -119,12 +118,12 @@ export function PosPagiPanel() {
 
   const saveAssignment = async (assignment: PosPagiAssignmentDTO) => {
     const value = draft[assignment.id];
-    if (!value) return;
+    if (value === undefined) return;
     setSavingId(assignment.id);
     try {
       const updated = await api.patch<PosPagiListDTO>(
         `/pos-pagi/assignments/${assignment.id}`,
-        { personnelId: value === EMPTY ? null : value }
+        { personnelId: value || null }
       );
       listApi.setData(updated);
       setDraft((current) => {
@@ -253,31 +252,18 @@ export function PosPagiPanel() {
                       {post?.name ?? 'PADAL'} · {assignment.jabatan ?? assignment.role}
                     </p>
                   </div>
-                  <Select
+                  <PersonnelCombobox
                     value={draft[assignment.id] ?? ''}
-                    onValueChange={(value) =>
+                    options={personnelOptions}
+                    onChange={(value) =>
                       setDraft((current) => ({ ...current, [assignment.id]: value }))
                     }
-                  >
-                    <SelectTrigger className="h-8 text-[10px]">
-                      <SelectValue placeholder="Pilih personel roster" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={EMPTY}>Kosongkan / belum cocok</SelectItem>
-                      {personnelOptions.map((person) => (
-                        <SelectItem key={person.id} value={person.id}>
-                          {person.rank ? `${person.rank} ` : ''}
-                          {person.name}
-                          {person.jabatan ? ` · ${person.jabatan}` : ''}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  />
                   <Button
                     size="sm"
                     className="h-8"
                     onClick={() => void saveAssignment(assignment)}
-                    disabled={!draft[assignment.id] || savingId === assignment.id}
+                    disabled={draft[assignment.id] === undefined || savingId === assignment.id}
                   >
                     {savingId === assignment.id ? (
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -326,30 +312,18 @@ export function PosPagiPanel() {
                     {post?.name ?? 'PADAL'} · terhubung: {assignment.personnelName ?? 'belum cocok'}
                   </p>
                 </div>
-                <Select
+                <PersonnelCombobox
                   value={draft[assignment.id] ?? assignment.personnelId ?? ''}
-                  onValueChange={(value) =>
+                  options={personnelOptions}
+                  onChange={(value) =>
                     setDraft((current) => ({ ...current, [assignment.id]: value }))
                   }
-                >
-                  <SelectTrigger className="h-8 text-[10px]">
-                    <SelectValue placeholder="Pilih personel roster" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={EMPTY}>Kosongkan / belum cocok</SelectItem>
-                    {personnelOptions.map((person) => (
-                      <SelectItem key={person.id} value={person.id}>
-                        {person.rank ? `${person.rank} ` : ''}
-                        {person.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                />
                 <Button
                   size="sm"
                   className="h-8"
                   onClick={() => void saveAssignment(assignment)}
-                  disabled={!draft[assignment.id] || savingId === assignment.id}
+                  disabled={draft[assignment.id] === undefined || savingId === assignment.id}
                 >
                   {savingId === assignment.id ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
