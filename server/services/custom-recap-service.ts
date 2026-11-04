@@ -46,6 +46,11 @@ export interface CustomRecapActivity {
   supervisorSandi: string | null;
   supervisorName: string | null;
   supervisorRank: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  posPagiName: string | null;
+  posPagiDistanceMeters: number | null;
+  posPagiLocationStatus: PosPagiLocationStatus | null;
 }
 
 export type PosPagiLocationStatus =
@@ -239,20 +244,17 @@ export async function buildCustomRecap(params: CustomRecapParams): Promise<Custo
     resolveSandiAssignments()
   ]);
 
-  const posPagiPosts =
-    category === 'POS_PAGI'
-      ? await prisma.posPagi.findMany({
-          where: { active: true },
-          orderBy: [{ order: 'asc' }, { name: 'asc' }],
-          include: {
-            assignments: {
-              where: { active: true },
-              orderBy: [{ no: 'asc' }],
-              include: { personnel: true }
-            }
-          }
-        })
-      : [];
+  const posPagiPosts = await prisma.posPagi.findMany({
+    where: { active: true },
+    orderBy: [{ order: 'asc' }, { name: 'asc' }],
+    include: {
+      assignments: {
+        where: { active: true },
+        orderBy: [{ no: 'asc' }],
+        include: { personnel: true }
+      }
+    }
+  });
   const posPagiPadal =
     category === 'POS_PAGI'
       ? await prisma.posPagiAssignment.findMany({
@@ -261,6 +263,22 @@ export async function buildCustomRecap(params: CustomRecapParams): Promise<Custo
           include: { personnel: true }
         })
       : [];
+
+  const posAssignmentByPersonnel = new Map<
+    string,
+    { postName: string; latitude: number | null; longitude: number | null; radiusMeters: number }
+  >();
+  for (const post of posPagiPosts) {
+    for (const assignment of post.assignments) {
+      if (!assignment.personnelId || posAssignmentByPersonnel.has(assignment.personnelId)) continue;
+      posAssignmentByPersonnel.set(assignment.personnelId, {
+        postName: post.name,
+        latitude: post.latitude,
+        longitude: post.longitude,
+        radiusMeters: post.radiusMeters
+      });
+    }
+  }
 
   const directory = new PersonnelDirectory(
     roster.map((person) => ({
@@ -303,6 +321,25 @@ export async function buildCustomRecap(params: CustomRecapParams): Promise<Custo
     // Nama pada watermark ("Nama: ...") adalah subjek laporan; pengirim hanya
     // cadangan bila nama di foto tidak terbaca.
     const person = resolvePhotoPerson(photo, directory, roster);
+    const position = person ? posAssignmentByPersonnel.get(person.id) : undefined;
+    let posPagiDistanceMeters: number | null = null;
+    let posPagiLocationStatus: PosPagiLocationStatus | null = null;
+    if (position) {
+      if (photo.latitude === null || photo.longitude === null) {
+        posPagiLocationStatus = 'TANPA_KOORDINAT';
+      } else if (position.latitude === null || position.longitude === null) {
+        posPagiLocationStatus = 'TANPA_TITIK';
+      } else {
+        posPagiDistanceMeters = distanceMeters(
+          position.latitude,
+          position.longitude,
+          photo.latitude,
+          photo.longitude
+        );
+        posPagiLocationStatus =
+          posPagiDistanceMeters <= position.radiusMeters ? 'SESUAI' : 'TIDAK_SESUAI';
+      }
+    }
     return {
       id: photo.id,
       at: (photo.capturedAt ?? photo.createdAt).toISOString(),
@@ -317,7 +354,12 @@ export async function buildCustomRecap(params: CustomRecapParams): Promise<Custo
       matchStatus: photo.matchStatus,
       supervisorSandi: photo.supervisorSandi,
       supervisorName: current?.name ?? photo.supervisorName,
-      supervisorRank: current?.rank ?? photo.supervisorRank
+      supervisorRank: current?.rank ?? photo.supervisorRank,
+      latitude: photo.latitude ?? null,
+      longitude: photo.longitude ?? null,
+      posPagiName: position?.postName ?? null,
+      posPagiDistanceMeters,
+      posPagiLocationStatus
     };
   });
 
@@ -483,7 +525,7 @@ export async function buildCustomRecap(params: CustomRecapParams): Promise<Custo
                 : !post || post.latitude === null || post.longitude === null
                   ? 'TANPA_TITIK'
                   : nearest
-                    ? nearest.distance <= (post?.radiusMeters ?? 100)
+                    ? nearest.distance <= (post?.radiusMeters ?? 10)
                       ? 'SESUAI'
                       : 'TIDAK_SESUAI'
                     : 'TANPA_KOORDINAT';

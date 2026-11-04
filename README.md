@@ -605,8 +605,10 @@ Panel **Settings → Rekap Kustom** menyediakan tombol **Ekspor** setelah rekap
 ditampilkan. Format yang tersedia:
 
 - **Excel (`.xlsx`)** — sheet Ringkasan, Kegiatan, Sudah Melapor, Belum
-  Melapor, Perwira Pengawas, dan Supervisi. Untuk rekap **Pos Pagi** ditambah
-  Rekap Pos Pagi, Anggota Pos Pagi, Tidak Sesuai Titik, dan Belum Terhubung.
+  Melapor, Perwira Pengawas, dan Supervisi. Sheet **Kegiatan** memuat kolom
+  **GPS Laporan**, **Pos Pagi**, **Jarak (m)**, dan **Status Titik** bila
+  personel terdaftar di pos. Untuk rekap **Pos Pagi** ditambah Rekap Pos Pagi,
+  Anggota Pos Pagi, Tidak Sesuai Titik, dan Belum Terhubung.
 - **Word (`.docx`)** — dokumen A4 landscape dengan tabel ringkasan dan rincian
   kegiatan/personel.
 - **PDF (`.pdf`)** — layout A4 landscape, tabel berulang di halaman baru, dan
@@ -629,8 +631,9 @@ untuk semua baris di dalamnya, dan nilai `PADAL` berarti perwira tanpa titik.
 - Nama dicocokkan ke roster secara ketat. Nama singkat yang masih diragukan
   ditandai **nama singkat**; nama yang tidak cocok bisa dihubungkan manual di
   panel yang sama.
-- Radius default **100 meter**. Laporan di luar radius ditandai
-  **tidak sesuai titik**; laporan tanpa koordinat ditandai terpisah.
+- Radius default **10 meter** (dapat diubah 5–5000 m lewat API/DB). Laporan di
+  luar radius ditandai **tidak sesuai titik**; laporan tanpa koordinat
+  ditandai terpisah.
 - Pilih kategori **Pos pagi (per titik)** di **Settings → Rekap Kustom**.
   Excel menambahkan sheet **Rekap Pos Pagi**, **Anggota Pos Pagi**,
   **Tidak Sesuai Titik**, dan **Belum Terhubung**. Ringkasan serta daftar

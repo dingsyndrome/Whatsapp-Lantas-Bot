@@ -465,8 +465,8 @@ export async function updatePosPagiPost(
   if (input.name !== undefined && !input.name.trim()) {
     throw new HttpError(400, 'Nama pos tidak boleh kosong.');
   }
-  if (input.radiusMeters !== undefined && (input.radiusMeters < 10 || input.radiusMeters > 5_000)) {
-    throw new HttpError(400, 'Radius harus antara 10 dan 5000 meter.');
+  if (input.radiusMeters !== undefined && (input.radiusMeters < 5 || input.radiusMeters > 5_000)) {
+    throw new HttpError(400, 'Radius harus antara 5 dan 5000 meter.');
   }
   await prisma.posPagi.update({
     where: { id: postId },

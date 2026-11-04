@@ -42,7 +42,7 @@ const postBody = z.object({
   name: z.string().trim().min(1).max(200).optional(),
   latitude: z.number().min(-90).max(90).nullable().optional(),
   longitude: z.number().min(-180).max(180).nullable().optional(),
-  radiusMeters: z.number().int().min(10).max(5000).optional(),
+  radiusMeters: z.number().int().min(5).max(5000).optional(),
   active: z.boolean().optional()
 });
 

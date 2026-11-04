@@ -33,7 +33,12 @@ const recap: CustomRecapResult = {
       matchStatus: 'MATCHED',
       supervisorSandi: '12.1',
       supervisorName: 'IVAN DANARA OKTAVIAN',
-      supervisorRank: 'AKP'
+      supervisorRank: 'AKP',
+      latitude: -8.05,
+      longitude: 111.9,
+      posPagiName: 'POS A',
+      posPagiDistanceMeters: 8,
+      posPagiLocationStatus: 'SESUAI'
     },
     {
       id: 'a2',
@@ -47,7 +52,12 @@ const recap: CustomRecapResult = {
       matchStatus: 'PARTIAL_MATCH',
       supervisorSandi: null,
       supervisorName: null,
-      supervisorRank: null
+      supervisorRank: null,
+      latitude: null,
+      longitude: null,
+      posPagiName: null,
+      posPagiDistanceMeters: null,
+      posPagiLocationStatus: null
     }
   ],
   supervisors: [
@@ -129,6 +139,10 @@ describe('export rekap kustom', () => {
     ]);
     const activities = workbook.getWorksheet('Kegiatan');
     expect(activities?.getCell('F2').value).toBe('BRIPKA ANDI SISCA');
+    expect(activities?.getCell('I2').value).toBe('-8.05, 111.9');
+    expect(activities?.getCell('J2').value).toBe('POS A');
+    expect(activities?.getCell('K2').value).toBe(8);
+    expect(activities?.getCell('L2').value).toBe('Sesuai titik');
     const pending = workbook.getWorksheet('Belum Melapor');
     expect(pending?.getCell('B2').value).toBe('AIPDA IMA SAFITRI');
     // Perwira tidak masuk daftar personel yang belum melapor.
@@ -203,6 +217,10 @@ describe('export rekap kustom', () => {
     );
     expect(workbook.getWorksheet('Anggota Pos Pagi')?.getCell('D2').value).toBe('Sudah lapor');
     expect(workbook.getWorksheet('Anggota Pos Pagi')?.getCell('I2').value).toBe('Tidak sesuai titik');
+    expect(workbook.getWorksheet('Anggota Pos Pagi')?.getCell('K2').value).toBe('-8.2, 112');
+    expect(workbook.getWorksheet('Anggota Pos Pagi')?.getCell('L2').value).toBe(
+      '-8.058888, 111.907502'
+    );
     expect(workbook.getWorksheet('Tidak Sesuai Titik')?.getCell('B2').value).toBe('DEPAN SMPN 6');
   });
 

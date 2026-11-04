@@ -96,7 +96,13 @@ function activityRows(recap: CustomRecapResult): Array<Array<string | number>> {
       activity.unitName ?? '-',
       activity.senderLabel,
       activity.matchStatus,
-      formatRankName(activity.supervisorRank, activity.supervisorName) || '-'
+      formatRankName(activity.supervisorRank, activity.supervisorName) || '-',
+      activity.latitude !== null && activity.longitude !== null
+        ? `${activity.latitude}, ${activity.longitude}`
+        : '-',
+      activity.posPagiName ?? '-',
+      activity.posPagiDistanceMeters ?? '-',
+      activity.posPagiLocationStatus ? posPagiLocationLabel(activity.posPagiLocationStatus) : '-'
     ]);
 }
 
@@ -131,7 +137,13 @@ function posPagiRows(recap: CustomRecapResult): Array<Array<string | number>> {
         person.distanceMeters ?? '-',
         post.radiusMeters,
         posPagiLocationLabel(person.locationStatus),
-        person.matchMethod ?? '-'
+        person.matchMethod ?? '-',
+        person.reportLatitude !== null && person.reportLongitude !== null
+          ? `${person.reportLatitude}, ${person.reportLongitude}`
+          : '-',
+        post.latitude !== null && post.longitude !== null
+          ? `${post.latitude}, ${post.longitude}`
+          : '-'
       ]);
     }
   }
@@ -147,7 +159,11 @@ function posPagiRows(recap: CustomRecapResult): Array<Array<string | number>> {
       '-',
       '-',
       posPagiLocationLabel(person.locationStatus),
-      person.matchMethod ?? '-'
+      person.matchMethod ?? '-',
+      person.reportLatitude !== null && person.reportLongitude !== null
+        ? `${person.reportLatitude}, ${person.reportLongitude}`
+        : '-',
+      '-'
     ]);
   }
   return rows;
@@ -325,9 +341,22 @@ export async function buildCustomRecapXlsx(recap: CustomRecapResult): Promise<Bu
   addExcelSheet(
     workbook,
     'Kegiatan',
-    ['No', 'Waktu', 'Kategori', 'Lokasi', 'Unit', 'Pengirim', 'Status Match', 'Perwira Pengawas'],
+    [
+      'No',
+      'Waktu',
+      'Kategori',
+      'Lokasi',
+      'Unit',
+      'Pengirim',
+      'Status Match',
+      'Perwira Pengawas',
+      'GPS Laporan',
+      'Pos Pagi',
+      'Jarak (m)',
+      'Status Titik'
+    ],
     activityRows(recap),
-    [6, 10, 28, 52, 30, 32, 18, 34]
+    [6, 10, 28, 46, 30, 32, 18, 30, 26, 34, 10, 18]
   );
   addExcelSheet(
     workbook,
@@ -375,10 +404,12 @@ export async function buildCustomRecapXlsx(recap: CustomRecapResult): Promise<Bu
         'Jarak (m)',
         'Radius (m)',
         'Status Titik',
-        'Metode Cocok'
+        'Metode Cocok',
+        'Titik Laporan',
+        'Titik Pos'
       ],
       posPagiRows(recap),
-      [6, 32, 36, 14, 10, 42, 10, 10, 18, 14]
+      [6, 32, 36, 14, 10, 42, 10, 10, 18, 14, 26, 26]
     );
     addExcelSheet(
       workbook,
@@ -514,7 +545,7 @@ export async function buildCustomRecapDocx(recap: CustomRecapResult): Promise<Bu
     activityRows(recap).length > 0
       ? docTable(
           ['No', 'Waktu', 'Kategori', 'Lokasi', 'Unit', 'Pengirim', 'Status', 'Pengawas'],
-          activityRows(recap)
+          activityRows(recap).map((row) => row.slice(0, 8))
         )
       : new Paragraph({ children: [new TextRun({ text: 'Tidak ada kegiatan pada rentang ini.', italics: true })] })
   );
@@ -692,7 +723,7 @@ export async function buildCustomRecapPdf(recap: CustomRecapResult): Promise<Buf
       { label: 'Status', width: 60 },
       { label: 'Pengawas', width: 130 }
     ],
-    activityRows(recap)
+    activityRows(recap).map((row) => row.slice(0, 8))
   );
 
   pdfSection(doc, 'PERWIRA PENGAWAS');

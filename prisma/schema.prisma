@@ -220,7 +220,7 @@ model PosPagi {
   name         String              @unique
   latitude     Float?
   longitude    Float?
-  radiusMeters Int                 @default(100)
+  radiusMeters Int                 @default(10)
   order        Int                 @default(0)
   active       Boolean             @default(true)
   source       String              @default("import")
