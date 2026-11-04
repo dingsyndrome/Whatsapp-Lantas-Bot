@@ -58,16 +58,24 @@ function editDistance(left: string, right: string): number {
  * - beda satu huruf untuk token panjang (ROHMAN ↔ ROCHMAN, ARIF ↔ ARIEF).
  * Tidak dipakai untuk nama satu kata tanpa konteks.
  */
-function tokenMatches(source: string, target: string, allowFuzzy = true): boolean {
+function tokenMatches(
+  source: string,
+  target: string,
+  allowFuzzy = true,
+  allowWideInitial = false
+): boolean {
   if (!source || !target) return false;
   if (source === target) return true;
 
   // Inisial di sisi Sprin: "M" → MUHAMMAD, "K" → KURNIAWAN.
   if (source.length === 1) return source[0] === target[0];
-  // Inisial di sisi roster hanya boleh mewakili singkatan pendek (HS → H,
-  // DWI → D), bukan nama panjang yang kebetulan berawalan sama
-  // (MIFTAHUROHMAN → M).
-  if (target.length === 1) return source.length <= 3 && source[0] === target[0];
+  // Inisial di sisi roster boleh mewakili kata apa pun pada posisi setelah
+  // token pertama (IRWAN DWI C), tetapi pada token pertama hanya bila sumber
+  // memang inisial/singkatan pendek — bukan nama panjang (MIFTAHUROHMAN → M).
+  if (target.length === 1) {
+    if (!allowWideInitial && source.length > 3) return false;
+    return source[0] === target[0];
+  }
 
   // Singkatan hanya boleh arah source → target (ARI → ARIF), bukan target
   // pendek yang kebetulan menjadi awalan source (NURSAID → NUR).
@@ -103,12 +111,20 @@ function matchesAbbreviatedName(sprinName: string, rosterName: string): boolean 
   const source = nameTokens(sprinName);
   const target = nameTokens(rosterName);
   if (source.length === 0 || target.length === 0) return false;
-  if (source.length > target.length) return false;
+
+  // Nama di pos lebih panjang dari roster (AGENG ARIF PRISWANTO → AGENG ARIF):
+  // hanya bila seluruh token roster adalah awalan yang cocok dan selisihnya
+  // maksimal dua token.
+  if (source.length > target.length) {
+    if (target.length < 2 || source.length - target.length > 2) return false;
+    for (let index = 0; index < target.length; index += 1) {
+      if (!tokenMatches(source[index]!, target[index]!, true, true)) return false;
+    }
+    return true;
+  }
 
   // Abaikan inisial di awal nama roster (mis. D.V. ADI NUGROHO) saat mencari
   // token pertama yang bermakna, tetapi tetap izinkan inisial itu dicocokkan.
-  // Lewati prefiks nama pendek seperti "MOH", "D.V.", atau "M." saat mencari
-  // token pertama, tetapi tetap izinkan prefiks itu dicocokkan sebagai inisial.
   const meaningfulStart = Math.max(
     0,
     target.findIndex((token) => token.length > 3)
@@ -119,28 +135,45 @@ function matchesAbbreviatedName(sprinName: string, rosterName: string): boolean 
     if (
       singleWord
         ? singleTokenMatches(source[0]!, target[index]!)
-        : tokenMatches(source[0]!, target[index]!, true)
+        : tokenMatches(source[0]!, target[index]!, true, true)
     ) {
       firstIndex = index;
       break;
     }
   }
-  if (firstIndex < 0) return false;
 
-  let targetIndex = firstIndex + 1;
-  for (let sourceIndex = 1; sourceIndex < source.length; sourceIndex += 1) {
-    let found = false;
-    while (targetIndex < target.length) {
-      if (tokenMatches(source[sourceIndex]!, target[targetIndex]!, true)) {
-        found = true;
+  let ordered = firstIndex >= 0;
+  if (ordered) {
+    let targetIndex = firstIndex + 1;
+    for (let sourceIndex = 1; sourceIndex < source.length; sourceIndex += 1) {
+      let found = false;
+      while (targetIndex < target.length) {
+        if (tokenMatches(source[sourceIndex]!, target[targetIndex]!, true, true)) {
+          found = true;
+          targetIndex += 1;
+          break;
+        }
         targetIndex += 1;
+      }
+      if (!found) {
+        ordered = false;
         break;
       }
-      targetIndex += 1;
     }
-    if (!found) return false;
   }
-  return true;
+  if (ordered) return true;
+
+  // Nama di pos hanya bagian belakang roster (FERI ISWANTO → MUHAMAD FERI
+  // ISWANTO). Hanya untuk nama multi-token dan semua token harus cocok.
+  if (source.length >= 2 && target.length > source.length) {
+    const offset = target.length - source.length;
+    for (let index = 0; index < source.length; index += 1) {
+      if (!tokenMatches(source[index]!, target[offset + index]!, true, true)) return false;
+    }
+    return true;
+  }
+
+  return false;
 }
 
 /**

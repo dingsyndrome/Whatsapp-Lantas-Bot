@@ -100,6 +100,107 @@ function activityRows(recap: CustomRecapResult): Array<Array<string | number>> {
     ]);
 }
 
+function posPagiStatusLabel(status: string): string {
+  if (status === 'SUBMITTED') return 'Sudah lapor';
+  if (status === 'NOT_SUBMITTED') return 'Belum lapor';
+  return 'Belum terhubung';
+}
+
+function posPagiLocationLabel(status: string): string {
+  if (status === 'SESUAI') return 'Sesuai titik';
+  if (status === 'TIDAK_SESUAI') return 'Tidak sesuai titik';
+  if (status === 'TANPA_KOORDINAT') return 'Tanpa koordinat';
+  if (status === 'TANPA_TITIK') return 'Tanpa titik pos';
+  return 'Tidak melapor';
+}
+
+function posPagiRows(recap: CustomRecapResult): Array<Array<string | number>> {
+  if (!recap.posPagi) return [];
+  const rows: Array<Array<string | number>> = [];
+  let index = 0;
+  for (const post of recap.posPagi.posts) {
+    for (const person of post.personnel) {
+      index += 1;
+      rows.push([
+        index,
+        post.name,
+        person.displayName,
+        posPagiStatusLabel(person.status),
+        person.reportAt ? timeOf(person.reportAt) : '-',
+        person.reportAddress ?? '-',
+        person.distanceMeters ?? '-',
+        post.radiusMeters,
+        posPagiLocationLabel(person.locationStatus),
+        person.matchMethod ?? '-'
+      ]);
+    }
+  }
+  for (const person of recap.posPagi.padal) {
+    index += 1;
+    rows.push([
+      index,
+      'PADAL',
+      person.displayName,
+      posPagiStatusLabel(person.status),
+      person.reportAt ? timeOf(person.reportAt) : '-',
+      person.reportAddress ?? '-',
+      '-',
+      '-',
+      posPagiLocationLabel(person.locationStatus),
+      person.matchMethod ?? '-'
+    ]);
+  }
+  return rows;
+}
+
+function posPagiSummaryRows(recap: CustomRecapResult): Array<Array<string | number>> {
+  if (!recap.posPagi) return [];
+  return recap.posPagi.posts.map((post, index) => [
+    index + 1,
+    post.name,
+    post.latitude ?? '-',
+    post.longitude ?? '-',
+    post.radiusMeters,
+    post.assigned,
+    post.submitted,
+    post.notSubmitted,
+    post.wrongLocation,
+    post.unmatched
+  ]);
+}
+
+function posPagiWrongRows(recap: CustomRecapResult): Array<Array<string | number>> {
+  if (!recap.posPagi) return [];
+  const rows: Array<Array<string | number>> = [];
+  for (const post of recap.posPagi.posts) {
+    for (const person of post.personnel) {
+      if (person.locationStatus !== 'TIDAK_SESUAI') continue;
+      rows.push([
+        rows.length + 1,
+        post.name,
+        person.displayName,
+        person.distanceMeters ?? '-',
+        post.radiusMeters,
+        person.reportAddress ?? '-',
+        person.reportAt ? timeOf(person.reportAt) : '-'
+      ]);
+    }
+  }
+  return rows;
+}
+
+function posPagiUnmatchedRows(recap: CustomRecapResult): Array<Array<string | number>> {
+  if (!recap.posPagi) return [];
+  return recap.posPagi.unmatched.map((person, index) => [
+    index + 1,
+    person.role === 'PADAL' ? 'PADAL' : 'Anggota pos',
+    person.name,
+    person.rank ?? '-',
+    '-',
+    'Nama belum cocok dengan roster'
+  ]);
+}
+
 function submittedRows(recap: CustomRecapResult): Array<Array<string | number>> {
   return submittedPersonnel(recap).map((person, index) => [
     index + 1,
@@ -204,6 +305,14 @@ export async function buildCustomRecapXlsx(recap: CustomRecapResult): Promise<Bu
   summary.addRow(['Perwira Pengawas', recap.counts.supervisors]);
   summary.addRow(['Anggota Sudah Melapor', submittedPersonnel(recap).length]);
   summary.addRow(['Anggota Belum Melapor', pendingPersonnel(recap).length]);
+  if (recap.posPagi) {
+    summary.addRow(['Pos Pagi', recap.posPagi.totals.posts]);
+    summary.addRow(['Anggota Terdaftar di Pos', recap.posPagi.totals.assigned]);
+    summary.addRow(['Lapor dari Pos', recap.posPagi.totals.submitted]);
+    summary.addRow(['Belum Lapor dari Pos', recap.posPagi.totals.notSubmitted]);
+    summary.addRow(['Tidak Sesuai Titik', recap.posPagi.totals.wrongLocation]);
+    summary.addRow(['Belum Terhubung ke Roster', recap.posPagi.totals.unmatched]);
+  }
   summary.eachRow((row, index) => {
     if (index === 1) return;
     const first = row.getCell(1);
@@ -234,6 +343,58 @@ export async function buildCustomRecapXlsx(recap: CustomRecapResult): Promise<Bu
     pendingRows(recap),
     [6, 36, 18]
   );
+  if (recap.posPagi) {
+    addExcelSheet(
+      workbook,
+      'Rekap Pos Pagi',
+      [
+        'No',
+        'Pos',
+        'Latitude',
+        'Longitude',
+        'Radius (m)',
+        'Anggota',
+        'Sudah Lapor',
+        'Belum Lapor',
+        'Tidak Sesuai Titik',
+        'Belum Terhubung'
+      ],
+      posPagiSummaryRows(recap),
+      [6, 40, 14, 14, 11, 10, 12, 12, 18, 17]
+    );
+    addExcelSheet(
+      workbook,
+      'Anggota Pos Pagi',
+      [
+        'No',
+        'Pos',
+        'Pangkat/Nama',
+        'Status Lapor',
+        'Waktu',
+        'Lokasi Laporan',
+        'Jarak (m)',
+        'Radius (m)',
+        'Status Titik',
+        'Metode Cocok'
+      ],
+      posPagiRows(recap),
+      [6, 32, 36, 14, 10, 42, 10, 10, 18, 14]
+    );
+    addExcelSheet(
+      workbook,
+      'Tidak Sesuai Titik',
+      ['No', 'Pos', 'Pangkat/Nama', 'Jarak (m)', 'Radius (m)', 'Lokasi Laporan', 'Waktu'],
+      posPagiWrongRows(recap),
+      [6, 36, 36, 10, 10, 46, 10]
+    );
+    addExcelSheet(
+      workbook,
+      'Belum Terhubung',
+      ['No', 'Jenis', 'Nama di Pos', 'Pangkat', 'Alasan'],
+      posPagiUnmatchedRows(recap),
+      [6, 16, 38, 14, 50]
+    );
+  }
   addExcelSheet(
     workbook,
     'Perwira Pengawas',

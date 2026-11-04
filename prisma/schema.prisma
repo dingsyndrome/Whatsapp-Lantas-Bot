@@ -8,41 +8,42 @@ datasource db {
 }
 
 model BotConfig {
-  id                 String   @id @default("singleton")
-  botName            String   @default("SIGAP Command Center")
-  waDriver           String   @default("mock")
-  autoReplyEnabled   Boolean  @default(true)
-  autoReplyTemplate  String   @default("Terima kasih {name} 🙏\nLaporan Anda sudah diterima SIGAP dan sedang diverifikasi otomatis.\n\n{summary}")
-  timemarkPrompt     String   @default("")
-  documentPrompt     String   @default("")
-  aiEnabled          Boolean  @default(false)
-  aiBaseUrl          String   @default("https://api.openai.com/v1")
-  aiApiKey           String   @default("")
-  aiModel            String   @default("gpt-4o-mini")
-  scheduleEnabled    Boolean  @default(false)
-  scheduleTime       String   @default("17:00")
-  scheduleTimezone   String   @default("Asia/Jakarta")
-  scheduleGroupJid   String   @default("")
-  scheduleGroupName  String   @default("")
-  minOcrConfidence   Int      @default(35)
-  notifyOnSprinUpload Boolean @default(true)
-  sprinNotifyMode    String   @default("review")
-  sprinNotifyDefaultFunctions String @default("[\"SATLANTAS\"]")
-  sprinNotifyExcludePerwira Boolean @default(true)
-  sprinNotifyTemplate String  @default("")
-  officerSandiMap    String   @default("{}")
-  turjawaliMatchingEnabled Boolean @default(true)
-  turjawaliKeywords   String   @default("")
-  gaturMorningStart   String   @default("06:00")
-  gaturMorningEnd     String   @default("08:00")
-  gaturEveningStart   String   @default("16:00")
-  gaturEveningEnd     String   @default("17:30")
-  patrolNightStart    String   @default("21:00")
-  patrolNightEnd      String   @default("04:00")
-  matchTimeToleranceMinutes Int @default(60)
-  matchLocationRadiusMeters Int  @default(500)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  id                          String   @id @default("singleton")
+  botName                     String   @default("SIGAP Command Center")
+  waDriver                    String   @default("mock")
+  autoReplyEnabled            Boolean  @default(true)
+  autoReplyTemplate           String   @default("Terima kasih {name} 🙏\nLaporan Anda sudah diterima SIGAP dan sedang diverifikasi otomatis.\n\n{summary}")
+  timemarkPrompt              String   @default("")
+  documentPrompt              String   @default("")
+  aiEnabled                   Boolean  @default(false)
+  aiBaseUrl                   String   @default("https://api.openai.com/v1")
+  aiApiKey                    String   @default("")
+  aiModel                     String   @default("gpt-4o-mini")
+  scheduleEnabled             Boolean  @default(false)
+  scheduleTime                String   @default("17:00")
+  scheduleTimezone            String   @default("Asia/Jakarta")
+  scheduleGroupJid            String   @default("")
+  scheduleGroupName           String   @default("")
+  minOcrConfidence            Int      @default(35)
+  notifyOnSprinUpload         Boolean  @default(true)
+  sprinNotifyMode             String   @default("review")
+  sprinNotifyDefaultFunctions String   @default("[\"SATLANTAS\"]")
+  sprinNotifyExcludePerwira   Boolean  @default(true)
+  sprinNotifyTemplate         String   @default("")
+  posPagiSeedVersion          String   @default("")
+  officerSandiMap             String   @default("{}")
+  turjawaliMatchingEnabled    Boolean  @default(true)
+  turjawaliKeywords           String   @default("")
+  gaturMorningStart           String   @default("06:00")
+  gaturMorningEnd             String   @default("08:00")
+  gaturEveningStart           String   @default("16:00")
+  gaturEveningEnd             String   @default("17:30")
+  patrolNightStart            String   @default("21:00")
+  patrolNightEnd              String   @default("04:00")
+  matchTimeToleranceMinutes   Int      @default(60)
+  matchLocationRadiusMeters   Int      @default(500)
+  createdAt                   DateTime @default(now())
+  updatedAt                   DateTime @updatedAt
 }
 
 model MonitoredGroup {
@@ -67,49 +68,49 @@ model WhatsAppSession {
 }
 
 model TimemarkPhoto {
-  id            String    @id @default(cuid())
-  source        String    @default("whatsapp")
-  messageId     String?   @unique
-  senderName    String
-  senderNumber  String
-  groupName     String?
-  imagePath     String
-  thumbnailPath String?
-  mimeType      String    @default("image/jpeg")
-  caption       String?
-  capturedAt    DateTime?
-  timeText      String?
-  dateText      String?
-  address       String?
-  village       String?
-  district      String?
-  regency       String?
-  province      String?
-  unitName      String?
-  latitude      Float?
-  longitude     Float?
-  coordinateText String?
-  rawText       String    @default("")
-  confidence    Float     @default(0)
-  aiUsed        Boolean   @default(false)
-  status        String    @default("parsed")
-  turjawaliType String    @default("LAINNYA")
-  matchStatus   String    @default("UNMATCHED")
-  matchScore    Int       @default(0)
-  matchedPersonnelId String?
-  matchedPersonnel   SprinPersonnel? @relation("TurjawaliMatchedPersonnel", fields: [matchedPersonnelId], references: [id], onDelete: SetNull)
-  matchNotes    String    @default("")
-  senderCaption String?
+  id                    String          @id @default(cuid())
+  source                String          @default("whatsapp")
+  messageId             String?         @unique
+  senderName            String
+  senderNumber          String
+  groupName             String?
+  imagePath             String
+  thumbnailPath         String?
+  mimeType              String          @default("image/jpeg")
+  caption               String?
+  capturedAt            DateTime?
+  timeText              String?
+  dateText              String?
+  address               String?
+  village               String?
+  district              String?
+  regency               String?
+  province              String?
+  unitName              String?
+  latitude              Float?
+  longitude             Float?
+  coordinateText        String?
+  rawText               String          @default("")
+  confidence            Float           @default(0)
+  aiUsed                Boolean         @default(false)
+  status                String          @default("parsed")
+  turjawaliType         String          @default("LAINNYA")
+  matchStatus           String          @default("UNMATCHED")
+  matchScore            Int             @default(0)
+  matchedPersonnelId    String?
+  matchedPersonnel      SprinPersonnel? @relation("TurjawaliMatchedPersonnel", fields: [matchedPersonnelId], references: [id], onDelete: SetNull)
+  matchNotes            String          @default("")
+  senderCaption         String?
   /// Nama personel yang tertulis pada watermark ('Nama: ...'), dipakai untuk atribusi laporan.
-  personnelName String?
-  isSupervision Boolean   @default(false)
-  supervisorSandi String?
-  supervisorName String?
-  supervisorRank String?
+  personnelName         String?
+  isSupervision         Boolean         @default(false)
+  supervisorSandi       String?
+  supervisorName        String?
+  supervisorRank        String?
   supervisorPersonnelId String?
-  sprinId       String?
-  sprin         Sprin?    @relation(fields: [sprinId], references: [id], onDelete: SetNull)
-  createdAt     DateTime  @default(now())
+  sprinId               String?
+  sprin                 Sprin?          @relation(fields: [sprinId], references: [id], onDelete: SetNull)
+  createdAt             DateTime        @default(now())
 
   @@index([createdAt])
   @@index([capturedAt])
@@ -120,31 +121,31 @@ model TimemarkPhoto {
 }
 
 model Sprin {
-  id             String            @id @default(cuid())
-  number         String            @unique
-  about          String?
-  dasar          String?
-  untuk          String?
-  activityDate   DateTime?
-  timeText       String?
-  place          String?
-  latitude       Float?
-  longitude      Float?
-  signatory      String?
-  signatoryRank  String?
-  filePath       String?
-  fileName       String?
-  mimeType       String?
-  source         String            @default("whatsapp")
-  rawText        String            @default("")
-  status         String            @default("active")
-  turjawaliType  String            @default("LAINNYA")
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
-  personnel      SprinPersonnel[]
-  links          LinkSubmission[]
-  timemarks      TimemarkPhoto[]
-  notification   SprinNotification?
+  id            String             @id @default(cuid())
+  number        String             @unique
+  about         String?
+  dasar         String?
+  untuk         String?
+  activityDate  DateTime?
+  timeText      String?
+  place         String?
+  latitude      Float?
+  longitude     Float?
+  signatory     String?
+  signatoryRank String?
+  filePath      String?
+  fileName      String?
+  mimeType      String?
+  source        String             @default("whatsapp")
+  rawText       String             @default("")
+  status        String             @default("active")
+  turjawaliType String             @default("LAINNYA")
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  personnel     SprinPersonnel[]
+  links         LinkSubmission[]
+  timemarks     TimemarkPhoto[]
+  notification  SprinNotification?
 
   @@index([activityDate])
   @@index([status])
@@ -152,58 +153,59 @@ model Sprin {
 }
 
 model NotificationFunction {
-  id            String   @id @default(cuid())
-  code          String   @unique
-  name          String
-  keywords      String   @default("[]")
-  excludePerwira Boolean @default(true)
-  active        Boolean  @default(true)
-  sortOrder     Int      @default(0)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id             String   @id @default(cuid())
+  code           String   @unique
+  name           String
+  keywords       String   @default("[]")
+  excludePerwira Boolean  @default(true)
+  active         Boolean  @default(true)
+  sortOrder      Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   @@index([active])
 }
 
 model SprinNotification {
-  id             String   @id @default(cuid())
-  sprinId        String   @unique
-  sprin          Sprin    @relation(fields: [sprinId], references: [id], onDelete: Cascade)
-  status         String   @default("draft")
-  functionCodes  String   @default("[\"SATLANTAS\"]")
-  excludePerwira Boolean  @default(true)
+  id             String    @id @default(cuid())
+  sprinId        String    @unique
+  sprin          Sprin     @relation(fields: [sprinId], references: [id], onDelete: Cascade)
+  status         String    @default("draft")
+  functionCodes  String    @default("[\"SATLANTAS\"]")
+  excludePerwira Boolean   @default(true)
   template       String?
-  overrides      String   @default("{}")
-  analysis       String   @default("{}")
-  requiresReview Boolean  @default(false)
-  reviewReasons  String   @default("[]")
+  overrides      String    @default("{}")
+  analysis       String    @default("{}")
+  requiresReview Boolean   @default(false)
+  reviewReasons  String    @default("[]")
   reviewNote     String?
   reviewedBy     String?
   reviewedAt     DateTime?
   sentAt         DateTime?
-  sentCount      Int      @default(0)
-  failedCount    Int      @default(0)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  sentCount      Int       @default(0)
+  failedCount    Int       @default(0)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   @@index([status])
 }
 
 model Personnel {
-  id        String   @id @default(cuid())
-  no        Int      @default(0)
-  name      String
-  rank      String?
-  nrp       String?
-  jabatan   String?
-  phone     String?
-  unit      String   @default("SATLANTAS")
-  category  String   @default("ANGGOTA")
-  sandi     String?
-  active    Boolean  @default(true)
-  source    String   @default("import")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                 String              @id @default(cuid())
+  no                 Int                 @default(0)
+  name               String
+  rank               String?
+  nrp                String?
+  jabatan            String?
+  phone              String?
+  unit               String              @default("SATLANTAS")
+  category           String              @default("ANGGOTA")
+  sandi              String?
+  active             Boolean             @default(true)
+  source             String              @default("import")
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  posPagiAssignments PosPagiAssignment[]
 
   @@index([name])
   @@index([nrp])
@@ -212,23 +214,63 @@ model Personnel {
   @@index([active])
 }
 
+/// Titik pos pagi beserta koordinat dan radius toleransi lokasi.
+model PosPagi {
+  id           String              @id @default(cuid())
+  name         String              @unique
+  latitude     Float?
+  longitude    Float?
+  radiusMeters Int                 @default(100)
+  order        Int                 @default(0)
+  active       Boolean             @default(true)
+  source       String              @default("import")
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  assignments  PosPagiAssignment[]
+
+  @@index([active])
+  @@index([order])
+}
+
+/// Anggota yang mengawaki satu pos pagi. posId null untuk PADAL/perwira.
+model PosPagiAssignment {
+  id          String     @id @default(cuid())
+  posId       String?
+  pos         PosPagi?   @relation(fields: [posId], references: [id], onDelete: SetNull)
+  personnelId String?
+  personnel   Personnel? @relation(fields: [personnelId], references: [id], onDelete: SetNull)
+  no          Int
+  name        String
+  rank        String?
+  jabatan     String?
+  role        String     @default("ANGGOTA")
+  matchStatus String     @default("UNMATCHED")
+  matchMethod String?
+  active      Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([posId, active])
+  @@index([personnelId])
+}
+
 model SprinPersonnel {
-  id        String   @id @default(cuid())
-  sprinId   String
-  sprin     Sprin    @relation(fields: [sprinId], references: [id], onDelete: Cascade)
-  no        Int
-  name      String
-  rankNrp   String?
-  rank      String?
-  nrp       String?
-  jabatan   String?
-  penugasan String?
-  ket       String?
-  phone     String?
-  notifiedAt DateTime?
-  page      Int      @default(1)
-  rawText   String   @default("")
-  createdAt DateTime @default(now())
+  id               String          @id @default(cuid())
+  sprinId          String
+  sprin            Sprin           @relation(fields: [sprinId], references: [id], onDelete: Cascade)
+  no               Int
+  name             String
+  rankNrp          String?
+  rank             String?
+  nrp              String?
+  jabatan          String?
+  penugasan        String?
+  ket              String?
+  phone            String?
+  notifiedAt       DateTime?
+  page             Int             @default(1)
+  rawText          String          @default("")
+  createdAt        DateTime        @default(now())
   matchedTimemarks TimemarkPhoto[] @relation("TurjawaliMatchedPersonnel")
 
   @@index([sprinId, no])
@@ -278,21 +320,21 @@ model Activity {
 
 /// Pengguna aplikasi: admin (akses penuh) atau manajer (izin terbatas).
 model AppUser {
-  id           String    @id @default(cuid())
+  id           String       @id @default(cuid())
   name         String
-  phone        String    @unique
+  phone        String       @unique
   /// Username untuk login username/password (opsional; admin memakai APP_USER).
-  username     String?   @unique
+  username     String?      @unique
   /// Hash scrypt password login (format: scrypt$salt$hash).
   passwordHash String?
-  role         String    @default("MANAGER")
+  role         String       @default("MANAGER")
   /// Daftar izin dipisah koma, mis. "timemark.correct,links.send".
-  permissions  String    @default("")
-  active       Boolean   @default(true)
+  permissions  String       @default("")
+  active       Boolean      @default(true)
   note         String?
   lastLoginAt  DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @default(now()) @updatedAt
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @default(now()) @updatedAt
   otpCodes     OtpCode[]
   sessions     AppSession[]
 
@@ -317,15 +359,15 @@ model OtpCode {
 
 /// Sesi login (token disimpan sebagai hash, cookie httpOnly di klien).
 model AppSession {
-  id         String   @id @default(cuid())
-  userId     String
-  user       AppUser  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tokenHash  String   @unique
-  expiresAt  DateTime
-  revokedAt  DateTime?
-  ip         String?
-  userAgent  String?
-  createdAt  DateTime @default(now())
+  id        String    @id @default(cuid())
+  userId    String
+  user      AppUser   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  ip        String?
+  userAgent String?
+  createdAt DateTime  @default(now())
 
   @@index([userId])
 }

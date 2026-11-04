@@ -10,6 +10,7 @@ import { reportsRouter } from './reports.js';
 import { authRouter, managersRouter } from './auth.js';
 import { eventsRouter } from './events.js';
 import { personnelRouter } from './personnel.js';
+import { posPagiRouter } from './pos-pagi.js';
 
 export const apiRouter = Router();
 
@@ -22,6 +23,7 @@ apiRouter.use('/sprin', sprinRouter);
 apiRouter.use('/links', linksRouter);
 apiRouter.use('/settings', settingsRouter);
 apiRouter.use('/personnel', personnelRouter);
+apiRouter.use('/pos-pagi', posPagiRouter);
 apiRouter.use('/wa', whatsappRouter);
 apiRouter.use('/exports', exportsRouter);
 apiRouter.use('/reports', reportsRouter);

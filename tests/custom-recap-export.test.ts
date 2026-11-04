@@ -19,6 +19,7 @@ const recap: CustomRecapResult = {
   },
   category: 'PENGATURAN',
   counts: { photos: 2, links: 1, activities: 2, supervisors: 1 },
+  posPagi: null,
   activities: [
     {
       id: 'a1',
@@ -132,6 +133,77 @@ describe('export rekap kustom', () => {
     expect(pending?.getCell('B2').value).toBe('AIPDA IMA SAFITRI');
     // Perwira tidak masuk daftar personel yang belum melapor.
     expect(pending?.rowCount).toBe(2);
+  });
+
+  it('menambahkan sheet pos pagi dan status titik', async () => {
+    const posRecap: CustomRecapResult = {
+      ...recap,
+      category: 'POS_PAGI',
+      posPagi: {
+        posts: [
+          {
+            id: 'pos-1',
+            name: 'DEPAN SMPN 6',
+            latitude: -8.058888,
+            longitude: 111.907502,
+            radiusMeters: 100,
+            assigned: 1,
+            submitted: 1,
+            notSubmitted: 0,
+            wrongLocation: 1,
+            unmatched: 0,
+            personnel: [
+              {
+                assignmentId: 'a-1',
+                personnelId: 'p-1',
+                name: 'SUWANTO',
+                displayName: 'AIPTU SUWANTO',
+                rank: 'AIPTU',
+                role: 'ANGGOTA',
+                status: 'SUBMITTED',
+                photos: 1,
+                links: 0,
+                times: ['07:10'],
+                firstAt: '2026-10-29T00:10:00.000Z',
+                lastAt: '2026-10-29T00:10:00.000Z',
+                reportAt: '2026-10-29T00:10:00.000Z',
+                reportLatitude: -8.2,
+                reportLongitude: 112,
+                reportAddress: 'Jalan Lain',
+                distanceMeters: 18705,
+                locationStatus: 'TIDAK_SESUAI',
+                matchMethod: 'name'
+              }
+            ]
+          }
+        ],
+        padal: [],
+        unmatched: [],
+        totals: {
+          posts: 1,
+          assigned: 1,
+          submitted: 1,
+          notSubmitted: 0,
+          wrongLocation: 1,
+          unmatched: 0,
+          padal: 0
+        }
+      }
+    };
+    const buffer = await buildCustomRecapXlsx(posRecap);
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(buffer as never);
+    expect(workbook.worksheets.map((sheet) => sheet.name)).toEqual(
+      expect.arrayContaining([
+        'Rekap Pos Pagi',
+        'Anggota Pos Pagi',
+        'Tidak Sesuai Titik',
+        'Belum Terhubung'
+      ])
+    );
+    expect(workbook.getWorksheet('Anggota Pos Pagi')?.getCell('D2').value).toBe('Sudah lapor');
+    expect(workbook.getWorksheet('Anggota Pos Pagi')?.getCell('I2').value).toBe('Tidak sesuai titik');
+    expect(workbook.getWorksheet('Tidak Sesuai Titik')?.getCell('B2').value).toBe('DEPAN SMPN 6');
   });
 
   it('membuat Word yang bisa dibaca kembali', async () => {

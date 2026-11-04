@@ -777,6 +777,50 @@ export interface SandiMapDTO {
   updatedAt: string | null;
 }
 
+export interface PosPagiAssignmentDTO {
+  id: string;
+  posId: string | null;
+  personnelId: string | null;
+  personnelName: string | null;
+  phone: string | null;
+  no: number;
+  name: string;
+  rank: string | null;
+  jabatan: string | null;
+  role: 'ANGGOTA' | 'PADAL';
+  matchStatus: 'MATCHED' | 'UNMATCHED' | 'DUPLICATE';
+  matchMethod: 'nrp' | 'name' | 'name-abbrev' | 'manual' | null;
+}
+
+export interface PosPagiDTO {
+  id: string;
+  name: string;
+  latitude: number | null;
+  longitude: number | null;
+  radiusMeters: number;
+  order: number;
+  active: boolean;
+  assignments: PosPagiAssignmentDTO[];
+}
+
+export interface PosPagiListDTO {
+  posts: PosPagiDTO[];
+  padalAssignments: PosPagiAssignmentDTO[];
+  totals: {
+    posts: number;
+    assigned: number;
+    matched: number;
+    unmatched: number;
+    padal: number;
+    withCoordinates: number;
+  };
+}
+
+export interface PosPagiImportResult extends PosPagiListDTO {
+  warnings: string[];
+  sheetName: string;
+}
+
 export interface SupervisionSignal {
   photoId: string;
   name: string | null;

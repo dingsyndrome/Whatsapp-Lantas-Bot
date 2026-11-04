@@ -2,6 +2,7 @@ import { endOfDay, format, startOfDay } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { prisma } from '../lib/prisma.js';
 import { formatTimeOfDay, resolveTimeRange } from '../lib/time.js';
+import { distanceMeters } from '../lib/geo.js';
 import { findSandiCodes } from './sandi-config.js';
 import { resolveSandiAssignments } from './personnel-service.js';
 import { PersonnelDirectory } from './personnel-directory.js';
@@ -47,10 +48,69 @@ export interface CustomRecapActivity {
   supervisorRank: string | null;
 }
 
+export type PosPagiLocationStatus =
+  | 'SESUAI'
+  | 'TIDAK_SESUAI'
+  | 'TANPA_KOORDINAT'
+  | 'TANPA_TITIK'
+  | 'TIDAK_MELAPOR';
+
+export interface CustomRecapPosPagiPerson {
+  assignmentId: string;
+  personnelId: string | null;
+  name: string;
+  displayName: string;
+  rank: string | null;
+  role: 'ANGGOTA' | 'PADAL';
+  status: 'SUBMITTED' | 'NOT_SUBMITTED' | 'UNMATCHED';
+  photos: number;
+  links: number;
+  times: string[];
+  firstAt: string;
+  lastAt: string;
+  reportAt: string | null;
+  reportLatitude: number | null;
+  reportLongitude: number | null;
+  reportAddress: string | null;
+  distanceMeters: number | null;
+  locationStatus: PosPagiLocationStatus;
+  matchMethod: string | null;
+}
+
+export interface CustomRecapPosPagiPost {
+  id: string;
+  name: string;
+  latitude: number | null;
+  longitude: number | null;
+  radiusMeters: number;
+  assigned: number;
+  submitted: number;
+  notSubmitted: number;
+  wrongLocation: number;
+  unmatched: number;
+  personnel: CustomRecapPosPagiPerson[];
+}
+
+export interface CustomRecapPosPagi {
+  posts: CustomRecapPosPagiPost[];
+  padal: CustomRecapPosPagiPerson[];
+  unmatched: CustomRecapPosPagiPerson[];
+  totals: {
+    posts: number;
+    assigned: number;
+    submitted: number;
+    notSubmitted: number;
+    wrongLocation: number;
+    unmatched: number;
+    padal: number;
+  };
+}
+
 export interface CustomRecapResult {
   range: { from: string; to: string; startTime: string | null; endTime: string | null };
   category: RecapCategory;
   counts: { photos: number; links: number; activities: number; supervisors: number };
+  posPagi: CustomRecapPosPagi | null;
   activities: CustomRecapActivity[];
   supervisors: Array<{
     sandi: string | null;
@@ -179,6 +239,29 @@ export async function buildCustomRecap(params: CustomRecapParams): Promise<Custo
     resolveSandiAssignments()
   ]);
 
+  const posPagiPosts =
+    category === 'POS_PAGI'
+      ? await prisma.posPagi.findMany({
+          where: { active: true },
+          orderBy: [{ order: 'asc' }, { name: 'asc' }],
+          include: {
+            assignments: {
+              where: { active: true },
+              orderBy: [{ no: 'asc' }],
+              include: { personnel: true }
+            }
+          }
+        })
+      : [];
+  const posPagiPadal =
+    category === 'POS_PAGI'
+      ? await prisma.posPagiAssignment.findMany({
+          where: { active: true, posId: null, role: 'PADAL' },
+          orderBy: [{ no: 'asc' }],
+          include: { personnel: true }
+        })
+      : [];
+
   const directory = new PersonnelDirectory(
     roster.map((person) => ({
       id: person.id,
@@ -295,6 +378,10 @@ export async function buildCustomRecap(params: CustomRecapParams): Promise<Custo
   }
 
   const submittedMap = new Map<string, { photos: number; links: number; times: Date[] }>();
+  const reportsByPerson = new Map<
+    string,
+    Array<{ at: Date; latitude: number | null; longitude: number | null; address: string | null }>
+  >();
   const matchRoster = (senderName: string, senderNumber: string) =>
     directory.resolve(senderName, senderNumber);
 
@@ -303,10 +390,19 @@ export async function buildCustomRecap(params: CustomRecapParams): Promise<Custo
   for (const photo of filteredPhotos) {
     const person = resolvePhotoPerson(photo, directory, roster);
     if (!person) continue;
+    const at = photo.capturedAt ?? photo.createdAt;
     const entry = submittedMap.get(person.id) ?? { photos: 0, links: 0, times: [] };
     entry.photos += 1;
-    entry.times.push(photo.capturedAt ?? photo.createdAt);
+    entry.times.push(at);
     submittedMap.set(person.id, entry);
+    const reports = reportsByPerson.get(person.id) ?? [];
+    reports.push({
+      at,
+      latitude: photo.latitude ?? null,
+      longitude: photo.longitude ?? null,
+      address: photo.address ?? null
+    });
+    reportsByPerson.set(person.id, reports);
   }
   for (const link of filteredLinks) {
     const person = matchRoster(link.senderName, link.senderNumber);
@@ -317,7 +413,143 @@ export async function buildCustomRecap(params: CustomRecapParams): Promise<Custo
     submittedMap.set(person.id, entry);
   }
 
-  const submitted = rosterView
+  const posPagi: CustomRecapPosPagi | null =
+    category === 'POS_PAGI'
+      ? (() => {
+          const makePerson = (
+            assignment: {
+              id: string;
+              personnelId: string | null;
+              name: string;
+              rank: string | null;
+              matchMethod: string | null;
+              personnel: {
+                id: string;
+                name: string;
+                rank: string | null;
+                nrp: string | null;
+                phone: string | null;
+                category: string;
+              } | null;
+            },
+            post: { latitude: number | null; longitude: number | null; radiusMeters: number } | null,
+            role: 'ANGGOTA' | 'PADAL'
+          ): CustomRecapPosPagiPerson => {
+            const person = assignment.personnel;
+            const entry = person ? submittedMap.get(person.id) : undefined;
+            const submitted = Boolean(entry && (entry.photos > 0 || entry.links > 0));
+            const sortedTimes = entry
+              ? [...entry.times].sort((a, b) => a.getTime() - b.getTime())
+              : [];
+            const times = [...new Set(sortedTimes.map((value) => format(value, 'HH:mm')))];
+            const reports = person ? (reportsByPerson.get(person.id) ?? []) : [];
+
+            let nearest:
+              | {
+                  at: Date;
+                  distance: number;
+                  latitude: number;
+                  longitude: number;
+                  address: string | null;
+                }
+              | null = null;
+            if (post && post.latitude !== null && post.longitude !== null) {
+              const postLatitude = post.latitude;
+              const postLongitude = post.longitude;
+              for (const report of reports) {
+                if (report.latitude === null || report.longitude === null) continue;
+                const distance = distanceMeters(
+                  postLatitude,
+                  postLongitude,
+                  report.latitude,
+                  report.longitude
+                );
+                if (!nearest || distance < nearest.distance) {
+                  nearest = {
+                    at: report.at,
+                    distance,
+                    latitude: report.latitude,
+                    longitude: report.longitude,
+                    address: report.address
+                  };
+                }
+              }
+            }
+
+            const locationStatus: PosPagiLocationStatus = !person
+              ? 'TIDAK_MELAPOR'
+              : !submitted
+                ? 'TIDAK_MELAPOR'
+                : !post || post.latitude === null || post.longitude === null
+                  ? 'TANPA_TITIK'
+                  : nearest
+                    ? nearest.distance <= (post?.radiusMeters ?? 100)
+                      ? 'SESUAI'
+                      : 'TIDAK_SESUAI'
+                    : 'TANPA_KOORDINAT';
+
+            return {
+              assignmentId: assignment.id,
+              personnelId: person?.id ?? null,
+              name: person?.name ?? assignment.name,
+              displayName: formatRankName(person?.rank ?? assignment.rank, person?.name ?? assignment.name),
+              rank: person?.rank ?? assignment.rank,
+              role,
+              status: !person ? 'UNMATCHED' : submitted ? 'SUBMITTED' : 'NOT_SUBMITTED',
+              photos: entry?.photos ?? 0,
+              links: entry?.links ?? 0,
+              times,
+              firstAt: sortedTimes[0]?.toISOString() ?? '',
+              lastAt: sortedTimes[sortedTimes.length - 1]?.toISOString() ?? '',
+              reportAt: nearest?.at.toISOString() ?? reports[0]?.at.toISOString() ?? null,
+              reportLatitude: nearest?.latitude ?? null,
+              reportLongitude: nearest?.longitude ?? null,
+              reportAddress: nearest?.address ?? reports[0]?.address ?? null,
+              distanceMeters: nearest?.distance ?? null,
+              locationStatus,
+              matchMethod: assignment.matchMethod
+            };
+          };
+
+          const posts: CustomRecapPosPagiPost[] = posPagiPosts.map((post) => {
+            const personnel = post.assignments.map((assignment) =>
+              makePerson(assignment, post, 'ANGGOTA')
+            );
+            return {
+              id: post.id,
+              name: post.name,
+              latitude: post.latitude,
+              longitude: post.longitude,
+              radiusMeters: post.radiusMeters,
+              assigned: personnel.length,
+              submitted: personnel.filter((person) => person.status === 'SUBMITTED').length,
+              notSubmitted: personnel.filter((person) => person.status === 'NOT_SUBMITTED').length,
+              wrongLocation: personnel.filter((person) => person.locationStatus === 'TIDAK_SESUAI').length,
+              unmatched: personnel.filter((person) => person.status === 'UNMATCHED').length,
+              personnel
+            };
+          });
+          const padal = posPagiPadal.map((assignment) => makePerson(assignment, null, 'PADAL'));
+          const allPersonnel = [...posts.flatMap((post) => post.personnel), ...padal];
+          return {
+            posts,
+            padal,
+            unmatched: allPersonnel.filter((person) => person.status === 'UNMATCHED'),
+            totals: {
+              posts: posts.length,
+              assigned: allPersonnel.length,
+              submitted: allPersonnel.filter((person) => person.status === 'SUBMITTED').length,
+              notSubmitted: allPersonnel.filter((person) => person.status === 'NOT_SUBMITTED').length,
+              wrongLocation: allPersonnel.filter((person) => person.locationStatus === 'TIDAK_SESUAI')
+                .length,
+              unmatched: allPersonnel.filter((person) => person.status === 'UNMATCHED').length,
+              padal: padal.length
+            }
+          };
+        })()
+      : null;
+
+  const baseSubmitted = rosterView
     .filter((person) => submittedMap.has(person.id))
     .map((person) => {
       const entry = submittedMap.get(person.id)!;
@@ -336,7 +568,7 @@ export async function buildCustomRecap(params: CustomRecapParams): Promise<Custo
         times
       };
     });
-  const notSubmitted = rosterView
+  const baseNotSubmitted = rosterView
     .filter((person) => !submittedMap.has(person.id))
     .map((person) => ({
       name: person.name,
@@ -347,13 +579,57 @@ export async function buildCustomRecap(params: CustomRecapParams): Promise<Custo
       phone: person.phone
     }));
 
+  // Untuk rekap POS PAGI, kewajiban lapor hanya untuk anggota yang tercantum
+  // di pos — bukan seluruh roster Satlantas.
+  const posPagiAnggota = posPagi
+    ? posPagi.posts.flatMap((post) => post.personnel).filter((person) => person.role === 'ANGGOTA')
+    : [];
+  const rosterById = new Map(roster.map((person) => [person.id, person]));
+  const submitted = posPagi
+    ? posPagiAnggota
+        .filter((person) => person.status === 'SUBMITTED' && person.personnelId)
+        .map((person) => {
+          const rosterPerson = rosterById.get(person.personnelId!);
+          return {
+            name: person.name,
+            displayName: person.displayName,
+            rank: person.rank,
+            rankNrp: [person.rank, rosterPerson?.nrp].filter(Boolean).join('/') || null,
+            category: rosterPerson?.category ?? 'ANGGOTA',
+            photos: person.photos,
+            links: person.links,
+            firstAt: person.firstAt,
+            lastAt: person.lastAt,
+            times: person.times
+          };
+        })
+        .sort((a, b) => a.firstAt.localeCompare(b.firstAt) || a.displayName.localeCompare(b.displayName))
+    : baseSubmitted;
+  const notSubmitted = posPagi
+    ? posPagiAnggota
+        .filter((person) => person.status === 'NOT_SUBMITTED' && person.personnelId)
+        .map((person) => {
+          const rosterPerson = rosterById.get(person.personnelId!);
+          return {
+            name: person.name,
+            displayName: person.displayName,
+            rank: person.rank,
+            rankNrp: [person.rank, rosterPerson?.nrp].filter(Boolean).join('/') || null,
+            category: rosterPerson?.category ?? 'ANGGOTA',
+            phone: rosterPerson?.phone ?? null
+          };
+        })
+    : baseNotSubmitted;
+
   // Perwira tidak dibebani kewajiban pelaporan — dinilai pada pengawasan saja.
   const anggotaSubmitted = submitted
     .filter((person) => person.category !== 'PERWIRA')
     // Urutkan dari jam Timemark paling awal; bila jam sama, urut nama.
     .sort((a, b) => a.firstAt.localeCompare(b.firstAt) || a.displayName.localeCompare(b.displayName));
   const anggotaNotSubmitted = notSubmitted.filter((person) => person.category !== 'PERWIRA');
-  const anggotaTotal = rosterView.filter((person) => person.category !== 'PERWIRA').length;
+  const anggotaTotal = posPagi
+    ? new Set(posPagiAnggota.map((person) => person.personnelId).filter(Boolean)).size
+    : rosterView.filter((person) => person.category !== 'PERWIRA').length;
 
   const label = category === 'ALL' ? 'Semua kegiatan' : category === 'POS_PAGI' ? `Pos pagi (${morningStart}–${morningEnd})` : TURJAWALI_LABELS[category];
   const supervisors = [...supervisorMap.values()].sort((a, b) => b.count - a.count);
@@ -412,6 +688,50 @@ export async function buildCustomRecap(params: CustomRecapParams): Promise<Custo
     );
   }
 
+  if (posPagi) {
+    lines.push('', '*POS PAGI*');
+    if (posPagi.posts.length === 0) {
+      lines.push('_Belum ada data pos pagi. Impor lewat Settings → Pos Pagi._');
+    } else {
+      posPagi.posts.forEach((post, index) => {
+        lines.push(
+          `${index + 1}. ${post.name} — ${post.assigned} anggota · ${post.submitted} lapor · ${post.notSubmitted} belum${post.wrongLocation ? ` · ${post.wrongLocation} tidak sesuai titik` : ''}`
+        );
+      });
+    }
+    if (posPagi.padal.length > 0) {
+      lines.push(
+        `PADAL: ${posPagi.padal.filter((person) => person.status === 'SUBMITTED').length}/${posPagi.padal.length} sudah melapor`
+      );
+    }
+
+    const wrongLocation = posPagi.posts
+      .flatMap((post) =>
+        post.personnel
+          .filter((person) => person.locationStatus === 'TIDAK_SESUAI')
+          .map((person) => ({ post, person }))
+      )
+      .sort((a, b) => a.post.name.localeCompare(b.post.name));
+    lines.push('', '*TIDAK SESUAI TITIK*');
+    if (wrongLocation.length === 0) {
+      lines.push('_Semua laporan yang masuk berada dalam radius titik pos._');
+    } else {
+      wrongLocation.forEach(({ post, person }, index) => {
+        lines.push(
+          `${index + 1}. ${person.displayName} — ${post.name} · ${person.distanceMeters ?? '?'} m (radius ${post.radiusMeters} m)`
+        );
+      });
+    }
+
+    if (posPagi.unmatched.length > 0) {
+      lines.push('', '*BELUM TERHUBUNG KE ROSTER*');
+      posPagi.unmatched.forEach((person, index) => {
+        lines.push(`${index + 1}. ${person.name} — ${person.role === 'PADAL' ? 'PADAL' : 'anggota pos'}`);
+      });
+      lines.push('_Hubungkan lewat Settings → Pos Pagi agar ikut dinilai._');
+    }
+  }
+
   lines.push('', '*SUDAH MELAPOR*');
   if (anggotaSubmitted.length === 0) {
     lines.push('_Belum ada anggota yang melapor._');
@@ -447,7 +767,8 @@ export async function buildCustomRecap(params: CustomRecapParams): Promise<Custo
     activities,
     supervisors,
     supervisionEvents,
-    personnel: { rosterTotal: rosterView.length, submitted, notSubmitted },
+    personnel: { rosterTotal: posPagi ? anggotaTotal : rosterView.length, submitted, notSubmitted },
+    posPagi,
     text: lines.join('\n')
   };
 }

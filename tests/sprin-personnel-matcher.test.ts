@@ -21,7 +21,13 @@ const roster = [
   { id: 'miftah', name: 'MOH MIFTAHURROHMAN', nrp: '83051315', phone: '6282140809080' },
   { id: 'reza', name: 'M. REZA MAHENDRA ARFIANSYAH, S.H.', nrp: '01010101', phone: '6285748505708' },
   { id: 'yuli', name: 'YULI SUDIBYO, S.H.', nrp: '79010101', phone: '628128139484' },
-  { id: 'yulig', name: 'YULIGIANTORO, S.H.', nrp: '79020202', phone: '6281234567890' }
+  { id: 'yulig', name: 'YULIGIANTORO, S.H.', nrp: '79020202', phone: '6281234567890' },
+  { id: 'irwan', name: 'IRWAN DWI C', nrp: '84120827', phone: '6281335302400' },
+  { id: 'ageng', name: 'AGENG ARIF', nrp: '86090720', phone: '6281328079926' },
+  { id: 'feri', name: 'MUHAMAD FERI ISWANTO', nrp: '04051353', phone: '6285746920366' },
+  { id: 'bayu', name: 'MUHAMMAD BAYU P', nrp: '95090559', phone: '6281333341534' },
+  { id: 'antok', name: 'ANTOK SEPTIANTO', nrp: '82091088', phone: '6281331244989' },
+  { id: 'dony', name: 'DONY PRASETYO, S.H', nrp: '83111205', phone: '6282234684511' }
 ];
 
 describe('strict Sprin personnel matching', () => {
@@ -33,7 +39,8 @@ describe('strict Sprin personnel matching', () => {
       'SUTIKNO, S.H.',
       'ALI SODIK',
       'ILHAM NURCAHYA ARIEF MUJI',
-      'NURSAID, S.H.'
+      'NURSAID, S.H.',
+      'DONNI PRASETIO'
     ];
 
     for (const name of wrongNames) {
@@ -53,7 +60,13 @@ describe('strict Sprin personnel matching', () => {
       ['ROHMAN YUWONO', 'rochman'],
       ['MIFTAHUROHMAN', 'miftah'],
       ['NUR CHOLIK', 'nurcholiq'],
-      ['YULI', 'yuli']
+      ['YULI', 'yuli'],
+      ['IRWAN DWI CAHYONO', 'irwan'],
+      ['AGENG ARIF PRISWANTO, S.H.', 'ageng'],
+      ['FERI ISWANTO', 'feri'],
+      ['MUHAMMAD BAYU PRAKOSO, S.H.', 'bayu'],
+      ['MOKHAMMAD REZA MAHENDRA A', 'reza'],
+      ['ANTOK SEPTIYANTO N', 'antok']
     ];
     for (const [name, id] of cases) {
       expect(matchSprinRosterPerson({ name, nrp: null }, index), name).toMatchObject({

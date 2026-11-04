@@ -605,7 +605,8 @@ Panel **Settings → Rekap Kustom** menyediakan tombol **Ekspor** setelah rekap
 ditampilkan. Format yang tersedia:
 
 - **Excel (`.xlsx`)** — sheet Ringkasan, Kegiatan, Sudah Melapor, Belum
-  Melapor, Perwira Pengawas, dan Supervisi.
+  Melapor, Perwira Pengawas, dan Supervisi. Untuk rekap **Pos Pagi** ditambah
+  Rekap Pos Pagi, Anggota Pos Pagi, Tidak Sesuai Titik, dan Belum Terhubung.
 - **Word (`.docx`)** — dokumen A4 landscape dengan tabel ringkasan dan rincian
   kegiatan/personel.
 - **PDF (`.pdf`)** — layout A4 landscape, tabel berulang di halaman baru, dan
@@ -615,6 +616,25 @@ Isi ekspor mengikuti tanggal, rentang jam, dan kategori yang sedang tampil.
 Perwira dikecualikan dari daftar personel sudah/belum melapor, sama seperti teks
 rekap. Endpoint: `GET /api/reports/custom/export?format=xlsx|docx|pdf` dengan
 parameter yang sama seperti `/api/reports/custom`.
+
+### 5.6c Pos Pagi dan rekap per titik
+
+Panel **Settings → Pos Pagi** menyimpan master titik pos pagi beserta anggota
+yang mengawaki. Unggah XLSX dengan kolom `NO`, `NAMA`, `PANGKAT`, `JABATAN`,
+dan kolom pos berisi `NAMA POS -lat, lng`. Sel yang digabung (merge) berlaku
+untuk semua baris di dalamnya, dan nilai `PADAL` berarti perwira tanpa titik.
+
+- Titik dan anggota lama diganti setiap kali impor; data awal November 2026
+  juga dimuat sekali saat deployment.
+- Nama dicocokkan ke roster secara ketat. Nama singkat yang masih diragukan
+  ditandai **nama singkat**; nama yang tidak cocok bisa dihubungkan manual di
+  panel yang sama.
+- Radius default **100 meter**. Laporan di luar radius ditandai
+  **tidak sesuai titik**; laporan tanpa koordinat ditandai terpisah.
+- Pilih kategori **Pos pagi (per titik)** di **Settings → Rekap Kustom**.
+  Excel menambahkan sheet **Rekap Pos Pagi**, **Anggota Pos Pagi**,
+  **Tidak Sesuai Titik**, dan **Belum Terhubung**. Ringkasan serta daftar
+  belum melapor hanya menghitung anggota yang terdaftar di pos.
 
 ### 5.7 Notifikasi Sprin per fungsi kepolisian
 
@@ -734,6 +754,10 @@ Selama belum ada nomor HP, fungsi tetap muncul tetapi diberi tanda
 | GET | `/api/personnel` | Roster personel + statistik (cari/filter) |
 | POST | `/api/personnel/import` | Unggah/ganti basis data personel (XLSX/CSV) |
 | GET/PUT | `/api/personnel/sandi` | Baca/simpan peta sandi 12.x dan Agung 1–16 |
+| GET | `/api/pos-pagi` | Titik pos pagi + anggota + status cocok roster |
+| POST | `/api/pos-pagi/import` | Unggah/ganti master pos pagi (XLSX) |
+| PATCH | `/api/pos-pagi/assignments/:id` | Hubungkan/lepas anggota ke personel |
+| PATCH | `/api/pos-pagi/:id` | Ubah nama/koordinat/radius/status pos |
 | POST/PATCH/DELETE | `/api/settings/groups...` | CRUD whitelist |
 | GET | `/api/wa/status` | Status WhatsApp |
 | POST | `/api/wa/connect` | Mulai/QR |

@@ -6,6 +6,7 @@ import { prisma } from './lib/prisma.js';
 import { getBotConfig } from './services/settings.js';
 import { whatsappManager } from './services/whatsapp-manager.js';
 import { rescheduleDailyRecap, stopScheduler } from './services/scheduler-service.js';
+import { seedPosPagiIfNeeded } from './services/pos-pagi-seed-service.js';
 import { terminateOcrWorker } from './services/ocr/timemark-ocr.js';
 
 async function main(): Promise<void> {
@@ -36,6 +37,10 @@ async function main(): Promise<void> {
   // Driver `webjs` butuh waktu membuka Chromium dan memuat sesi, jadi koneksi
   // WhatsApp dijalankan di latar belakang agar API/health langsung tersedia
   // (penting untuk healthcheck Docker dan dashboard yang dibuka lebih dulu).
+  void seedPosPagiIfNeeded().catch((error) => {
+    logger.error({ err: error }, 'Gagal memuat data POS PAGI awal');
+  });
+
   void whatsappManager.initialize().catch((error) => {
     logger.error({ err: error }, 'Gagal menginisialisasi WhatsApp saat startup');
   });

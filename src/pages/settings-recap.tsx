@@ -47,6 +47,7 @@ type Category =
 
 const CATEGORY_LABELS: Array<[Category, string]> = [
   ['ALL', 'Semua kegiatan'],
+  ['POS_PAGI', 'Pos pagi (per titik)'],
   ['PENGATURAN', 'Pengaturan (Gatur)'],
   ['PENJAGAAN', 'Penjagaan'],
   ['PENGAWALAN', 'Pengawalan (Wal)'],

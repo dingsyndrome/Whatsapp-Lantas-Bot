@@ -89,6 +89,7 @@ import { api, copyText, downloadFile, errorMessage, exportUrl } from '@/lib/api'
 import { cn } from '@/lib/utils';
 import { formatDateTime } from '@/lib/format';
 import { PersonnelPanel } from './settings-personnel';
+import { PosPagiPanel } from './settings-pos-pagi';
 import { RecapPanel } from './settings-recap';
 import { ManagersPanel } from './settings-managers';
 import { NotifySettingsPanel } from './settings-notify';
@@ -1716,6 +1717,7 @@ export function SettingsPage() {
             <TabsTrigger value="ai" className="text-[11px]"><Cpu className="h-3.5 w-3.5" /> AI & Prompt</TabsTrigger>
             <TabsTrigger value="turjawali" className="text-[11px]"><Route className="h-3.5 w-3.5" /> Turjawali</TabsTrigger>
             <TabsTrigger value="personel" className="text-[11px]"><UsersRound className="h-3.5 w-3.5" /> Personel</TabsTrigger>
+            <TabsTrigger value="pos-pagi" className="text-[11px]"><MapPin className="h-3.5 w-3.5" /> Pos Pagi</TabsTrigger>
             <TabsTrigger value="manajer" className="text-[11px]"><ShieldCheck className="h-3.5 w-3.5" /> Manajer</TabsTrigger>
             <TabsTrigger value="notifikasi" className="text-[11px]"><Bell className="h-3.5 w-3.5" /> Notifikasi</TabsTrigger>
             <TabsTrigger value="jadwal" className="text-[11px]"><CalendarClock className="h-3.5 w-3.5" /> Jadwal Rekap</TabsTrigger>
@@ -1752,6 +1754,10 @@ export function SettingsPage() {
 
         <TabsContent value="personel" className="mt-5">
           <PersonnelPanel />
+        </TabsContent>
+
+        <TabsContent value="pos-pagi" className="mt-5">
+          <PosPagiPanel />
         </TabsContent>
 
         <TabsContent value="notifikasi" className="mt-5">

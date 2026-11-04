@@ -1,0 +1,1892 @@
+{
+  "sheetName": "Sheet1",
+  "posts": [
+    {
+      "name": "DEPAN SMPN 6 TULUNGAGUNG",
+      "latitude": -8.058888325864162,
+      "longitude": 111.9075020384556,
+      "order": 0,
+      "assignments": [
+        {
+          "no": 2,
+          "name": "SUWANTO",
+          "rank": "AIPTU",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "DEPAN SMPN 6 TULUNGAGUNG",
+          "latitude": -8.058888325864162,
+          "longitude": 111.9075020384556
+        },
+        {
+          "no": 3,
+          "name": "BAMBANG RIYADI",
+          "rank": "AIPDA",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "DEPAN SMPN 6 TULUNGAGUNG",
+          "latitude": -8.058888325864162,
+          "longitude": 111.9075020384556
+        },
+        {
+          "no": 4,
+          "name": "SAMSUR RIJAL",
+          "rank": "BRIGADIR",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "DEPAN SMPN 6 TULUNGAGUNG",
+          "latitude": -8.058888325864162,
+          "longitude": 111.9075020384556
+        },
+        {
+          "no": 5,
+          "name": "HERIYANTO",
+          "rank": "BRIGADIR",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "DEPAN SMPN 6 TULUNGAGUNG",
+          "latitude": -8.058888325864162,
+          "longitude": 111.9075020384556
+        }
+      ]
+    },
+    {
+      "name": "DEPAN SMPN 3 TULUNGAGUNG",
+      "latitude": -8.059632889434232,
+      "longitude": 111.90883602495896,
+      "order": 1,
+      "assignments": [
+        {
+          "no": 6,
+          "name": "UMI AMBARWATI",
+          "rank": "AIPTU",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "DEPAN SMPN 3 TULUNGAGUNG",
+          "latitude": -8.059632889434232,
+          "longitude": 111.90883602495896
+        },
+        {
+          "no": 7,
+          "name": "HERU TRIHANDOKO",
+          "rank": "AIPTU",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "DEPAN SMPN 3 TULUNGAGUNG",
+          "latitude": -8.059632889434232,
+          "longitude": 111.90883602495896
+        }
+      ]
+    },
+    {
+      "name": "DEPAN SMAN 1 KEDUNGWARU",
+      "latitude": -8.055749420248388,
+      "longitude": 111.91037056728976,
+      "order": 2,
+      "assignments": [
+        {
+          "no": 8,
+          "name": "VENDHY SUPRAYOGA",
+          "rank": "BRIGADIR",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "DEPAN SMAN 1 KEDUNGWARU",
+          "latitude": -8.055749420248388,
+          "longitude": 111.91037056728976
+        },
+        {
+          "no": 9,
+          "name": "EKA PUSPITA MAYDRYANA",
+          "rank": "BRIGADIR",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "DEPAN SMAN 1 KEDUNGWARU",
+          "latitude": -8.055749420248388,
+          "longitude": 111.91037056728976
+        }
+      ]
+    },
+    {
+      "name": "DEPAN SMK KATHOLIK THOMAS AQUINO",
+      "latitude": -8.055621467612982,
+      "longitude": 111.9125851096205,
+      "order": 3,
+      "assignments": [
+        {
+          "no": 10,
+          "name": "EKO FEBRI",
+          "rank": "AIPDA",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "DEPAN SMK KATHOLIK THOMAS AQUINO",
+          "latitude": -8.055621467612982,
+          "longitude": 111.9125851096205
+        },
+        {
+          "no": 11,
+          "name": "GAGAS HANDRIYANA PUTRA",
+          "rank": "BRIPTU",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "DEPAN SMK KATHOLIK THOMAS AQUINO",
+          "latitude": -8.055621467612982,
+          "longitude": 111.9125851096205
+        }
+      ]
+    },
+    {
+      "name": "DEPAN SD PETRA",
+      "latitude": -8.057988017098983,
+      "longitude": 111.90740785194994,
+      "order": 4,
+      "assignments": [
+        {
+          "no": 12,
+          "name": "DENY ANDRI S",
+          "rank": "BRIPTU",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "DEPAN SD PETRA",
+          "latitude": -8.057988017098983,
+          "longitude": 111.90740785194994
+        },
+        {
+          "no": 13,
+          "name": "LUKY AKBAR FIRMANSYAH",
+          "rank": "BRIPDA",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "DEPAN SD PETRA",
+          "latitude": -8.057988017098983,
+          "longitude": 111.90740785194994
+        },
+        {
+          "no": 14,
+          "name": "WARAS ALI HARTONO",
+          "rank": "AIPDA",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "DEPAN SD PETRA",
+          "latitude": -8.057988017098983,
+          "longitude": 111.90740785194994
+        }
+      ]
+    },
+    {
+      "name": "DEPAN SMP KATHOLIK",
+      "latitude": -8.065438305903392,
+      "longitude": 111.90550274029938,
+      "order": 5,
+      "assignments": [
+        {
+          "no": 16,
+          "name": "IMA SAFITRI",
+          "rank": "AIPDA",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "DEPAN SMP KATHOLIK",
+          "latitude": -8.065438305903392,
+          "longitude": 111.90550274029938
+        },
+        {
+          "no": 17,
+          "name": "FRANSISKA ENDI",
+          "rank": "AIPTU",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "DEPAN SMP KATHOLIK",
+          "latitude": -8.065438305903392,
+          "longitude": 111.90550274029938
+        }
+      ]
+    },
+    {
+      "name": "DEPAN SDN KAMDAL 456",
+      "latitude": -8.065762596290638,
+      "longitude": 111.90313006728964,
+      "order": 6,
+      "assignments": [
+        {
+          "no": 18,
+          "name": "VENNA ANGGRIAWAN",
+          "rank": "AIPDA",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "DEPAN SDN KAMDAL 456",
+          "latitude": -8.065762596290638,
+          "longitude": 111.90313006728964
+        },
+        {
+          "no": 19,
+          "name": "NINO DIMYANA",
+          "rank": "AIPTU",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "DEPAN SDN KAMDAL 456",
+          "latitude": -8.065762596290638,
+          "longitude": 111.90313006728964
+        }
+      ]
+    },
+    {
+      "name": "SIMP 3 GOLDEN",
+      "latitude": -8.065625340673485,
+      "longitude": 111.90410242520896,
+      "order": 7,
+      "assignments": [
+        {
+          "no": 20,
+          "name": "ANDI SISCA",
+          "rank": "AIPDA",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "SIMP 3 GOLDEN",
+          "latitude": -8.065625340673485,
+          "longitude": 111.90410242520896
+        },
+        {
+          "no": 21,
+          "name": "MOCH. IMAM ZUHDI",
+          "rank": "BRIPDA",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "SIMP 3 GOLDEN",
+          "latitude": -8.065625340673485,
+          "longitude": 111.90410242520896
+        }
+      ]
+    },
+    {
+      "name": "SIMP 3 GEREJA SANTA MARIA",
+      "latitude": -8.065538887191643,
+      "longitude": 111.90492888733966,
+      "order": 8,
+      "assignments": [
+        {
+          "no": 22,
+          "name": "ARI EKO ISWOYO",
+          "rank": "Aiptu",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "SIMP 3 GEREJA SANTA MARIA",
+          "latitude": -8.065538887191643,
+          "longitude": 111.90492888733966
+        },
+        {
+          "no": 23,
+          "name": "SAMSUL HADI",
+          "rank": "Aipda",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "SIMP 3 GEREJA SANTA MARIA",
+          "latitude": -8.065538887191643,
+          "longitude": 111.90492888733966
+        }
+      ]
+    },
+    {
+      "name": "SIMP 3 TOPSELL",
+      "latitude": -8.065528880749682,
+      "longitude": 111.90466626881988,
+      "order": 9,
+      "assignments": [
+        {
+          "no": 24,
+          "name": "AGUS SUHARSOYO",
+          "rank": "Aiptu",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "SIMP 3 TOPSELL",
+          "latitude": -8.065528880749682,
+          "longitude": 111.90466626881988
+        },
+        {
+          "no": 25,
+          "name": "YULI SUDIBYO",
+          "rank": "Aipda",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "SIMP 3 TOPSELL",
+          "latitude": -8.065528880749682,
+          "longitude": 111.90466626881988
+        }
+      ]
+    },
+    {
+      "name": "DEPAN SMPN 1 TULUNGAGUNG",
+      "latitude": -8.065184634002646,
+      "longitude": 111.90295544222718,
+      "order": 10,
+      "assignments": [
+        {
+          "no": 26,
+          "name": "RETNO DWI ASTUTI",
+          "rank": "BRIPKA",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "DEPAN SMPN 1 TULUNGAGUNG",
+          "latitude": -8.065184634002646,
+          "longitude": 111.90295544222718
+        },
+        {
+          "no": 27,
+          "name": "AYU F. VALBIE",
+          "rank": "BRIGPOL",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "DEPAN SMPN 1 TULUNGAGUNG",
+          "latitude": -8.065184634002646,
+          "longitude": 111.90295544222718
+        }
+      ]
+    },
+    {
+      "name": "DEPAN SDN KAMDAL 1",
+      "latitude": -8.063907757920912,
+      "longitude": 111.9019937777672,
+      "order": 11,
+      "assignments": [
+        {
+          "no": 29,
+          "name": "SISWATI HANDAYANI",
+          "rank": "AIPTU",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "DEPAN SDN KAMDAL 1",
+          "latitude": -8.063907757920912,
+          "longitude": 111.9019937777672
+        },
+        {
+          "no": 30,
+          "name": "ANNA SILVI",
+          "rank": "BRIGADIR",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "DEPAN SDN KAMDAL 1",
+          "latitude": -8.063907757920912,
+          "longitude": 111.9019937777672
+        }
+      ]
+    },
+    {
+      "name": "SIMP 4 ALTA",
+      "latitude": -8.063799788430401,
+      "longitude": 111.90285453421113,
+      "order": 12,
+      "assignments": [
+        {
+          "no": 31,
+          "name": "IRWAN DWI CAHYONO",
+          "rank": "AIPDA",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "SIMP 4 ALTA",
+          "latitude": -8.063799788430401,
+          "longitude": 111.90285453421113
+        },
+        {
+          "no": 32,
+          "name": "AGENG ARIF PRISWANTO, S.H.",
+          "rank": "AIPDA",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "SIMP 4 ALTA",
+          "latitude": -8.063799788430401,
+          "longitude": 111.90285453421113
+        },
+        {
+          "no": 33,
+          "name": "TOBARONI ACHMAD, S.H.",
+          "rank": "AIPDA",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "SIMP 4 ALTA",
+          "latitude": -8.063799788430401,
+          "longitude": 111.90285453421113
+        }
+      ]
+    },
+    {
+      "name": "SIMP 4 55 UTARA",
+      "latitude": -8.065066942733177,
+      "longitude": 111.89841109643612,
+      "order": 13,
+      "assignments": [
+        {
+          "no": 34,
+          "name": "ILHAM YUZRIL A",
+          "rank": "BRIPTU",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "SIMP 4 55 UTARA",
+          "latitude": -8.065066942733177,
+          "longitude": 111.89841109643612
+        },
+        {
+          "no": 35,
+          "name": "M.ARVIN FIRDAUS",
+          "rank": "BRIPDA",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "SIMP 4 55 UTARA",
+          "latitude": -8.065066942733177,
+          "longitude": 111.89841109643612
+        }
+      ]
+    },
+    {
+      "name": "SIMP 3 55 SELATAN",
+      "latitude": -8.066529137364478,
+      "longitude": 111.89847237258641,
+      "order": 14,
+      "assignments": [
+        {
+          "no": 36,
+          "name": "WAHYU PRIBADININGTYAS",
+          "rank": "AIPDA",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "SIMP 3 55 SELATAN",
+          "latitude": -8.066529137364478,
+          "longitude": 111.89847237258641
+        },
+        {
+          "no": 37,
+          "name": "GADING PERMATA S",
+          "rank": "BRIGADIR",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "SIMP 3 55 SELATAN",
+          "latitude": -8.066529137364478,
+          "longitude": 111.89847237258641
+        }
+      ]
+    },
+    {
+      "name": "SIMP 4 VIDIA TIRTA",
+      "latitude": -8.065404560981312,
+      "longitude": 111.89607020991215,
+      "order": 15,
+      "assignments": [
+        {
+          "no": 38,
+          "name": "FERI ISWANTO",
+          "rank": "BRIPDA",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "SIMP 4 VIDIA TIRTA",
+          "latitude": -8.065404560981312,
+          "longitude": 111.89607020991215
+        },
+        {
+          "no": 39,
+          "name": "HARSANDA ARJUNA",
+          "rank": "BRIPDA",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "SIMP 4 VIDIA TIRTA",
+          "latitude": -8.065404560981312,
+          "longitude": 111.89607020991215
+        }
+      ]
+    },
+    {
+      "name": "DEPAN SD BAGO TINGKAT",
+      "latitude": -8.07105009942868,
+      "longitude": 111.91448025270972,
+      "order": 16,
+      "assignments": [
+        {
+          "no": 41,
+          "name": "SATRIYA HADI",
+          "rank": "AIPDA",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "DEPAN SD BAGO TINGKAT",
+          "latitude": -8.07105009942868,
+          "longitude": 111.91448025270972
+        },
+        {
+          "no": 42,
+          "name": "JOHAN YOGA",
+          "rank": "BRIPTU",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "DEPAN SD BAGO TINGKAT",
+          "latitude": -8.07105009942868,
+          "longitude": 111.91448025270972
+        }
+      ]
+    },
+    {
+      "name": "DEPAN SD JEPUN",
+      "latitude": -8.076145606299068,
+      "longitude": 111.9141322469476,
+      "order": 17,
+      "assignments": [
+        {
+          "no": 43,
+          "name": "DONNI PRASETIO",
+          "rank": "AIPDA",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "DEPAN SD JEPUN",
+          "latitude": -8.076145606299068,
+          "longitude": 111.9141322469476
+        },
+        {
+          "no": 44,
+          "name": "ALVIAN SETIADI",
+          "rank": "BRIGADIR",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "DEPAN SD JEPUN",
+          "latitude": -8.076145606299068,
+          "longitude": 111.9141322469476
+        }
+      ]
+    },
+    {
+      "name": "DEPAN SDN 3 KEPATIHAN",
+      "latitude": -8.062012594284846,
+      "longitude": 111.91615540301032,
+      "order": 18,
+      "assignments": [
+        {
+          "no": 45,
+          "name": "PEGIANA PANGGAH YUANDRA",
+          "rank": "BRIGPOL",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "DEPAN SDN 3 KEPATIHAN",
+          "latitude": -8.062012594284846,
+          "longitude": 111.91615540301032
+        },
+        {
+          "no": 46,
+          "name": "RINTO BASUKI",
+          "rank": "AIPDA",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "DEPAN SDN 3 KEPATIHAN",
+          "latitude": -8.062012594284846,
+          "longitude": 111.91615540301032
+        }
+      ]
+    },
+    {
+      "name": "SIMP 4 CEMPAKA",
+      "latitude": -8.064542898265882,
+      "longitude": 111.91080347075726,
+      "order": 19,
+      "assignments": [
+        {
+          "no": 47,
+          "name": "DENNA ARIEF M",
+          "rank": "AIPDA",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "SIMP 4 CEMPAKA",
+          "latitude": -8.064542898265882,
+          "longitude": 111.91080347075726
+        },
+        {
+          "no": 48,
+          "name": "CHANDRA ALPO ROMEO",
+          "rank": "AIPTU",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "SIMP 4 CEMPAKA",
+          "latitude": -8.064542898265882,
+          "longitude": 111.91080347075726
+        }
+      ]
+    },
+    {
+      "name": "SIMP 4 ORARI",
+      "latitude": -8.070694059521273,
+      "longitude": 111.90732704211752,
+      "order": 20,
+      "assignments": [
+        {
+          "no": 49,
+          "name": "YOPIE DWI CAHYONO, S.H.",
+          "rank": "AIPTU",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "SIMP 4 ORARI",
+          "latitude": -8.070694059521273,
+          "longitude": 111.90732704211752
+        },
+        {
+          "no": 50,
+          "name": "TATAN ALAM AKBAR",
+          "rank": "BRIPTU",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "SIMP 4 ORARI",
+          "latitude": -8.070694059521273,
+          "longitude": 111.90732704211752
+        },
+        {
+          "no": 51,
+          "name": "M. PUTRA FATIQUNADA",
+          "rank": "BRIGADIR",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "SIMP 4 ORARI",
+          "latitude": -8.070694059521273,
+          "longitude": 111.90732704211752
+        }
+      ]
+    },
+    {
+      "name": "DEPAN TK BHAYANGKARI",
+      "latitude": -8.067827687414495,
+      "longitude": 111.90735984377604,
+      "order": 21,
+      "assignments": [
+        {
+          "no": 52,
+          "name": "INDRO GIRI",
+          "rank": "AIPDA",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "DEPAN TK BHAYANGKARI",
+          "latitude": -8.067827687414495,
+          "longitude": 111.90735984377604
+        },
+        {
+          "no": 53,
+          "name": "SAVIRA NATASYA",
+          "rank": "BRIPDA",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "DEPAN TK BHAYANGKARI",
+          "latitude": -8.067827687414495,
+          "longitude": 111.90735984377604
+        }
+      ]
+    },
+    {
+      "name": "SIMP 4 RSB",
+      "latitude": -8.067046048910614,
+      "longitude": 111.9073502746778,
+      "order": 22,
+      "assignments": [
+        {
+          "no": 54,
+          "name": "ADI WASKITHO",
+          "rank": "BRIGPOL",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "SIMP 4 RSB",
+          "latitude": -8.067046048910614,
+          "longitude": 111.9073502746778
+        },
+        {
+          "no": 55,
+          "name": "ICON YOHNA B",
+          "rank": "BRIPTU",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "SIMP 4 RSB",
+          "latitude": -8.067046048910614,
+          "longitude": 111.9073502746778
+        }
+      ]
+    },
+    {
+      "name": "SIMP 4 SD BEJI",
+      "latitude": -8.078718361851248,
+      "longitude": 111.9027155657898,
+      "order": 23,
+      "assignments": [
+        {
+          "no": 57,
+          "name": "MUHAMAD CAHYO RAHARJO, S.H.",
+          "rank": "BRIGPOL",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "SIMP 4 SD BEJI",
+          "latitude": -8.078718361851248,
+          "longitude": 111.9027155657898
+        },
+        {
+          "no": 58,
+          "name": "WAHYU SUPIYANTO",
+          "rank": "BRIPKA",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "SIMP 4 SD BEJI",
+          "latitude": -8.078718361851248,
+          "longitude": 111.9027155657898
+        },
+        {
+          "no": 59,
+          "name": "YOGI CANDRA DINATA",
+          "rank": "BRIGADIR",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "SIMP 4 SD BEJI",
+          "latitude": -8.078718361851248,
+          "longitude": 111.9027155657898
+        }
+      ]
+    },
+    {
+      "name": "SIMP 4 BRI",
+      "latitude": -8.070593791999652,
+      "longitude": 111.90150946430629,
+      "order": 24,
+      "assignments": [
+        {
+          "no": 60,
+          "name": "YHOGA PERMANA, S.H.",
+          "rank": "BRIGPOL",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "SIMP 4 BRI",
+          "latitude": -8.070593791999652,
+          "longitude": 111.90150946430629
+        },
+        {
+          "no": 61,
+          "name": "MUHAMMAD BAYU PRAKOSO, S.H.",
+          "rank": "BRIGPOL",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "SIMP 4 BRI",
+          "latitude": -8.070593791999652,
+          "longitude": 111.90150946430629
+        },
+        {
+          "no": 62,
+          "name": "MOKHAMMAD REZA MAHENDRA A",
+          "rank": "BRIPTU",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "SIMP 4 BRI",
+          "latitude": -8.070593791999652,
+          "longitude": 111.90150946430629
+        }
+      ]
+    },
+    {
+      "name": "DEPAN SD TAMANAN",
+      "latitude": -8.07316272932058,
+      "longitude": 111.90310931046098,
+      "order": 25,
+      "assignments": [
+        {
+          "no": 63,
+          "name": "SANCOKO YEKTI",
+          "rank": "BRIPKA",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "DEPAN SD TAMANAN",
+          "latitude": -8.07316272932058,
+          "longitude": 111.90310931046098
+        },
+        {
+          "no": 64,
+          "name": "M. JULIAN",
+          "rank": "BRIGADIR",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "DEPAN SD TAMANAN",
+          "latitude": -8.07316272932058,
+          "longitude": 111.90310931046098
+        }
+      ]
+    },
+    {
+      "name": "SIMP 4 TT",
+      "latitude": -8.06611292679103,
+      "longitude": 111.90098677074417,
+      "order": 26,
+      "assignments": [
+        {
+          "no": 65,
+          "name": "NUR CHOLIK",
+          "rank": "AIPTU",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "SIMP 4 TT",
+          "latitude": -8.06611292679103,
+          "longitude": 111.90098677074417
+        },
+        {
+          "no": 66,
+          "name": "ROBI SETIAWAN",
+          "rank": "AIPTU",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "SIMP 4 TT",
+          "latitude": -8.06611292679103,
+          "longitude": 111.90098677074417
+        },
+        {
+          "no": 67,
+          "name": "BUDI SETIONO",
+          "rank": "AIPDA",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "SIMP 4 TT",
+          "latitude": -8.06611292679103,
+          "longitude": 111.90098677074417
+        },
+        {
+          "no": 68,
+          "name": "SETYA TRI",
+          "rank": "BRIPTU",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "SIMP 4 TT",
+          "latitude": -8.06611292679103,
+          "longitude": 111.90098677074417
+        }
+      ]
+    },
+    {
+      "name": "DEPAN SMPN 2 TULUNGAGUNG",
+      "latitude": -8.062451762042587,
+      "longitude": 111.90733186450889,
+      "order": 27,
+      "assignments": [
+        {
+          "no": 70,
+          "name": "ROHMAN YUWONO",
+          "rank": "AIPTU",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "DEPAN SMPN 2 TULUNGAGUNG",
+          "latitude": -8.062451762042587,
+          "longitude": 111.90733186450889
+        },
+        {
+          "no": 71,
+          "name": "NANDA FARADICHA",
+          "rank": "BRIPDA",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "DEPAN SMPN 2 TULUNGAGUNG",
+          "latitude": -8.062451762042587,
+          "longitude": 111.90733186450889
+        },
+        {
+          "no": 72,
+          "name": "MUHADI",
+          "rank": "AIPDA",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "DEPAN SMPN 2 TULUNGAGUNG",
+          "latitude": -8.062451762042587,
+          "longitude": 111.90733186450889
+        },
+        {
+          "no": 73,
+          "name": "JAROT PRIO RAMADHANI",
+          "rank": "BRIPDA",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "DEPAN SMPN 2 TULUNGAGUNG",
+          "latitude": -8.062451762042587,
+          "longitude": 111.90733186450889
+        }
+      ]
+    },
+    {
+      "name": "SIMP 4 KARYA AGUNG",
+      "latitude": -8.06317057603224,
+      "longitude": 111.90733186450662,
+      "order": 28,
+      "assignments": [
+        {
+          "no": 74,
+          "name": "CHOIRUL ANAM",
+          "rank": "AIPDA",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "SIMP 4 KARYA AGUNG",
+          "latitude": -8.06317057603224,
+          "longitude": 111.90733186450662
+        },
+        {
+          "no": 75,
+          "name": "ANTOK SEPTIYANTO N",
+          "rank": "AIPDA",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "SIMP 4 KARYA AGUNG",
+          "latitude": -8.06317057603224,
+          "longitude": 111.90733186450662
+        }
+      ]
+    },
+    {
+      "name": "SIMP 4 PGRI",
+      "latitude": -8.061885235984377,
+      "longitude": 111.90736198870472,
+      "order": 29,
+      "assignments": [
+        {
+          "no": 76,
+          "name": "AGUS SUPRAYITNO",
+          "rank": "AIPDA",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "SIMP 4 PGRI",
+          "latitude": -8.061885235984377,
+          "longitude": 111.90736198870472
+        },
+        {
+          "no": 77,
+          "name": "RIZKI INDRA SUSANTO",
+          "rank": "BRIPTU",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "SIMP 4 PGRI",
+          "latitude": -8.061885235984377,
+          "longitude": 111.90736198870472
+        }
+      ]
+    },
+    {
+      "name": "SIMP 4 PARE LAMA",
+      "latitude": -8.060141735248424,
+      "longitude": 111.90418999036669,
+      "order": 30,
+      "assignments": [
+        {
+          "no": 78,
+          "name": "ADI NUGROHO",
+          "rank": "AIPTU",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "SIMP 4 PARE LAMA",
+          "latitude": -8.060141735248424,
+          "longitude": 111.90418999036669
+        },
+        {
+          "no": 79,
+          "name": "LUTFI KURNIAWAN",
+          "rank": "AIPTU",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "SIMP 4 PARE LAMA",
+          "latitude": -8.060141735248424,
+          "longitude": 111.90418999036669
+        }
+      ]
+    },
+    {
+      "name": "SIMP 4 TOKO CANTIK",
+      "latitude": -8.06009823739921,
+      "longitude": 111.90473913819474,
+      "order": 31,
+      "assignments": [
+        {
+          "no": 80,
+          "name": "HELEN IZA M",
+          "rank": "BRIPTU",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "SIMP 4 TOKO CANTIK",
+          "latitude": -8.06009823739921,
+          "longitude": 111.90473913819474
+        },
+        {
+          "no": 81,
+          "name": "YOGHA YULIAN P",
+          "rank": "BRIGADIR",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "SIMP 4 TOKO CANTIK",
+          "latitude": -8.06009823739921,
+          "longitude": 111.90473913819474
+        },
+        {
+          "no": 82,
+          "name": "ROHANA",
+          "rank": "AIPTU",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "SIMP 4 TOKO CANTIK",
+          "latitude": -8.06009823739921,
+          "longitude": 111.90473913819474
+        }
+      ]
+    },
+    {
+      "name": "SIMP 4 PUJASERA NGEMPLAK",
+      "latitude": -8.054009759517879,
+      "longitude": 111.8907612746449,
+      "order": 32,
+      "assignments": [
+        {
+          "no": 83,
+          "name": "ANDI WISNU WARDANI",
+          "rank": "BRIPTU",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "SIMP 4 PUJASERA NGEMPLAK",
+          "latitude": -8.054009759517879,
+          "longitude": 111.8907612746449
+        },
+        {
+          "no": 84,
+          "name": "EDO JULIAN HARJITO",
+          "rank": "BRIGADIR",
+          "jabatan": "BA SATLANTAS",
+          "role": "ANGGOTA",
+          "postName": "SIMP 4 PUJASERA NGEMPLAK",
+          "latitude": -8.054009759517879,
+          "longitude": 111.8907612746449
+        }
+      ]
+    }
+  ],
+  "assignments": [
+    {
+      "no": 1,
+      "name": "KIKIS AGUNG DWI H, S.H.,M.H.",
+      "rank": "IPDA",
+      "jabatan": "KANIT TURJAGWALI",
+      "role": "PADAL",
+      "postName": null,
+      "latitude": null,
+      "longitude": null
+    },
+    {
+      "no": 2,
+      "name": "SUWANTO",
+      "rank": "AIPTU",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "DEPAN SMPN 6 TULUNGAGUNG",
+      "latitude": -8.058888325864162,
+      "longitude": 111.9075020384556
+    },
+    {
+      "no": 3,
+      "name": "BAMBANG RIYADI",
+      "rank": "AIPDA",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "DEPAN SMPN 6 TULUNGAGUNG",
+      "latitude": -8.058888325864162,
+      "longitude": 111.9075020384556
+    },
+    {
+      "no": 4,
+      "name": "SAMSUR RIJAL",
+      "rank": "BRIGADIR",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "DEPAN SMPN 6 TULUNGAGUNG",
+      "latitude": -8.058888325864162,
+      "longitude": 111.9075020384556
+    },
+    {
+      "no": 5,
+      "name": "HERIYANTO",
+      "rank": "BRIGADIR",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "DEPAN SMPN 6 TULUNGAGUNG",
+      "latitude": -8.058888325864162,
+      "longitude": 111.9075020384556
+    },
+    {
+      "no": 6,
+      "name": "UMI AMBARWATI",
+      "rank": "AIPTU",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "DEPAN SMPN 3 TULUNGAGUNG",
+      "latitude": -8.059632889434232,
+      "longitude": 111.90883602495896
+    },
+    {
+      "no": 7,
+      "name": "HERU TRIHANDOKO",
+      "rank": "AIPTU",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "DEPAN SMPN 3 TULUNGAGUNG",
+      "latitude": -8.059632889434232,
+      "longitude": 111.90883602495896
+    },
+    {
+      "no": 8,
+      "name": "VENDHY SUPRAYOGA",
+      "rank": "BRIGADIR",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "DEPAN SMAN 1 KEDUNGWARU",
+      "latitude": -8.055749420248388,
+      "longitude": 111.91037056728976
+    },
+    {
+      "no": 9,
+      "name": "EKA PUSPITA MAYDRYANA",
+      "rank": "BRIGADIR",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "DEPAN SMAN 1 KEDUNGWARU",
+      "latitude": -8.055749420248388,
+      "longitude": 111.91037056728976
+    },
+    {
+      "no": 10,
+      "name": "EKO FEBRI",
+      "rank": "AIPDA",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "DEPAN SMK KATHOLIK THOMAS AQUINO",
+      "latitude": -8.055621467612982,
+      "longitude": 111.9125851096205
+    },
+    {
+      "no": 11,
+      "name": "GAGAS HANDRIYANA PUTRA",
+      "rank": "BRIPTU",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "DEPAN SMK KATHOLIK THOMAS AQUINO",
+      "latitude": -8.055621467612982,
+      "longitude": 111.9125851096205
+    },
+    {
+      "no": 12,
+      "name": "DENY ANDRI S",
+      "rank": "BRIPTU",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "DEPAN SD PETRA",
+      "latitude": -8.057988017098983,
+      "longitude": 111.90740785194994
+    },
+    {
+      "no": 13,
+      "name": "LUKY AKBAR FIRMANSYAH",
+      "rank": "BRIPDA",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "DEPAN SD PETRA",
+      "latitude": -8.057988017098983,
+      "longitude": 111.90740785194994
+    },
+    {
+      "no": 14,
+      "name": "WARAS ALI HARTONO",
+      "rank": "AIPDA",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "DEPAN SD PETRA",
+      "latitude": -8.057988017098983,
+      "longitude": 111.90740785194994
+    },
+    {
+      "no": 15,
+      "name": "AHMAD ZAENUDIN, S.H.",
+      "rank": "IPDA",
+      "jabatan": "KAURBINOPSNAL",
+      "role": "PADAL",
+      "postName": null,
+      "latitude": null,
+      "longitude": null
+    },
+    {
+      "no": 16,
+      "name": "IMA SAFITRI",
+      "rank": "AIPDA",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "DEPAN SMP KATHOLIK",
+      "latitude": -8.065438305903392,
+      "longitude": 111.90550274029938
+    },
+    {
+      "no": 17,
+      "name": "FRANSISKA ENDI",
+      "rank": "AIPTU",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "DEPAN SMP KATHOLIK",
+      "latitude": -8.065438305903392,
+      "longitude": 111.90550274029938
+    },
+    {
+      "no": 18,
+      "name": "VENNA ANGGRIAWAN",
+      "rank": "AIPDA",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "DEPAN SDN KAMDAL 456",
+      "latitude": -8.065762596290638,
+      "longitude": 111.90313006728964
+    },
+    {
+      "no": 19,
+      "name": "NINO DIMYANA",
+      "rank": "AIPTU",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "DEPAN SDN KAMDAL 456",
+      "latitude": -8.065762596290638,
+      "longitude": 111.90313006728964
+    },
+    {
+      "no": 20,
+      "name": "ANDI SISCA",
+      "rank": "AIPDA",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "SIMP 3 GOLDEN",
+      "latitude": -8.065625340673485,
+      "longitude": 111.90410242520896
+    },
+    {
+      "no": 21,
+      "name": "MOCH. IMAM ZUHDI",
+      "rank": "BRIPDA",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "SIMP 3 GOLDEN",
+      "latitude": -8.065625340673485,
+      "longitude": 111.90410242520896
+    },
+    {
+      "no": 22,
+      "name": "ARI EKO ISWOYO",
+      "rank": "Aiptu",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "SIMP 3 GEREJA SANTA MARIA",
+      "latitude": -8.065538887191643,
+      "longitude": 111.90492888733966
+    },
+    {
+      "no": 23,
+      "name": "SAMSUL HADI",
+      "rank": "Aipda",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "SIMP 3 GEREJA SANTA MARIA",
+      "latitude": -8.065538887191643,
+      "longitude": 111.90492888733966
+    },
+    {
+      "no": 24,
+      "name": "AGUS SUHARSOYO",
+      "rank": "Aiptu",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "SIMP 3 TOPSELL",
+      "latitude": -8.065528880749682,
+      "longitude": 111.90466626881988
+    },
+    {
+      "no": 25,
+      "name": "YULI SUDIBYO",
+      "rank": "Aipda",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "SIMP 3 TOPSELL",
+      "latitude": -8.065528880749682,
+      "longitude": 111.90466626881988
+    },
+    {
+      "no": 26,
+      "name": "RETNO DWI ASTUTI",
+      "rank": "BRIPKA",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "DEPAN SMPN 1 TULUNGAGUNG",
+      "latitude": -8.065184634002646,
+      "longitude": 111.90295544222718
+    },
+    {
+      "no": 27,
+      "name": "AYU F. VALBIE",
+      "rank": "BRIGPOL",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "DEPAN SMPN 1 TULUNGAGUNG",
+      "latitude": -8.065184634002646,
+      "longitude": 111.90295544222718
+    },
+    {
+      "no": 28,
+      "name": "SUSILO AJI SUJATMIKO, S.H.,M.H.",
+      "rank": "IPDA",
+      "jabatan": "KANIT REGIDENT",
+      "role": "PADAL",
+      "postName": null,
+      "latitude": null,
+      "longitude": null
+    },
+    {
+      "no": 29,
+      "name": "SISWATI HANDAYANI",
+      "rank": "AIPTU",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "DEPAN SDN KAMDAL 1",
+      "latitude": -8.063907757920912,
+      "longitude": 111.9019937777672
+    },
+    {
+      "no": 30,
+      "name": "ANNA SILVI",
+      "rank": "BRIGADIR",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "DEPAN SDN KAMDAL 1",
+      "latitude": -8.063907757920912,
+      "longitude": 111.9019937777672
+    },
+    {
+      "no": 31,
+      "name": "IRWAN DWI CAHYONO",
+      "rank": "AIPDA",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "SIMP 4 ALTA",
+      "latitude": -8.063799788430401,
+      "longitude": 111.90285453421113
+    },
+    {
+      "no": 32,
+      "name": "AGENG ARIF PRISWANTO, S.H.",
+      "rank": "AIPDA",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "SIMP 4 ALTA",
+      "latitude": -8.063799788430401,
+      "longitude": 111.90285453421113
+    },
+    {
+      "no": 33,
+      "name": "TOBARONI ACHMAD, S.H.",
+      "rank": "AIPDA",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "SIMP 4 ALTA",
+      "latitude": -8.063799788430401,
+      "longitude": 111.90285453421113
+    },
+    {
+      "no": 34,
+      "name": "ILHAM YUZRIL A",
+      "rank": "BRIPTU",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "SIMP 4 55 UTARA",
+      "latitude": -8.065066942733177,
+      "longitude": 111.89841109643612
+    },
+    {
+      "no": 35,
+      "name": "M.ARVIN FIRDAUS",
+      "rank": "BRIPDA",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "SIMP 4 55 UTARA",
+      "latitude": -8.065066942733177,
+      "longitude": 111.89841109643612
+    },
+    {
+      "no": 36,
+      "name": "WAHYU PRIBADININGTYAS",
+      "rank": "AIPDA",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "SIMP 3 55 SELATAN",
+      "latitude": -8.066529137364478,
+      "longitude": 111.89847237258641
+    },
+    {
+      "no": 37,
+      "name": "GADING PERMATA S",
+      "rank": "BRIGADIR",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "SIMP 3 55 SELATAN",
+      "latitude": -8.066529137364478,
+      "longitude": 111.89847237258641
+    },
+    {
+      "no": 38,
+      "name": "FERI ISWANTO",
+      "rank": "BRIPDA",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "SIMP 4 VIDIA TIRTA",
+      "latitude": -8.065404560981312,
+      "longitude": 111.89607020991215
+    },
+    {
+      "no": 39,
+      "name": "HARSANDA ARJUNA",
+      "rank": "BRIPDA",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "SIMP 4 VIDIA TIRTA",
+      "latitude": -8.065404560981312,
+      "longitude": 111.89607020991215
+    },
+    {
+      "no": 40,
+      "name": "GERRY PERMANA, S.H.",
+      "rank": "IPDA",
+      "jabatan": "KAURMINTU",
+      "role": "PADAL",
+      "postName": null,
+      "latitude": null,
+      "longitude": null
+    },
+    {
+      "no": 41,
+      "name": "SATRIYA HADI",
+      "rank": "AIPDA",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "DEPAN SD BAGO TINGKAT",
+      "latitude": -8.07105009942868,
+      "longitude": 111.91448025270972
+    },
+    {
+      "no": 42,
+      "name": "JOHAN YOGA",
+      "rank": "BRIPTU",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "DEPAN SD BAGO TINGKAT",
+      "latitude": -8.07105009942868,
+      "longitude": 111.91448025270972
+    },
+    {
+      "no": 43,
+      "name": "DONNI PRASETIO",
+      "rank": "AIPDA",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "DEPAN SD JEPUN",
+      "latitude": -8.076145606299068,
+      "longitude": 111.9141322469476
+    },
+    {
+      "no": 44,
+      "name": "ALVIAN SETIADI",
+      "rank": "BRIGADIR",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "DEPAN SD JEPUN",
+      "latitude": -8.076145606299068,
+      "longitude": 111.9141322469476
+    },
+    {
+      "no": 45,
+      "name": "PEGIANA PANGGAH YUANDRA",
+      "rank": "BRIGPOL",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "DEPAN SDN 3 KEPATIHAN",
+      "latitude": -8.062012594284846,
+      "longitude": 111.91615540301032
+    },
+    {
+      "no": 46,
+      "name": "RINTO BASUKI",
+      "rank": "AIPDA",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "DEPAN SDN 3 KEPATIHAN",
+      "latitude": -8.062012594284846,
+      "longitude": 111.91615540301032
+    },
+    {
+      "no": 47,
+      "name": "DENNA ARIEF M",
+      "rank": "AIPDA",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "SIMP 4 CEMPAKA",
+      "latitude": -8.064542898265882,
+      "longitude": 111.91080347075726
+    },
+    {
+      "no": 48,
+      "name": "CHANDRA ALPO ROMEO",
+      "rank": "AIPTU",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "SIMP 4 CEMPAKA",
+      "latitude": -8.064542898265882,
+      "longitude": 111.91080347075726
+    },
+    {
+      "no": 49,
+      "name": "YOPIE DWI CAHYONO, S.H.",
+      "rank": "AIPTU",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "SIMP 4 ORARI",
+      "latitude": -8.070694059521273,
+      "longitude": 111.90732704211752
+    },
+    {
+      "no": 50,
+      "name": "TATAN ALAM AKBAR",
+      "rank": "BRIPTU",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "SIMP 4 ORARI",
+      "latitude": -8.070694059521273,
+      "longitude": 111.90732704211752
+    },
+    {
+      "no": 51,
+      "name": "M. PUTRA FATIQUNADA",
+      "rank": "BRIGADIR",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "SIMP 4 ORARI",
+      "latitude": -8.070694059521273,
+      "longitude": 111.90732704211752
+    },
+    {
+      "no": 52,
+      "name": "INDRO GIRI",
+      "rank": "AIPDA",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "DEPAN TK BHAYANGKARI",
+      "latitude": -8.067827687414495,
+      "longitude": 111.90735984377604
+    },
+    {
+      "no": 53,
+      "name": "SAVIRA NATASYA",
+      "rank": "BRIPDA",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "DEPAN TK BHAYANGKARI",
+      "latitude": -8.067827687414495,
+      "longitude": 111.90735984377604
+    },
+    {
+      "no": 54,
+      "name": "ADI WASKITHO",
+      "rank": "BRIGPOL",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "SIMP 4 RSB",
+      "latitude": -8.067046048910614,
+      "longitude": 111.9073502746778
+    },
+    {
+      "no": 55,
+      "name": "ICON YOHNA B",
+      "rank": "BRIPTU",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "SIMP 4 RSB",
+      "latitude": -8.067046048910614,
+      "longitude": 111.9073502746778
+    },
+    {
+      "no": 56,
+      "name": "SUNONDO",
+      "rank": "IPTU",
+      "jabatan": "KANIT KAMSEL",
+      "role": "PADAL",
+      "postName": null,
+      "latitude": null,
+      "longitude": null
+    },
+    {
+      "no": 57,
+      "name": "MUHAMAD CAHYO RAHARJO, S.H.",
+      "rank": "BRIGPOL",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "SIMP 4 SD BEJI",
+      "latitude": -8.078718361851248,
+      "longitude": 111.9027155657898
+    },
+    {
+      "no": 58,
+      "name": "WAHYU SUPIYANTO",
+      "rank": "BRIPKA",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "SIMP 4 SD BEJI",
+      "latitude": -8.078718361851248,
+      "longitude": 111.9027155657898
+    },
+    {
+      "no": 59,
+      "name": "YOGI CANDRA DINATA",
+      "rank": "BRIGADIR",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "SIMP 4 SD BEJI",
+      "latitude": -8.078718361851248,
+      "longitude": 111.9027155657898
+    },
+    {
+      "no": 60,
+      "name": "YHOGA PERMANA, S.H.",
+      "rank": "BRIGPOL",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "SIMP 4 BRI",
+      "latitude": -8.070593791999652,
+      "longitude": 111.90150946430629
+    },
+    {
+      "no": 61,
+      "name": "MUHAMMAD BAYU PRAKOSO, S.H.",
+      "rank": "BRIGPOL",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "SIMP 4 BRI",
+      "latitude": -8.070593791999652,
+      "longitude": 111.90150946430629
+    },
+    {
+      "no": 62,
+      "name": "MOKHAMMAD REZA MAHENDRA A",
+      "rank": "BRIPTU",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "SIMP 4 BRI",
+      "latitude": -8.070593791999652,
+      "longitude": 111.90150946430629
+    },
+    {
+      "no": 63,
+      "name": "SANCOKO YEKTI",
+      "rank": "BRIPKA",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "DEPAN SD TAMANAN",
+      "latitude": -8.07316272932058,
+      "longitude": 111.90310931046098
+    },
+    {
+      "no": 64,
+      "name": "M. JULIAN",
+      "rank": "BRIGADIR",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "DEPAN SD TAMANAN",
+      "latitude": -8.07316272932058,
+      "longitude": 111.90310931046098
+    },
+    {
+      "no": 65,
+      "name": "NUR CHOLIK",
+      "rank": "AIPTU",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "SIMP 4 TT",
+      "latitude": -8.06611292679103,
+      "longitude": 111.90098677074417
+    },
+    {
+      "no": 66,
+      "name": "ROBI SETIAWAN",
+      "rank": "AIPTU",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "SIMP 4 TT",
+      "latitude": -8.06611292679103,
+      "longitude": 111.90098677074417
+    },
+    {
+      "no": 67,
+      "name": "BUDI SETIONO",
+      "rank": "AIPDA",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "SIMP 4 TT",
+      "latitude": -8.06611292679103,
+      "longitude": 111.90098677074417
+    },
+    {
+      "no": 68,
+      "name": "SETYA TRI",
+      "rank": "BRIPTU",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "SIMP 4 TT",
+      "latitude": -8.06611292679103,
+      "longitude": 111.90098677074417
+    },
+    {
+      "no": 69,
+      "name": "ARMANDO SATYA PUTRA PRATAMA, S.Tr.K.,CPHR",
+      "rank": "IPDA",
+      "jabatan": "KANIT GAKKUM",
+      "role": "PADAL",
+      "postName": null,
+      "latitude": null,
+      "longitude": null
+    },
+    {
+      "no": 70,
+      "name": "ROHMAN YUWONO",
+      "rank": "AIPTU",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "DEPAN SMPN 2 TULUNGAGUNG",
+      "latitude": -8.062451762042587,
+      "longitude": 111.90733186450889
+    },
+    {
+      "no": 71,
+      "name": "NANDA FARADICHA",
+      "rank": "BRIPDA",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "DEPAN SMPN 2 TULUNGAGUNG",
+      "latitude": -8.062451762042587,
+      "longitude": 111.90733186450889
+    },
+    {
+      "no": 72,
+      "name": "MUHADI",
+      "rank": "AIPDA",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "DEPAN SMPN 2 TULUNGAGUNG",
+      "latitude": -8.062451762042587,
+      "longitude": 111.90733186450889
+    },
+    {
+      "no": 73,
+      "name": "JAROT PRIO RAMADHANI",
+      "rank": "BRIPDA",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "DEPAN SMPN 2 TULUNGAGUNG",
+      "latitude": -8.062451762042587,
+      "longitude": 111.90733186450889
+    },
+    {
+      "no": 74,
+      "name": "CHOIRUL ANAM",
+      "rank": "AIPDA",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "SIMP 4 KARYA AGUNG",
+      "latitude": -8.06317057603224,
+      "longitude": 111.90733186450662
+    },
+    {
+      "no": 75,
+      "name": "ANTOK SEPTIYANTO N",
+      "rank": "AIPDA",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "SIMP 4 KARYA AGUNG",
+      "latitude": -8.06317057603224,
+      "longitude": 111.90733186450662
+    },
+    {
+      "no": 76,
+      "name": "AGUS SUPRAYITNO",
+      "rank": "AIPDA",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "SIMP 4 PGRI",
+      "latitude": -8.061885235984377,
+      "longitude": 111.90736198870472
+    },
+    {
+      "no": 77,
+      "name": "RIZKI INDRA SUSANTO",
+      "rank": "BRIPTU",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "SIMP 4 PGRI",
+      "latitude": -8.061885235984377,
+      "longitude": 111.90736198870472
+    },
+    {
+      "no": 78,
+      "name": "ADI NUGROHO",
+      "rank": "AIPTU",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "SIMP 4 PARE LAMA",
+      "latitude": -8.060141735248424,
+      "longitude": 111.90418999036669
+    },
+    {
+      "no": 79,
+      "name": "LUTFI KURNIAWAN",
+      "rank": "AIPTU",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "SIMP 4 PARE LAMA",
+      "latitude": -8.060141735248424,
+      "longitude": 111.90418999036669
+    },
+    {
+      "no": 80,
+      "name": "HELEN IZA M",
+      "rank": "BRIPTU",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "SIMP 4 TOKO CANTIK",
+      "latitude": -8.06009823739921,
+      "longitude": 111.90473913819474
+    },
+    {
+      "no": 81,
+      "name": "YOGHA YULIAN P",
+      "rank": "BRIGADIR",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "SIMP 4 TOKO CANTIK",
+      "latitude": -8.06009823739921,
+      "longitude": 111.90473913819474
+    },
+    {
+      "no": 82,
+      "name": "ROHANA",
+      "rank": "AIPTU",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "SIMP 4 TOKO CANTIK",
+      "latitude": -8.06009823739921,
+      "longitude": 111.90473913819474
+    },
+    {
+      "no": 83,
+      "name": "ANDI WISNU WARDANI",
+      "rank": "BRIPTU",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "SIMP 4 PUJASERA NGEMPLAK",
+      "latitude": -8.054009759517879,
+      "longitude": 111.8907612746449
+    },
+    {
+      "no": 84,
+      "name": "EDO JULIAN HARJITO",
+      "rank": "BRIGADIR",
+      "jabatan": "BA SATLANTAS",
+      "role": "ANGGOTA",
+      "postName": "SIMP 4 PUJASERA NGEMPLAK",
+      "latitude": -8.054009759517879,
+      "longitude": 111.8907612746449
+    }
+  ],
+  "warnings": []
+}
