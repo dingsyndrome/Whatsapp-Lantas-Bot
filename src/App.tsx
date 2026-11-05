@@ -6,6 +6,7 @@ import { DashboardPage } from '@/src/pages/dashboard';
 import { TimemarkPage } from '@/src/pages/timemark';
 import { SprinPage } from '@/src/pages/sprin';
 import { LinksPage } from '@/src/pages/links';
+import { RekapitulasiPage } from '@/src/pages/rekapitulasi';
 import { SettingsPage } from '@/src/pages/settings';
 import { LoginPage } from '@/src/pages/login';
 import { useTheme } from '@/src/lib/theme';
@@ -31,6 +32,7 @@ export default function App() {
                   <Route path="/timemark" element={<TimemarkPage />} />
                   <Route path="/sprin" element={<SprinPage />} />
                   <Route path="/links" element={<LinksPage />} />
+                  <Route path="/rekapitulasi" element={<RekapitulasiPage />} />
                   <Route path="/settings" element={<SettingsPage />} />
                   <Route path="*" element={<NotFoundPage />} />
                 </Routes>

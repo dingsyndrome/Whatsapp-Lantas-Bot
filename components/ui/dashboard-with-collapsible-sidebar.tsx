@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
+  BarChart3,
   Camera,
   ChevronRight,
   FileText,
@@ -31,9 +32,9 @@ import { formatDateLong, statusLabel } from '@/lib/format';
 
 const NAV_ITEMS = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
-  { path: '/timemark', label: 'Rekap Foto Timemark', icon: Camera, end: false },
+  { path: '/timemark', label: 'Timemark', icon: Camera, end: false },
   { path: '/sprin', label: 'Data Surat Perintah', icon: FileText, end: false },
-  { path: '/links', label: 'Rekap Link Anggota', icon: Link2, end: false },
+  { path: '/rekapitulasi', label: 'Rekapitulasi', icon: BarChart3, end: false },
   { path: '/settings', label: 'Settings / Bot', icon: Settings2, end: false }
 ];
 

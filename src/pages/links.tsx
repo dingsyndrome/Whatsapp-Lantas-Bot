@@ -527,7 +527,7 @@ function LinkRecapDialog({
   );
 }
 
-export function LinksPage() {
+export function LinksPage({ embedded = false }: { embedded?: boolean } = {}) {
   const [page, setPage] = React.useState(1);
   const [search, setSearch] = React.useState('');
   const [platform, setPlatform] = React.useState('all');
@@ -563,6 +563,7 @@ export function LinksPage() {
 
   return (
     <div className="animate-slide-up space-y-6">
+      {embedded ? null : (
       <PageHeader
         eyebrow="Link Aggregator"
         title="Rekap Link Anggota"
@@ -603,6 +604,7 @@ export function LinksPage() {
           </>
         }
       />
+      )}
 
       {summaryApi.data ? <LinkSummaryCards summary={summaryApi.data} /> : null}
 

@@ -90,7 +90,6 @@ import { cn } from '@/lib/utils';
 import { formatDateTime } from '@/lib/format';
 import { PersonnelPanel } from './settings-personnel';
 import { PosPagiPanel } from './settings-pos-pagi';
-import { RecapPanel } from './settings-recap';
 import { ManagersPanel } from './settings-managers';
 import { NotifySettingsPanel } from './settings-notify';
 
@@ -1721,7 +1720,6 @@ export function SettingsPage() {
             <TabsTrigger value="manajer" className="text-[11px]"><ShieldCheck className="h-3.5 w-3.5" /> Manajer</TabsTrigger>
             <TabsTrigger value="notifikasi" className="text-[11px]"><Bell className="h-3.5 w-3.5" /> Notifikasi</TabsTrigger>
             <TabsTrigger value="jadwal" className="text-[11px]"><CalendarClock className="h-3.5 w-3.5" /> Jadwal Rekap</TabsTrigger>
-            <TabsTrigger value="rekap" className="text-[11px]"><ClipboardCopy className="h-3.5 w-3.5" /> Rekap Kustom</TabsTrigger>
             <TabsTrigger value="simulator" className="text-[11px]"><Sparkles className="h-3.5 w-3.5" /> Simulator</TabsTrigger>
           </TabsList>
         </div>
@@ -1768,9 +1766,6 @@ export function SettingsPage() {
           <ManagersPanel />
         </TabsContent>
 
-        <TabsContent value="rekap" className="mt-5">
-          <RecapPanel />
-        </TabsContent>
 
         <TabsContent value="jadwal" className="mt-5">
           <SchedulePanel
