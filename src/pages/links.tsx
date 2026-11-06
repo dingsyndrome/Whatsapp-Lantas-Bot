@@ -561,48 +561,54 @@ export function LinksPage({ embedded = false }: { embedded?: boolean } = {}) {
   const data = listApi.data;
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;
 
+  // Aksi header dipakai ulang: tampil penuh pada halaman biasa, dan tetap
+  // tampil sebagai baris tombol saat halaman ditanam di tab Rekapitulasi.
+  const linkHeaderActions = (
+    <>
+              <Button variant="outline" size="sm" onClick={() => setRecapOpen(true)}>
+                <CalendarClock className="h-4 w-4" />
+                Rekap ke WA
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="sm">
+                    <Download className="h-4 w-4" /> Ekspor
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>Ekspor data</DropdownMenuLabel>
+                  <DropdownMenuItem onClick={() => downloadFile(exportUrl('daily.xlsx'))}>
+                    <FileSpreadsheet className="h-4 w-4 text-success" /> Excel semua data
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => downloadFile(exportUrl('links.csv'))}>
+                    <Link2 className="h-4 w-4 text-info" /> CSV link anggota
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => downloadFile(exportUrl('turjawali.csv'))}>
+                    <FileSpreadsheet className="h-4 w-4 text-warning" /> CSV rekap Turjawali
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel>WhatsApp</DropdownMenuLabel>
+                  <DropdownMenuItem onClick={() => setRecapOpen(true)}>
+                    <ClipboardCopy className="h-4 w-4" /> Rekap link ke WA
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => downloadFile(exportUrl('daily.txt'))}>
+                    <FileText className="h-4 w-4" /> Teks harian lengkap
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+    </>
+  );
+
   return (
     <div className="animate-slide-up space-y-6">
-      {embedded ? null : (
+      {embedded ? (
+        <div className="flex flex-wrap items-center justify-end gap-2">{linkHeaderActions}</div>
+      ) : (
       <PageHeader
         eyebrow="Link Aggregator"
         title="Rekap Link Anggota"
         description="Tautan laporan dari Instagram, TikTok, Facebook, YouTube, X, Drive, maps, dan portal berita — terekam otomatis."
-        actions={
-          <>
-            <Button variant="outline" size="sm" onClick={() => setRecapOpen(true)}>
-              <CalendarClock className="h-4 w-4" />
-              Rekap ke WA
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button size="sm">
-                  <Download className="h-4 w-4" /> Ekspor
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Ekspor data</DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => downloadFile(exportUrl('daily.xlsx'))}>
-                  <FileSpreadsheet className="h-4 w-4 text-success" /> Excel semua data
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => downloadFile(exportUrl('links.csv'))}>
-                  <Link2 className="h-4 w-4 text-info" /> CSV link anggota
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => downloadFile(exportUrl('turjawali.csv'))}>
-                  <FileSpreadsheet className="h-4 w-4 text-warning" /> CSV rekap Turjawali
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuLabel>WhatsApp</DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => setRecapOpen(true)}>
-                  <ClipboardCopy className="h-4 w-4" /> Rekap link ke WA
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => downloadFile(exportUrl('daily.txt'))}>
-                  <FileText className="h-4 w-4" /> Teks harian lengkap
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </>
-        }
+        actions={linkHeaderActions}
       />
       )}
 
