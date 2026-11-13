@@ -226,7 +226,7 @@ export async function listSprins(options: {
   if (options.notify === 'review') {
     where.notification = { is: { status: 'pending_review' } };
   } else if (options.notify === 'sent') {
-    where.notification = { is: { status: 'sent' } };
+    where.notification = { is: { status: { in: ['sent', 'partial_sent'] } } };
   }
   if (options.search) {
     where.OR = [

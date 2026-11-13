@@ -183,6 +183,17 @@ export interface SprinNotifySendResultDTO extends SprinNotifyPreviewDTO {
   dryRun: boolean;
 }
 
+export interface SprinNotifyPersonSendResultDTO {
+  personnelId: string;
+  name: string;
+  phone: string;
+  message: string;
+  sent: boolean;
+  failed: boolean;
+  notificationStatus: string;
+  sentAt: string | null;
+}
+
 export const TURJAWALI_TYPES = [
   'PENGATURAN',
   'PENJAGAAN',

@@ -1,6 +1,7 @@
 import { format } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { prisma } from '../lib/prisma.js';
+import { HttpError } from '../lib/http-error.js';
 import { logger } from '../lib/logger.js';
 import { recordActivity } from '../lib/activity.js';
 import { samePhone } from '../lib/phone.js';
@@ -12,6 +13,7 @@ import {
 import {
   DEFAULT_SPRIN_NOTIFY_TEMPLATE,
   TURJAWALI_LABELS,
+  type SprinNotifyPersonSendResultDTO,
   type SprinNotifyPreviewDTO,
   type SprinNotifyRecipientDTO,
   type SprinNotifySendResultDTO,
@@ -579,6 +581,138 @@ export async function sendSprinNotification(
     sent,
     failed,
     dryRun: false
+  };
+}
+
+async function persistPersonSend(
+  preview: SprinNotifyPreviewDTO,
+  personnelId: string,
+  message: string,
+  sent: boolean,
+  options: SprinNotifyOptions
+): Promise<string> {
+  const existing = await prisma.sprinNotification.findUnique({
+    where: { sprinId: preview.sprinId }
+  });
+  const overrides = {
+    ...parseOverrides(existing?.overrides),
+    [personnelId]: message
+  };
+  const now = new Date();
+  const status = existing?.status === 'sent' ? 'sent' : sent ? 'partial_sent' : existing?.status ?? 'draft';
+
+  await prisma.sprinNotification.upsert({
+    where: { sprinId: preview.sprinId },
+    create: {
+      sprinId: preview.sprinId,
+      status,
+      functionCodes: JSON.stringify(preview.functionCodes),
+      excludePerwira: preview.excludePerwira,
+      template: preview.template,
+      overrides: JSON.stringify(overrides),
+      analysis: JSON.stringify(preview.analysis),
+      requiresReview: preview.requiresReview,
+      reviewReasons: JSON.stringify(preview.reviewReasons),
+      reviewNote: options.reviewNote ?? null,
+      reviewedBy: options.actor ?? null,
+      reviewedAt: sent ? now : null,
+      sentAt: sent ? now : null,
+      sentCount: sent ? 1 : 0,
+      failedCount: sent ? 0 : 1
+    },
+    update: {
+      status,
+      overrides: JSON.stringify(overrides),
+      reviewNote: options.reviewNote ?? undefined,
+      ...(sent
+        ? {
+            sentAt: now,
+            sentCount: { increment: 1 },
+            reviewedBy: options.actor ?? undefined,
+            reviewedAt: now
+          }
+        : { failedCount: { increment: 1 } })
+    }
+  });
+
+  return status;
+}
+
+/**
+ * Kirim satu pesan khusus ke satu personel. Berbeda dari kirim massal,
+ * fungsi ini tidak menandai seluruh Sprin sebagai terkirim.
+ */
+export async function sendSprinPersonNotification(
+  sprinId: string,
+  personnelId: string,
+  message: string,
+  options: SprinNotifyOptions = {}
+): Promise<SprinNotifyPersonSendResultDTO | null> {
+  const context = await loadContext(sprinId);
+  if (!context) return null;
+
+  const trimmed = message.trim();
+  if (!trimmed) throw new HttpError(400, 'Pesan tidak boleh kosong.');
+  if (trimmed.length > 10_000) throw new HttpError(400, 'Pesan terlalu panjang (maksimal 10.000 karakter).');
+
+  const preview = buildPreview(context, {
+    ...options,
+    // Kirim ulang tetap boleh untuk pesan khusus ke satu orang.
+    force: options.force ?? true,
+    overrides: {
+      ...(options.overrides ?? {}),
+      [personnelId]: trimmed
+    }
+  });
+
+  if (preview.requiresReview && !options.confirmReview) {
+    throw new HttpError(409, 'Notifikasi ini perlu verifikasi admin. Setujui pengiriman per orang terlebih dahulu.');
+  }
+
+  const recipient = preview.recipients.find((row) => row.personnelId === personnelId);
+  if (!recipient) {
+    throw new HttpError(
+      404,
+      'Personel tidak termasuk penerima. Periksa fungsi, perwira, nomor HP, atau kecocokan roster.'
+    );
+  }
+
+  const ok = await whatsappManager
+    .sendMessage(`${recipient.phone}@c.us`, trimmed)
+    .catch(() => false);
+
+  if (ok) {
+    await prisma.sprinPersonnel.update({
+      where: { id: recipient.personnelId },
+      data: { notifiedAt: new Date() }
+    });
+  }
+
+  const status = await persistPersonSend(preview, personnelId, trimmed, ok, options);
+
+  await recordActivity({
+    type: 'sprin_notify_person',
+    title: ok ? 'Pesan khusus Sprin terkirim' : 'Pesan khusus Sprin gagal',
+    description: `${preview.sprinNumber} · ${recipient.name} · ${recipient.phone}`,
+    actor: options.actor ?? 'Dashboard',
+    entityType: 'sprin',
+    entityId: sprinId,
+    metadata: {
+      personnelId,
+      sent: ok,
+      functions: preview.functionCodes
+    }
+  });
+
+  return {
+    personnelId: recipient.personnelId,
+    name: recipient.name,
+    phone: recipient.phone,
+    message: trimmed,
+    sent: ok,
+    failed: !ok,
+    notificationStatus: status,
+    sentAt: ok ? new Date().toISOString() : null
   };
 }
 

@@ -40,6 +40,12 @@ function matchRule(method: string, rawPath: string): PermissionRule | null {
   if (/^\/api\/sprin\/[^/]+\/notify$/.test(path) && method === 'POST') {
     return 'sprin.notify';
   }
+  if (
+    /^\/api\/sprin\/[^/]+\/notify\/(preview|draft|person)$/.test(path) &&
+    method === 'POST'
+  ) {
+    return 'sprin.notify';
+  }
   if (path.startsWith('/api/sprin') && write) return 'sprin.manage';
 
   if (/^\/api\/timemark\/[^/]+\/turjawali$/.test(path) && write) {

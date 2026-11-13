@@ -19,7 +19,8 @@ import {
   autoNotifySprin,
   previewSprinNotification,
   saveSprinNotificationDraft,
-  sendSprinNotification
+  sendSprinNotification,
+  sendSprinPersonNotification
 } from '../services/sprin-notify-service.js';
 
 export const sprinRouter = Router();
@@ -123,6 +124,26 @@ const notifySchema = z.object({
   limit: z.number().int().min(1).max(1000).optional(),
   confirmReview: z.boolean().optional(),
   reviewNote: z.string().max(2000).optional()
+});
+
+const personNotifySchema = notifySchema.extend({
+  personnelId: z.string().trim().min(1).max(64),
+  message: z.string().trim().min(1).max(10_000)
+});
+
+sprinRouter.post('/:id/notify/person', async (req, res) => {
+  const body = personNotifySchema.parse(req.body ?? {});
+  const result = await sendSprinPersonNotification(
+    String(req.params.id),
+    body.personnelId,
+    body.message,
+    {
+      ...body,
+      actor: 'Dashboard'
+    }
+  );
+  if (!result) throw new HttpError(404, 'Surat Perintah tidak ditemukan.');
+  res.json(result);
 });
 
 sprinRouter.post('/:id/notify/preview', async (req, res) => {

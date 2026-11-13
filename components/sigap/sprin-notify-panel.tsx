@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 import type {
   NotificationFunctionDTO,
   SprinDTO,
+  SprinNotifyPersonSendResultDTO,
   SprinNotifyPreviewDTO,
   SprinNotifyRecipientDTO
 } from '@/shared/types';
@@ -44,6 +45,7 @@ import { cn } from '@/lib/utils';
 
 function statusBadge(status: string) {
   if (status === 'sent') return <Badge variant="success" className="text-[8px]">Terkirim</Badge>;
+  if (status === 'partial_sent') return <Badge variant="info" className="text-[8px]">Sebagian terkirim</Badge>;
   if (status === 'failed') return <Badge variant="destructive" className="text-[8px]">Gagal</Badge>;
   if (status === 'pending_review') return <Badge variant="warning" className="text-[8px]">Perlu verifikasi</Badge>;
   if (status === 'draft') return <Badge variant="info" className="text-[8px]">Draf</Badge>;
@@ -68,9 +70,11 @@ export function SprinNotifyPanel({ sprin, onChanged }: { sprin: SprinDTO; onChan
   const [loading, setLoading] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
   const [sending, setSending] = React.useState(false);
+  const [sendingPerson, setSendingPerson] = React.useState(false);
   const [selectedRecipient, setSelectedRecipient] = React.useState<SprinNotifyRecipientDTO | null>(null);
   const [showSkipped, setShowSkipped] = React.useState(false);
   const [confirmOpen, setConfirmOpen] = React.useState(false);
+  const [personConfirmOpen, setPersonConfirmOpen] = React.useState(false);
   const [reviewNote, setReviewNote] = React.useState('');
 
   const loadPreview = React.useCallback(
@@ -118,6 +122,7 @@ export function SprinNotifyPanel({ sprin, onChanged }: { sprin: SprinDTO; onChan
     setSelectedRecipient(null);
     setReviewNote('');
     setConfirmOpen(false);
+    setPersonConfirmOpen(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sprin.id]);
 
@@ -199,6 +204,55 @@ export function SprinNotifyPanel({ sprin, onChanged }: { sprin: SprinDTO; onChan
       toast.error('Gagal mengirim notifikasi', { description: errorMessage(error) });
     } finally {
       setSending(false);
+    }
+  };
+
+  const sendPerson = async () => {
+    const recipient = selectedRecipient;
+    if (!recipient) return;
+    const message = (messageOverrides[recipient.personnelId] ?? recipient.generatedMessage).trim();
+    if (!message) {
+      toast.error('Pesan masih kosong', { description: 'Tulis pesan sebelum mengirim.' });
+      return;
+    }
+
+    setSendingPerson(true);
+    setPersonConfirmOpen(false);
+    try {
+      const result = await api.post<SprinNotifyPersonSendResultDTO>(
+        `/sprin/${sprin.id}/notify/person`,
+        {
+          personnelId: recipient.personnelId,
+          message,
+          functionCodes: selectedCodes,
+          excludePerwira,
+          template,
+          force: true,
+          confirmReview: true,
+          reviewNote
+        }
+      );
+
+      if (result.sent) {
+        toast.success(`Pesan terkirim ke ${recipient.name}`, {
+          description: `Hanya ke ${recipient.phone}.`
+        });
+      } else {
+        toast.error('Pesan gagal dikirim', { description: `Nomor ${recipient.phone}.` });
+      }
+
+      onChanged();
+      await loadPreview({
+        functionCodes: selectedCodes,
+        excludePerwira,
+        template,
+        force: true,
+        overrides: messageOverrides
+      });
+    } catch (error) {
+      toast.error('Gagal mengirim pesan per orang', { description: errorMessage(error) });
+    } finally {
+      setSendingPerson(false);
     }
   };
 
@@ -658,9 +712,24 @@ export function SprinNotifyPanel({ sprin, onChanged }: { sprin: SprinDTO; onChan
                     className="mt-2 min-h-[190px] font-mono text-[9px] leading-relaxed"
                   />
                   <p className="mt-1 text-[9px] text-muted-foreground">
-                    Edit langsung pesan untuk anggota ini. Perubahan disimpan saat menekan <b>Simpan draf</b> atau
-                    <b> Kirim</b>. Tombol <b>Otomatis</b> mengembalikan pesan ke hasil template.
+                    Edit langsung pesan untuk anggota ini. <b>Simpan draf</b> menyimpan perubahan, sedangkan
+                    <b> Kirim pesan ini</b> hanya mengirim ke anggota yang sedang dipilih. Tombol <b>Otomatis</b>{' '}
+                    mengembalikan pesan ke hasil template.
                   </p>
+                  <div className="mt-2 flex justify-end">
+                    <Button
+                      size="sm"
+                      onClick={() => setPersonConfirmOpen(true)}
+                      disabled={sendingPerson || sending}
+                    >
+                      {sendingPerson ? (
+                        <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Send className="h-3.5 w-3.5" />
+                      )}
+                      Kirim pesan ini
+                    </Button>
+                  </div>
                 </div>
               ) : null}
             </CardContent>
@@ -738,6 +807,52 @@ export function SprinNotifyPanel({ sprin, onChanged }: { sprin: SprinDTO; onChan
           </div>
         </>
       ) : null}
+
+      <Dialog open={personConfirmOpen} onOpenChange={setPersonConfirmOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Kirim pesan khusus ini?</DialogTitle>
+            <DialogDescription>
+              Pesan hanya dikirim ke {selectedRecipient?.name ?? 'anggota terpilih'} (
+              {selectedRecipient?.phone ?? 'nomor belum dipilih'}), bukan ke seluruh daftar.
+            </DialogDescription>
+          </DialogHeader>
+          {preview?.requiresReview ? (
+            <div className="rounded-lg border border-warning/25 bg-warning/5 p-3">
+              <p className="text-[9px] font-semibold text-warning">Perlu verifikasi admin</p>
+              <ul className="mt-1 space-y-0.5 text-[9px] text-muted-foreground">
+                {preview.reviewReasons.map((reason) => (
+                  <li key={reason}>• {reason}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          <div className="rounded-lg border border-border/60 bg-muted/15 p-3">
+            <p className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Pratinjau pesan
+            </p>
+            <p className="mt-1 max-h-[240px] overflow-auto whitespace-pre-wrap text-[10px] leading-relaxed">
+              {selectedRecipient
+                ? (messageOverrides[selectedRecipient.personnelId] ??
+                  selectedRecipient.generatedMessage)
+                : ''}
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPersonConfirmOpen(false)}>
+              Batal
+            </Button>
+            <Button onClick={() => void sendPerson()} disabled={sendingPerson}>
+              {sendingPerson ? (
+                <RefreshCw className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+              Kirim ke orang ini
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <DialogContent className="max-w-lg">

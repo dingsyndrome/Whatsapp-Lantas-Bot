@@ -655,7 +655,11 @@ mengirim ke semua personel Sprin, tetapi hanya ke fungsi yang dipilih admin.
    bila perlu.
 5. **Simpan draf** atau **Verifikasi & kirim**. Pada mode *Tinjau admin dulu*,
    pengiriman otomatis selalu ditahan sampai admin menyetujui.
-6. Gunakan filter **Notifikasi → Perlu review** di halaman Data Surat Perintah
+6. Untuk pesan khusus satu orang, klik baris personel, edit pesannya, lalu
+   **Kirim pesan ini**. Pesan hanya dikirim ke nomor orang tersebut dan
+   tersimpan sebagai override. Status Sprin menjadi **Sebagian terkirim**.
+   Admin dan manajer dengan izin **Notifikasi Sprin** dapat memakai tombol ini.
+7. Gunakan filter **Notifikasi → Perlu review** di halaman Data Surat Perintah
    atau klik kartu **Notif perlu review** untuk melihat semua draf yang belum
    disetujui.
 
