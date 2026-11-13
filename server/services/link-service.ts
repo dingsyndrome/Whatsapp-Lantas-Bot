@@ -9,6 +9,7 @@ import type { LinkDTO } from '../../shared/types.js';
 import { extractLinks, extractSprinNumber, stripLinks } from './links/extractor.js';
 import { validateLink } from './links/validator.js';
 import { PersonnelDirectory } from './personnel-directory.js';
+import { isSatlantasPersonnel } from './personnel-scope.js';
 
 export interface LinkIngestInput {
   text: string;
@@ -147,11 +148,12 @@ export async function listLinks(options: {
 }): Promise<{ items: LinkDTO[]; total: number; page: number; pageSize: number }> {
   const page = Math.max(1, options.page ?? 1);
   const pageSize = Math.min(200, Math.max(1, options.pageSize ?? 30));
-  const roster = await prisma.personnel.findMany({
+  const allPersonnel = await prisma.personnel.findMany({
     where: { active: true },
-    select: { id: true, name: true, rank: true, phone: true },
+    select: { id: true, name: true, rank: true, phone: true, jabatan: true, unit: true },
     orderBy: [{ no: 'asc' }]
   });
+  const roster = allPersonnel.filter(isSatlantasPersonnel);
   const directory = new PersonnelDirectory(roster);
 
   const where: Prisma.LinkSubmissionWhereInput = {};

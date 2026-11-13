@@ -16,6 +16,7 @@ import { formatRankName } from '../../shared/personnel-name.js';
 import { prisma } from '../lib/prisma.js';
 import { serializeLink, serializeSprin, serializeTimemark, type LinkWithSprin, type SprinWithPersonnel, type TimemarkWithSprin } from '../lib/serializers.js';
 import { PersonnelDirectory } from './personnel-directory.js';
+import { isSatlantasPersonnel } from './personnel-scope.js';
 import { getTurjawaliRecap } from './turjawali-recap-service.js';
 
 export type ExportFormat = 'xlsx' | 'csv' | 'txt';
@@ -81,12 +82,21 @@ export async function getDailyBundle(dateInput?: string | null): Promise<DailyBu
     getTurjawaliRecap({ period: 'daily', date: format(day, 'yyyy-MM-dd') }),
     prisma.personnel.findMany({
       where: { active: true },
-      select: { id: true, name: true, rank: true, phone: true, category: true },
+      select: {
+        id: true,
+        name: true,
+        rank: true,
+        phone: true,
+        category: true,
+        jabatan: true,
+        unit: true
+      },
       orderBy: [{ no: 'asc' }]
     })
   ]);
+  const satlantasRoster = roster.filter(isSatlantasPersonnel);
 
-  const directory = new PersonnelDirectory(roster);
+  const directory = new PersonnelDirectory(satlantasRoster);
   const timemarkDtos = timemarks.map((row) => {
     const item = serializeTimemark(row as TimemarkWithSprin);
     const person = directory.resolve(item.matchedPersonnelName ?? item.senderName, item.senderNumber)
@@ -138,7 +148,7 @@ export async function getDailyBundle(dateInput?: string | null): Promise<DailyBu
     const person = directory.resolve(link.senderName, link.senderNumber);
     if (person) submittedLinkIds.add(person.id);
   }
-  const nonPerwira = roster.filter((person) => person.category !== 'PERWIRA');
+  const nonPerwira = satlantasRoster.filter((person) => person.category !== 'PERWIRA');
   const notSubmitted = nonPerwira
     .filter((person) => !submittedLinkIds.has(person.id))
     .map((person) => formatRankName(person.rank, person.name));

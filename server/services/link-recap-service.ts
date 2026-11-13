@@ -12,6 +12,7 @@ import {
   summarizeLinks
 } from './links/recap-text.js';
 import { PersonnelDirectory } from './personnel-directory.js';
+import { isSatlantasPersonnel } from './personnel-scope.js';
 import { formatRankName } from '../../shared/personnel-name.js';
 import { whatsappManager } from './whatsapp-manager.js';
 
@@ -77,7 +78,7 @@ export async function buildLinkRecap(params: LinkRecapParams): Promise<LinkRecap
     ];
   }
 
-  const [rows, periodRows, roster] = await Promise.all([
+  const [rows, periodRows, allPersonnel] = await Promise.all([
     prisma.linkSubmission.findMany({
       where,
       include: { sprin: { select: { number: true } } },
@@ -90,10 +91,19 @@ export async function buildLinkRecap(params: LinkRecapParams): Promise<LinkRecap
     }),
     prisma.personnel.findMany({
       where: { active: true },
-      select: { id: true, name: true, rank: true, phone: true, category: true },
+      select: {
+        id: true,
+        name: true,
+        rank: true,
+        phone: true,
+        category: true,
+        jabatan: true,
+        unit: true
+      },
       orderBy: [{ no: 'asc' }]
     })
   ]);
+  const roster = allPersonnel.filter(isSatlantasPersonnel);
   const directory = new PersonnelDirectory(roster);
   // Batas absolut (sudah termasuk tanggal), sehingga rentang lintas hari seperti
   // 29 Okt 13:36 → 30 Okt 08:26 tidak ikut tersaring oleh perbandingan jam saja.
