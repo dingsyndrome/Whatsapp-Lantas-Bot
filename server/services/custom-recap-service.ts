@@ -6,6 +6,7 @@ import { distanceMeters } from '../lib/geo.js';
 import { findSandiCodes } from './sandi-config.js';
 import { resolveSandiAssignments } from './personnel-service.js';
 import { PersonnelDirectory } from './personnel-directory.js';
+import { isSatlantasPersonnel } from './personnel-scope.js';
 import { formatRankName } from '../../shared/personnel-name.js';
 import { TURJAWALI_LABELS, type TurjawaliType } from '../../shared/types.js';
 
@@ -234,7 +235,7 @@ export async function buildCustomRecap(params: CustomRecapParams): Promise<Custo
   const rosterOnly = params.rosterOnly !== false;
 
   const bot = await prisma.botConfig.findUnique({ where: { id: 'singleton' } });
-  const [photos, links, roster, sandiMap] = await Promise.all([
+  const [photos, links, allPersonnel, sandiMap] = await Promise.all([
     prisma.timemarkPhoto.findMany({
       where: { createdAt: { gte: from, lte: to } },
       orderBy: { createdAt: 'asc' }
@@ -243,6 +244,7 @@ export async function buildCustomRecap(params: CustomRecapParams): Promise<Custo
     prisma.personnel.findMany({ where: { active: true }, orderBy: [{ no: 'asc' }] }),
     resolveSandiAssignments()
   ]);
+  const roster = allPersonnel.filter(isSatlantasPersonnel);
 
   const posPagiPosts = await prisma.posPagi.findMany({
     where: { active: true },

@@ -79,7 +79,18 @@ export function PosPagiPanel() {
     : [];
 
   const personnelOptions = (personnelApi.data?.items ?? [])
-    .slice()
+    .filter((person) => {
+      const jabatan = (person.jabatan ?? '').toUpperCase();
+      const unit = (person.unit ?? '').toUpperCase();
+      if (jabatan.includes('POLSEK')) return false;
+      return (
+        jabatan.includes('SATLANTAS') ||
+        jabatan.includes('POLANTAS') ||
+        jabatan.includes('LANTAS') ||
+        unit.includes('SATLANTAS') ||
+        unit.includes('POLANTAS')
+      );
+    })
     .sort((a, b) => a.name.localeCompare(b.name))
     .map((person) => ({
       id: person.id,

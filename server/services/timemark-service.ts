@@ -10,6 +10,7 @@ import { logger } from '../lib/logger.js';
 import { recordActivity } from '../lib/activity.js';
 import { serializeTimemark, type TimemarkWithSprin } from '../lib/serializers.js';
 import { PersonnelDirectory } from './personnel-directory.js';
+import { isSatlantasPersonnel } from './personnel-scope.js';
 import { formatRankName } from '../../shared/personnel-name.js';
 import { getBotConfig } from './settings.js';
 import { extractTimemarkFromFile } from './ocr/timemark-ocr.js';
@@ -320,11 +321,19 @@ async function enrichSenderLabels<T extends { senderName: string; senderNumber: 
   rows: T[]
 ): Promise<Array<T & { senderLabel?: string | null; senderRank?: string | null }>> {
   if (rows.length === 0) return rows;
-  const roster = await prisma.personnel.findMany({
+  const allPersonnel = await prisma.personnel.findMany({
     where: { active: true },
-    select: { id: true, name: true, rank: true, phone: true, category: true }
+    select: {
+      id: true,
+      name: true,
+      rank: true,
+      phone: true,
+      category: true,
+      jabatan: true,
+      unit: true
+    }
   });
-  const directory = new PersonnelDirectory(roster);
+  const directory = new PersonnelDirectory(allPersonnel.filter(isSatlantasPersonnel));
   return rows.map((row) => {
     const person = directory.resolve(row.senderName, row.senderNumber);
     return {

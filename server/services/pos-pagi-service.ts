@@ -2,6 +2,7 @@ import ExcelJS from 'exceljs';
 import { HttpError } from '../lib/http-error.js';
 import { prisma } from '../lib/prisma.js';
 import { buildSprinRosterIndex, matchSprinRosterPerson } from './sprin-personnel-matcher.js';
+import { isSatlantasPersonnel } from './personnel-scope.js';
 import type {
   PosPagiAssignmentDTO,
   PosPagiDTO,
@@ -323,7 +324,7 @@ export async function listPosPagi(): Promise<PosPagiListDTO> {
 export async function importPosPagiData(
   parsed: ParsedPosPagiWorkbook
 ): Promise<PosPagiImportResult> {
-  const roster = await prisma.personnel.findMany({
+  const allPersonnel = await prisma.personnel.findMany({
     where: { active: true },
     select: {
       id: true,
@@ -336,6 +337,7 @@ export async function importPosPagiData(
       unit: true
     }
   });
+  const roster = allPersonnel.filter(isSatlantasPersonnel);
   const index = buildSprinRosterIndex(roster);
 
   const seenPersonnel = new Set<string>();
