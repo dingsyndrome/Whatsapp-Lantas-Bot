@@ -199,15 +199,33 @@ function resolvePhotoPerson(
   const senderTokens = new Set(normalizeTokens(photo.senderName));
   if (senderTokens.size === 0) return null;
   let best: { id: string; name: string; rank: string | null; score: number } | null = null;
+  let ties = 0;
   for (const person of roster) {
     const personTokens = normalizeTokens(person.name);
     if (personTokens.length === 0) continue;
     const overlap = personTokens.filter((token) => senderTokens.has(token)).length;
     const needed = Math.min(2, personTokens.length);
-    if (overlap >= needed && overlap > (best?.score ?? 0)) {
-      best = { id: person.id, name: person.name, rank: person.rank, score: overlap };
+    const strong = overlap >= needed;
+    // Kelonggaran: nama WhatsApp sering hanya memuat satu kata depan
+    // ("Yuli Ba Mutasi" vs "YULI SUDIBYO"). Satu token pun diterima asalkan
+    // panjangnya wajar dan hanya satu personel yang cocok.
+    const first = personTokens[0] ?? '';
+    const weak =
+      !strong &&
+      overlap === 1 &&
+      senderTokens.has(first) &&
+      first.length >= 4;
+    if (!strong && !weak) continue;
+    const score = strong ? overlap : 1;
+    if (!best || score > best.score) {
+      best = { id: person.id, name: person.name, rank: person.rank, score };
+      ties = 1;
+    } else if (best.score === score) {
+      ties += 1;
     }
   }
+  // Jangan menebak bila dua personel sama kuat.
+  if (best && best.score === 1 && ties > 1) return null;
   return best ? { id: best.id, name: best.name, rank: best.rank } : null;
 }
 

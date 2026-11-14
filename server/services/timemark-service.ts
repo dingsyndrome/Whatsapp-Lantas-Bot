@@ -115,13 +115,30 @@ export async function ingestTimemark(input: TimemarkIngestInput): Promise<Timema
       (Boolean(extraction.unitName) || Boolean(extraction.address));
     const status =
       extraction.confidence >= bot.minOcrConfidence && criticalComplete ? 'parsed' : 'review';
-    const match = await matchTurjawali({
+    let match = await matchTurjawali({
       ocr: extraction,
       senderName: input.senderName,
       senderNumber: input.senderNumber,
       caption: senderCaption,
       receivedAt
     });
+
+    // Foto tanpa watermark Timemark (tangkapan layar survei, bukti pengiriman
+    // laporan, dsb.) tidak boleh dipaksa masuk kategori kegiatan hanya karena
+    // kata kunci di caption. Semua yang tidak memuat jam + tanggal dikategorikan
+    // Lainnya agar tidak mengotori rekap kegiatan harian.
+    const withoutWatermark = !extraction.timeText && !extraction.capturedAt;
+    if (withoutWatermark) {
+      match = {
+        ...match,
+        classification: { ...match.classification, type: 'LAINNYA' },
+        matchStatus: 'UNMATCHED',
+        matchScore: 0,
+        matchedPersonnelId: null,
+        matchNotes:
+          'Tanpa watermark Timemark (jam/tanggal tidak terbaca); dikategorikan Lainnya.'
+      } as typeof match;
+    }
     const supervision = await detectSupervision({
       caption: senderCaption,
       ocrText: result.ocrText,
@@ -233,11 +250,11 @@ export async function ingestTimemark(input: TimemarkIngestInput): Promise<Timema
         status: 'failed',
         confidence: 0,
         rawText: error instanceof Error ? error.message : 'OCR gagal',
-        turjawaliType: fallbackMatch?.classification.type ?? 'LAINNYA',
+        // OCR gagal total: jangan menebak kategori kegiatan dari caption.\n        turjawaliType: 'LAINNYA',
         matchStatus: fallbackMatch?.matchStatus ?? 'UNMATCHED',
         matchScore: fallbackMatch?.matchScore ?? 0,
         matchedPersonnelId: fallbackMatch?.matchedPersonnelId ?? null,
-        matchNotes: fallbackMatch?.matchNotes ?? 'OCR gagal; matching tidak dapat dijalankan.',
+        matchNotes: 'OCR gagal; dikategorikan Lainnya (bukan kegiatan Turjawali).',
         isSupervision: supervision?.isSupervision ?? false,
         supervisorSandi: supervision?.sandi ?? null,
         supervisorName: supervision?.name ?? null,
