@@ -127,7 +127,11 @@ export async function ingestTimemark(input: TimemarkIngestInput): Promise<Timema
     // laporan, dsb.) tidak boleh dipaksa masuk kategori kegiatan hanya karena
     // kata kunci di caption. Semua yang tidak memuat jam + tanggal dikategorikan
     // Lainnya agar tidak mengotori rekap kegiatan harian.
-    const withoutWatermark = !extraction.timeText && !extraction.capturedAt;
+    // Foto tanpa tanggal, satuan, dan alamat bukan foto Timemark. Sering kali
+    // berupa tangkapan layar (K3I, survei) yang memuat jam dari antarmuka HP,
+    // sehingga jam saja tidak cukup untuk menganggapnya kegiatan Turjawali.
+    const withoutWatermark =
+      !extraction.capturedAt && !extraction.unitName && !extraction.address;
     if (withoutWatermark) {
       match = {
         ...match,
