@@ -118,6 +118,12 @@ export interface CustomRecapResult {
   counts: { photos: number; links: number; activities: number; supervisors: number };
   posPagi: CustomRecapPosPagi | null;
   activities: CustomRecapActivity[];
+  /** Ringkasan foto yang masuk tetapi belum bisa dipetakan ke roster. */
+  inbox?: {
+    total: number;
+    failed: number;
+    unmatched: Array<{ name: string; number: string; count: number; lastAt: string }>;
+  };
   supervisors: Array<{
     sandi: string | null;
     name: string;
@@ -317,6 +323,35 @@ export async function buildCustomRecap(params: CustomRecapParams): Promise<Custo
   // kategori (mis. Gatur), laporan link tidak boleh ikut dihitung — kalau tidak,
   // anggota yang hanya mengirim link akan muncul sebagai "sudah melapor".
   const filteredLinks = category === 'ALL' ? links.filter((link) => timeMatches(link.receivedAt)) : [];
+
+  const unmatchedMap = new Map<string, { name: string; number: string; count: number; lastAt: Date }>();
+  let failedPhotos = 0;
+  for (const photo of filteredPhotos) {
+    if (photo.status === 'failed') failedPhotos += 1;
+    if (resolvePhotoPerson(photo, directory, roster)) continue;
+    const key = photo.senderNumber || photo.senderName;
+    const entry = unmatchedMap.get(key) ?? {
+      name: photo.senderName,
+      number: photo.senderNumber,
+      count: 0,
+      lastAt: photo.createdAt
+    };
+    entry.count += 1;
+    if (photo.createdAt > entry.lastAt) entry.lastAt = photo.createdAt;
+    unmatchedMap.set(key, entry);
+  }
+  const inbox = {
+    total: filteredPhotos.length,
+    failed: failedPhotos,
+    unmatched: [...unmatchedMap.values()]
+      .sort((a, b) => b.count - a.count)
+      .map((row) => ({
+        name: row.name,
+        number: row.number,
+        count: row.count,
+        lastAt: row.lastAt.toISOString()
+      }))
+  };
 
   const activities: CustomRecapActivity[] = filteredPhotos.map((photo) => {
     const current = photo.supervisorSandi ? sandiMap[photo.supervisorSandi] : undefined;
@@ -790,6 +825,18 @@ export async function buildCustomRecap(params: CustomRecapParams): Promise<Custo
     });
   }
 
+  if (inbox.unmatched.length > 0) {
+    lines.push('', '*FOTO DITERIMA, BELUM COCOK ROSTER*');
+    inbox.unmatched.slice(0, 15).forEach((row, index) => {
+      lines.push(`${index + 1}. ${row.name}${row.number ? ` (${row.number})` : ''} : ${row.count} foto`);
+    });
+    if (inbox.unmatched.length > 15) {
+      lines.push(`_… dan ${inbox.unmatched.length - 15} pengirim lain._`);
+    }
+  }
+  if (inbox.failed > 0) {
+    lines.push('', `⚠️ *_${inbox.failed} foto gagal OCR${inbox.failed > 0 ? ' (tercatat, tidak masuk hitungan kegiatan)' : ''}_*`);
+  }
   lines.push('', '*BELUM MELAPOR*');
   if (anggotaNotSubmitted.length === 0) {
     lines.push('_Semua anggota roster sudah melapor._');
@@ -809,6 +856,7 @@ export async function buildCustomRecap(params: CustomRecapParams): Promise<Custo
       supervisors: supervisors.length
     },
     activities,
+    inbox,
     supervisors,
     supervisionEvents,
     personnel: { rosterTotal: posPagi ? anggotaTotal : rosterView.length, submitted, notSubmitted },

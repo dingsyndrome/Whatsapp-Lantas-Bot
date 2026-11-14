@@ -60,6 +60,11 @@ const CATEGORY_LABELS: Array<[Category, string]> = [
 ];
 
 interface CustomRecapResponse {
+  inbox?: {
+    total: number;
+    failed: number;
+    unmatched: Array<{ name: string; number: string; count: number; lastAt: string }>;
+  };
   counts: { photos: number; links: number; activities: number; supervisors: number };
   personnel: {
     rosterTotal: number;
@@ -263,6 +268,23 @@ export function RecapPanel() {
             </div>
           </CardHeader>
           <CardContent>
+            {result.inbox && (result.inbox.failed > 0 || result.inbox.unmatched.length > 0) ? (
+              <div className="mb-3 rounded-lg border border-warning/30 bg-warning/10 p-2.5 text-[10px] text-warning">
+                <p className="font-semibold">Foto masuk yang belum terhitung</p>
+                <p className="mt-0.5">
+                  {result.inbox.total} foto diterima · {result.inbox.failed} gagal OCR ·{' '}
+                  {result.inbox.unmatched.length} pengirim belum cocok roster
+                </p>
+                {result.inbox.unmatched.length > 0 ? (
+                  <p className="mt-1 text-[9px] text-muted-foreground">
+                    {result.inbox.unmatched
+                      .slice(0, 8)
+                      .map((row) => `${row.name} (${row.count})`)
+                      .join(' · ')}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
             <pre className="max-h-[420px] overflow-auto whitespace-pre-wrap rounded-lg border border-border/60 bg-muted/20 p-3 font-mono text-[10px] leading-relaxed">
               {result.text}
             </pre>
