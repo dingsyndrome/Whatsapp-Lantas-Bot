@@ -57,6 +57,24 @@ export class WhatsAppManager {
   private lastError: string | null = null;
   private qrGeneratedAt: Date | null = null;
   private starting = false;
+  /** Penjaga agar pemicu koneksi (startup + GET /wa/status) tidak menumpuk. */
+  private ensurePromise: Promise<void> | null = null;
+  /** Waktu percobaan koneksi terakhir, untuk membatasi percobaan berulang. */
+  private lastConnectAttemptAt = 0;
+  private static readonly CONNECT_RETRY_WINDOW_MS = 20_000;
+
+  /** Dipanggil endpoint status: pulihkan driver yang mati, lalu kembalikan status. */
+  async syncConnection(): Promise<void> {
+    if (!this.usesBaileysCached()) {
+      // Jangan bergantung pada `initialize()` yang berjalan sekali saat boot:
+      // kalau proses sempat gagal sebelum menyetel driver, halaman akan terus
+      // menampilkan driver lama. Baca ulang konfigurasi dari database.
+      const configured = await this.usesBaileys().catch(() => false);
+      if (!configured) return;
+      this.activeDriver = 'baileys';
+    }
+    await this.ensureConnected('status');
+  }
 
   /** True bila driver aktif adalah Baileys (tanpa Chromium). */
   private async usesBaileys(): Promise<boolean> {
@@ -64,12 +82,63 @@ export class WhatsAppManager {
     return bot.waDriver === 'baileys';
   }
 
+  private usesBaileysCached(): boolean {
+    return this.activeDriver === 'baileys';
+  }
+
+  /**
+   * Menyambung ulang Baileys bila sebelumnya gagal atau socket-nya hilang.
+   *
+   * Sengaja idempoten: `initialize()` saat startup dan `GET /wa/status` sama-sama
+   * memanggilnya. Yang membuat halaman terlihat "tidak terhubung" adalah socket
+   * yang mati setelah error pertama tanpa ada yang mencoba lagi, jadi dibatasi
+   * jendela percobaan agar tidak menumpuk saat halaman di-refresh berulang.
+   */
+  private async ensureConnected(reason: 'startup' | 'status' | 'manual' | 'driver-switch'): Promise<void> {
+    if (this.ensurePromise) {
+      await this.ensurePromise;
+      return;
+    }
+    const status = baileysManager.getStatus();
+    if (status.status === 'connected' || status.status === 'qr' || status.status === 'authenticated') {
+      return;
+    }
+    if (status.status === 'connecting') {
+      // Socket bisa tersangkut di 'connecting' tanpa event close sama sekali;
+      // tanpa pemulihan, status itu bertahan sampai container di-restart.
+      await baileysManager.recoverIfStale().catch((error) => {
+        logger.warn({ err: error }, 'Gagal memulihkan koneksi WhatsApp yang macet');
+      });
+      return;
+    }
+    const now = Date.now();
+    if (status.status === 'error' && now - this.lastConnectAttemptAt < WhatsAppManager.CONNECT_RETRY_WINDOW_MS) {
+      return;
+    }
+    this.lastConnectAttemptAt = now;
+    logger.info({ reason, status: status.status }, 'Menyambung ulang driver WhatsApp Baileys');
+    this.ensurePromise = baileysManager
+      .connect()
+      .then(() => undefined)
+      .catch((error) => {
+        logger.warn({ err: error, reason }, 'Penyambungan ulang WhatsApp gagal');
+      })
+      .finally(() => {
+        this.ensurePromise = null;
+      });
+    await this.ensurePromise;
+  }
+
   async initialize(): Promise<void> {
     const session = await ensureWhatsAppSessionRow();
     const bot = await getBotConfig();
     if (bot.waDriver === 'baileys') {
       this.activeDriver = 'baileys';
-      await baileysManager.connect();
+      // Jangan biarkan kegagalan socket pertama menggagalkan startup: koneksi
+      // Baileys sering gagal sekali saat jaringan, lalu perlu dicoba lagi.
+      await this.ensureConnected('startup').catch((error) => {
+        logger.error({ err: error }, 'Gagal menghubungkan WhatsApp saat startup');
+      });
       return;
     }
     this.activeDriver = bot.waDriver === 'webjs' ? 'webjs' : 'mock';
@@ -89,6 +158,8 @@ export class WhatsAppManager {
   }
 
   getStatus(): WhatsAppStatusDTO {
+    // Status Baileys dipakai apa adanya: nomor, waktu terhubung, dan pesan error
+    // terakhir berasal dari socket, bukan dari baris sesi whatsapp-web.js.
     if (this.activeDriver === 'baileys') return baileysManager.getStatus();
     return {
       status: this.statusValue,
@@ -120,7 +191,7 @@ export class WhatsAppManager {
         .rm(path.join(paths.waSession, 'session-sigap'), { recursive: true, force: true })
         .catch(() => undefined);
       this.activeDriver = 'baileys';
-      await baileysManager.connect();
+      await this.ensureConnected('driver-switch');
       realtime.publish('wa-status', this.getStatus());
       return this.getStatus();
     }
@@ -192,7 +263,8 @@ export class WhatsAppManager {
   async connect(): Promise<WhatsAppStatusDTO> {
     if (await this.usesBaileys()) {
       this.activeDriver = 'baileys';
-      return baileysManager.connect();
+      await this.ensureConnected('manual');
+      return this.getStatus();
     }
     if (this.starting) return this.getStatus();
     const bot = await getBotConfig();

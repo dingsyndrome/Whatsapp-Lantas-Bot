@@ -44,6 +44,11 @@ class BaileysManager {
   private pairingCode: string | null = null;
   private pendingPairingPhone: string | null = null;
   private senderBackfillStarted = false;
+  private lastConnectedAt: Date | null = null;
+  private retryTimer: NodeJS.Timeout | null = null;
+  /** Waktu mulai percobaan koneksi berjalan, untuk mendeteksi status macet. */
+  private connectStartedAt = 0;
+  private static readonly STALE_CONNECTING_MS = 120_000;
 
   private sessionDir(): string {
     return path.join(paths.waSession, 'baileys');
@@ -55,7 +60,7 @@ class BaileysManager {
       driver: 'baileys',
       phone: this.phone,
       pushName: this.pushName,
-      lastConnectedAt: null,
+      lastConnectedAt: this.lastConnectedAt?.toISOString() ?? null,
       lastError: this.lastError,
       qrDataUrl: this.qrDataUrl,
       qrGeneratedAt: this.qrGeneratedAt?.toISOString() ?? null,
@@ -68,8 +73,20 @@ class BaileysManager {
     await prisma.whatsAppSession
       .upsert({
         where: { id: 'runtime' },
-        create: { id: 'runtime', status, driver: 'baileys', phone: this.phone },
-        update: { status, driver: 'baileys', phone: this.phone, lastError: this.lastError }
+        create: {
+          id: 'runtime',
+          status,
+          driver: 'baileys',
+          phone: this.phone,
+          lastConnectedAt: this.lastConnectedAt
+        },
+        update: {
+          status,
+          driver: 'baileys',
+          phone: this.phone,
+          lastError: this.lastError,
+          lastConnectedAt: this.lastConnectedAt
+        }
       })
       .catch((error) => logger.warn({ err: error }, 'Gagal menyimpan status WhatsApp'));
   }
@@ -78,6 +95,7 @@ class BaileysManager {
     if (this.starting) return this.getStatus();
     if (this.socket) return this.getStatus();
     this.starting = true;
+    this.connectStartedAt = Date.now();
     this.statusValue = 'connecting';
     this.lastError = null;
     this.qrDataUrl = null;
@@ -85,7 +103,11 @@ class BaileysManager {
     await this.persist('connecting');
 
     try {
-      await ensureWhatsAppSessionRow();
+      const session = await ensureWhatsAppSessionRow();
+      // Angka "terakhir terhubung" dan nomor bot tetap tampil setelah restart.
+      if (!this.lastConnectedAt) this.lastConnectedAt = session.lastConnectedAt ?? null;
+      if (!this.phone && session.phone) this.phone = session.phone;
+      if (!this.pushName && session.pushName) this.pushName = session.pushName;
       fs.mkdirSync(this.sessionDir(), { recursive: true });
       const { state, saveCreds } = await useMultiFileAuthState(this.sessionDir());
 
@@ -126,6 +148,10 @@ class BaileysManager {
       this.lastError = message;
       this.socket = null;
       await this.persist('error');
+      // Tanpa percobaan ulang, satu kegagalan socket (jaringan VPS sempat lepas,
+      // Baileys disetop paksa, dll.) membuat halaman tertahan di status error
+      // sampai container di-restart. Jadwalkan satu kali lagi.
+      this.scheduleRetry();
     } finally {
       this.starting = false;
     }
@@ -227,6 +253,7 @@ class BaileysManager {
       const id = this.socket?.user?.id ?? '';
       this.phone = normalizePhone(id.split(':')[0] ?? '') ?? null;
       this.pushName = this.socket?.user?.name ?? null;
+      this.lastConnectedAt = new Date();
       await this.persist('connected');
       await recordActivity({
         type: 'wa_connected',
@@ -281,17 +308,58 @@ class BaileysManager {
       this.statusValue = 'connecting';
       this.lastError = `Koneksi terputus (kode ${statusCode ?? '?'}); menyambung ulang…`;
       await this.persist('connecting');
-      setTimeout(() => {
-        if (!this.socket && !this.starting) {
-          void this.connect().catch((error) =>
-            logger.warn({ err: error }, 'Gagal menyambung ulang WhatsApp')
-          );
-        }
-      }, 2500);
+      this.scheduleRetry();
     }
   }
 
+  /**
+   * Pulihkan socket yang tersangkut di status `connecting` melewati batas waktu.
+   * Kadang WhatsApp tidak mengirim event close sehingga socket lama harus diputus
+   * manual sebelum percobaan baru bisa dimulai.
+   */
+  async recoverIfStale(): Promise<boolean> {
+    if (this.starting) return false;
+    if (this.statusValue !== 'connecting') return false;
+    const age = Date.now() - this.connectStartedAt;
+    if (age < BaileysManager.STALE_CONNECTING_MS) return false;
+    logger.warn({ ageMs: age }, 'Koneksi Baileys macet di status connecting; memulai ulang');
+    if (this.retryTimer) {
+      clearTimeout(this.retryTimer);
+      this.retryTimer = null;
+    }
+    const stale = this.socket;
+    this.socket = null;
+    try {
+      stale?.end(undefined);
+    } catch (error) {
+      logger.debug({ err: error }, 'Gagal menutup socket Baileys yang macet');
+    }
+    await this.connect();
+    return true;
+  }
+
+  /**
+   * Satu percobaan sambung ulang dengan jeda. Penjagaan `!this.socket &&
+   * !this.starting` mencegah dua socket hidup bersamaan, yang membuat sesi
+   * saling tendang dan status bolak-balik connected → connecting.
+   */
+  private scheduleRetry(delayMs = 2500): void {
+    if (this.retryTimer) return;
+    this.retryTimer = setTimeout(() => {
+      this.retryTimer = null;
+      if (this.socket || this.starting) return;
+      void this.connect().catch((error) =>
+        logger.warn({ err: error }, 'Gagal menyambung ulang WhatsApp')
+      );
+    }, delayMs);
+    this.retryTimer.unref?.();
+  }
+
   async disconnect(logout = false): Promise<WhatsAppStatusDTO> {
+    if (this.retryTimer) {
+      clearTimeout(this.retryTimer);
+      this.retryTimer = null;
+    }
     try {
       if (this.socket) {
         if (logout) await this.socket.logout();

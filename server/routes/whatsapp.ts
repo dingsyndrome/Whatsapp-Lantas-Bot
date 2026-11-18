@@ -5,7 +5,11 @@ import { simulateIncoming } from '../services/simulation-service.js';
 
 export const whatsappRouter = Router();
 
-whatsappRouter.get('/status', (_req, res) => {
+whatsappRouter.get('/status', async (_req, res) => {
+  // Status dibaca halaman Settings terus-menerus. Kesempatan yang sama dipakai
+  // untuk menyambung ulang driver yang mati setelah error pertama, supaya
+  // halaman bisa pulih sendiri tanpa perlu restart container.
+  await whatsappManager.syncConnection().catch(() => undefined);
   res.json(whatsappManager.getStatus());
 });
 
