@@ -46,6 +46,11 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
 
   React.useEffect(() => {
     void refreshWhatsApp();
+    // Cadangan bila event SSE terlewat: status koneksi bisa berubah di server
+    // tanpa event yang sampai ke halaman ini, dan sebelumnya halaman baru
+    // memuat status sekali saja sehingga tampak "tidak terhubung" terus.
+    const timer = window.setInterval(() => void refreshWhatsApp(), 15_000);
+    return () => window.clearInterval(timer);
   }, [refreshWhatsApp]);
 
   React.useEffect(() => {
@@ -75,14 +80,19 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
       handlers.push([type, listener]);
     }
 
-    source.onopen = () => setConnected(true);
+    source.onopen = () => {
+      setConnected(true);
+      // Setelah sambungan putus, event status yang terbit saat itu hilang.
+      // Ambil ulang agar badge tidak tertinggal di nilai lama.
+      void refreshWhatsApp();
+    };
     source.onerror = () => setConnected(false);
 
     return () => {
       for (const [type, listener] of handlers) source.removeEventListener(type, listener);
       source.close();
     };
-  }, []);
+  }, [refreshWhatsApp]);
 
   const value = React.useMemo<RealtimeContextValue>(
     () => ({ connected, version, lastEvent, waStatus, refreshWhatsApp }),
