@@ -66,9 +66,8 @@ export class WhatsAppManager {
   /** Dipanggil endpoint status: pulihkan driver yang mati, lalu kembalikan status. */
   async syncConnection(): Promise<void> {
     if (!this.usesBaileysCached()) {
-      // Jangan bergantung pada `initialize()` yang berjalan sekali saat boot:
-      // kalau proses sempat gagal sebelum menyetel driver, halaman akan terus
-      // menampilkan driver lama. Baca ulang konfigurasi dari database.
+      // initialize() hanya berjalan sekali saat boot; kalau gagal sebelum
+      // menyetel driver, halaman akan terus menampilkan driver lama.
       const configured = await this.usesBaileys().catch(() => false);
       if (!configured) return;
       this.activeDriver = 'baileys';
@@ -87,12 +86,9 @@ export class WhatsAppManager {
   }
 
   /**
-   * Menyambung ulang Baileys bila sebelumnya gagal atau socket-nya hilang.
-   *
-   * Sengaja idempoten: `initialize()` saat startup dan `GET /wa/status` sama-sama
-   * memanggilnya. Yang membuat halaman terlihat "tidak terhubung" adalah socket
-   * yang mati setelah error pertama tanpa ada yang mencoba lagi, jadi dibatasi
-   * jendela percobaan agar tidak menumpuk saat halaman di-refresh berulang.
+   * Sambungkan ulang Baileys bila socket sebelumnya gagal atau hilang.
+   * Idempoten: dipanggil saat startup, tombol Hubungkan, dan polling status,
+   * dibatasi jendela 20 detik agar refresh halaman tidak menumpuk koneksi.
    */
   private async ensureConnected(reason: 'startup' | 'status' | 'manual' | 'driver-switch'): Promise<void> {
     if (this.ensurePromise) {

@@ -148,9 +148,8 @@ class BaileysManager {
       this.lastError = message;
       this.socket = null;
       await this.persist('error');
-      // Tanpa percobaan ulang, satu kegagalan socket (jaringan VPS sempat lepas,
-      // Baileys disetop paksa, dll.) membuat halaman tertahan di status error
-      // sampai container di-restart. Jadwalkan satu kali lagi.
+      // Satu kegagalan socket (jaringan VPS lepas, Baileys disetop paksa) akan
+      // menahan halaman di status error sampai container di-restart.
       this.scheduleRetry();
     } finally {
       this.starting = false;
@@ -313,9 +312,8 @@ class BaileysManager {
   }
 
   /**
-   * Pulihkan socket yang tersangkut di status `connecting` melewati batas waktu.
-   * Kadang WhatsApp tidak mengirim event close sehingga socket lama harus diputus
-   * manual sebelum percobaan baru bisa dimulai.
+   * Putuskan socket yang macet di status `connecting` melewati batas waktu,
+   * karena WhatsApp kadang tidak mengirim event close sama sekali.
    */
   async recoverIfStale(): Promise<boolean> {
     if (this.starting) return false;
@@ -339,9 +337,8 @@ class BaileysManager {
   }
 
   /**
-   * Satu percobaan sambung ulang dengan jeda. Penjagaan `!this.socket &&
-   * !this.starting` mencegah dua socket hidup bersamaan, yang membuat sesi
-   * saling tendang dan status bolak-balik connected → connecting.
+   * Satu percobaan sambung ulang dengan jeda. Dua socket hidup bersamaan
+   * membuat sesi saling tendang dan status bolak-balik connected → connecting.
    */
   private scheduleRetry(delayMs = 2500): void {
     if (this.retryTimer) return;
